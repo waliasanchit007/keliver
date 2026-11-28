@@ -56,7 +56,22 @@ Changes since:
   them, and it is written through before the load is reported. The reference-app and ios-host
   workflows build and run this output on a pull request.
   The host features are declared per line (review of #316, M2): a feature declared later goes
-  into `line-0.5/kotlin/HostFeatures.kt` only, so it changes none of these manifests. Rewritten
+  into `line-0.5/kotlin/HostFeatures.kt` only, so it changes none of these manifests (one
+  exception, MS4-04, below: a 0.4 host has no `schemaMismatch` to override, so the shared
+  listener and `reportReason` had to move once; the maintainer accepted it, 2026-11-28). Rewritten
   once more in that review round, for `HostFeatures.kt` and `HostFeaturesTest.kt` (above),
   `KeliverLine.kt` (its header names the line's two files) and `KeliverScreen.kt` (a comment that
   now says what back does on each line).
+- All four, deliberately (MS4-04, schema-mismatch reports). The feature is declared in
+  `line-0.5/kotlin/HostFeatures.kt` and checked in the 0.5 line's own test file
+  (`line-0.5/test/kotlin/SchemaMismatchReportsTest.kt`, which no 0.4.x host gets), as H0 set out.
+  What it does, though, is a report, and only the host's shared listener and report code can make
+  one: no per-line file reaches the host's report function. So three files move, and no file is
+  added or removed:
+  - `KeliverLine.kt` (the 0.4 line's): a `KeliverEventListener` base class, whose
+    `onSchemaMismatch` nothing calls on this line (its Treehouse has no once-per-tag hook);
+  - `KeliverHost.kt` and `MainViewController.kt`: the code-load listener extends it and, when it
+    is called, reports through the host's report path;
+  - `BundleIndex.kt` (both hosts): the `schema-mismatch` outcome and its reason in
+    `reportReason`.
+  No behaviour changes on the 0.4 line: an unknown tag is ignored silently, as before.

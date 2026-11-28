@@ -7,6 +7,7 @@ redwoodBuild {
 
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply plugin: 'app.cash.zipline'
+apply plugin: 'dev.drewhamilton.poko'
 
 // KELIVER_HOST_VERSION: this build's version, which a host logs once (HostBuild.kt's
 // HOST_BUILD_LINE). The reference app's local-maven route looks for it in the device's log.

@@ -91,6 +91,8 @@ class HostFeaturesTemplateTest {
       assertTrue("internal const val KELIVER_LINE = \"$line\"" in text, "$file names another line")
       assertTrue("internal abstract class KeliverSpec<A : AppService> : TreehouseApp.Spec<A>()" in text, file.path)
       assertTrue("internal fun <A : AppService> KeliverTreehouseContent(" in text, file.path)
+      // MS4-04: the hosts' code-load listeners extend it on every line.
+      assertTrue("internal abstract class KeliverEventListener : EventListener() {" in text, file.path)
       assertTrue(File(templates, "production-host/src/line-$line/kotlin/HostFeatures.kt").isFile, "no HostFeatures.kt for the $line line")
     }
     val old = File(templates, "production-host/src/line-0.4/kotlin/KeliverLine.kt").readText()
@@ -99,6 +101,25 @@ class HostFeaturesTemplateTest {
     val current = File(templates, "production-host/src/line-0.5/kotlin/KeliverLine.kt").readText()
     assertTrue("override val hostFeatures: Set<String>\n    get() = HostFeatures.implemented" in current)
     assertTrue("backEnabled = backEnabled," in current)
+    assertFalse("schemaMismatch" in old, "the 0.4 line's Treehouse names no schema mismatch once per tag")
+    assertTrue("if (KeliverHostFeatures.SCHEMA_MISMATCH_REPORTS_1 in HostFeatures.implemented) onSchemaMismatch(" in current)
+  }
+
+  /**
+   * Each Keliver feature a line declares has its behavioural check in that line's own test files
+   * (src/line-<line>/test/kotlin/), and the shared HostFeaturesTest.kt, which every line's host
+   * gets (and the 0.4.1 manifests hold), names no feature (review of #316, re-review Low 1; MS4-04).
+   */
+  @Test
+  fun everyFeatureALineDeclaresIsCheckedInTheLinesOwnTests() {
+    for ((line, names) in declared) {
+      val tests = File(templates, "production-host/src/line-$line/test/kotlin").listFiles { f -> f.name.endsWith(".kt") }.orEmpty()
+      for (name in names.filter { it.startsWith("keliver.") }) {
+        assertTrue(tests.any { "\"$name\"" in it.readText() }, "the $line line declares $name, and none of its own test files checks it")
+      }
+    }
+    val shared = File(templates, "production-host/src/test/kotlin/HostFeaturesTest.kt").readText()
+    for (name in KeliverHostFeatures.all) assertFalse(name in shared, "the shared HostFeaturesTest.kt names $name")
   }
 
   /** One declaration per line, and no copy of it (or of the release identity) beside the hosts' shared code (review of #316, Low 1). */

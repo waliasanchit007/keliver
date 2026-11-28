@@ -133,7 +133,11 @@ class HostReportsTest {
       hosttemplate.crashRollbackDetail(crashStep, 2, hosttemplate.CRASH_TO_NEWER),
       hosttemplate.crashRollbackDetail(crashStep, 2, hosttemplate.CRASH_TO_APP_VIEW),
     )
-    val outcomes = listOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed", "crash-rollback")
+    val outcomes = listOf(
+      "loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed", "crash-rollback",
+      // MS4-04: with the detail the host's listener gives it.
+      hosttemplate.SCHEMA_MISMATCH_OUTCOME,
+    )
     val r = HostReports(dir())
     val produced = mutableSetOf<String>()
     for (outcome in outcomes) {
@@ -148,10 +152,31 @@ class HostReportsTest {
     assertEquals(
       setOf(
         "", "sha256-mismatch", "below-floor", "set-aside", "bridge-missing", "bridge-shape", "bridge-bind", "engine", "signature", "lookup-failed",
-        "network", "config", "exception", "previous-good", "newer-bundle", "app-view", "other",
+        "network", "config", "exception", "previous-good", "newer-bundle", "app-view", "schema-mismatch", "other",
       ),
       produced,
     )
+  }
+
+  /** MS4-04: a host's report that a bundle used a tag the host lacks, once per tag. */
+  @Test
+  fun aSchemaMismatchIsAcceptedAndShownWithItsReason() {
+    val r = HostReports(dir())
+    val reason = hosttemplate.reportReason(hosttemplate.SCHEMA_MISMATCH_OUTCOME, "unknown modifier 777000001")
+    assertEquals("schema-mismatch", reason)
+    val mismatch = report(outcome = hosttemplate.SCHEMA_MISMATCH_OUTCOME, sequence = "3").replace("\"reason\":\"\"", "\"reason\":\"$reason\"")
+    assertNull(r.accept(report(sequence = "3")))
+    assertNull(r.accept(mismatch))
+    // Only the category leaves the device: the tag stays in the app's detail.
+    assertEquals(400, r.accept(mismatch.replace("\"reason\":\"schema-mismatch\"", "\"reason\":\"unknown modifier 777000001\""))!!.first)
+
+    val bundle = (r.summary()["bundles"] as JsonArray).single() as JsonObject
+    assertEquals(1, (bundle["outcomes"] as JsonObject)["schema-mismatch"]!!.jsonPrimitive.int)
+    assertEquals(1, (bundle["outcomes"] as JsonObject)["loaded"]!!.jsonPrimitive.int)
+    // A plain load gives no reason, so only the mismatch is counted under reasons.
+    assertEquals(mapOf("schema-mismatch" to 1), (bundle["reasons"] as JsonObject).mapValues { it.value.jsonPrimitive.int })
+    val page = r.page()
+    assertTrue("<th>reasons</th>" in page && "<td>schema-mismatch 1</td>" in page, page)
   }
 
   private val crashStep = hosttemplate.CrashStep.SetAside(5, 2, hosttemplate.CrashKind.EXCEPTION)

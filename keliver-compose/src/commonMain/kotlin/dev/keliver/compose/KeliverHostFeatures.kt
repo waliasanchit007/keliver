@@ -60,6 +60,15 @@ public object KeliverHostFeatures {
   public const val FRAME_SCOPE_1: String = "keliver.frameScope@1"
 
   /**
+   * Schema-mismatch reports (MS4-04): the host reports each unknown widget, modifier, property,
+   * children or event tag a loaded bundle uses once (keliver-treehouse-host's
+   * `EventListener.schemaMismatch`), with the report reason `schema-mismatch`, instead of ignoring
+   * it silently. It changes nothing a guest can do; a guest may read it to know its mismatches are
+   * seen.
+   */
+  public const val SCHEMA_MISMATCH_REPORTS_1: String = "keliver.schemaMismatchReports@1"
+
+  /**
    * Every feature Keliver defines, each with the features it requires (as `keliver.nav.reveal@1`
    * will require `keliver.nav.retainedContainer@2`). A host that declares a feature without all of
    * them is to be treated as not declaring it (docs/SHOW_BEFORE_COMPUTE.md 3.2), and Keliver's
@@ -70,6 +79,7 @@ public object KeliverHostFeatures {
     PRESS_1 to emptySet(),
     CACHED_FRAME_1 to emptySet(),
     FRAME_SCOPE_1 to setOf(CACHED_FRAME_1),
+    SCHEMA_MISMATCH_REPORTS_1 to emptySet(),
   )
 
   /** Every name Keliver defines. */

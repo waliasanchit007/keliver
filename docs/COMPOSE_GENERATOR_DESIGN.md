@@ -281,6 +281,10 @@ one naming its category. First entries:
 - **Inside the gate**, `ProtocolMismatchHandler` stays the second line: an unknown widget,
   modifier, property or children tag is ignored, as today, and the host templates now report it
   (a `schema-mismatch` report reason, de-duplicated by tag) instead of dropping it silently.
+  Built by MS4-04: `keliver-treehouse-host`'s `EventListener.schemaMismatch` receives each
+  distinct unknown widget, modifier, property, children or event tag once per code session (one
+  loaded bundle, across all its screens), and the 0.5 line's host templates, which declare
+  `keliver.schemaMismatchReports@1`, report it with the outcome and reason `schema-mismatch`.
 - **Granularity:** a whole group's level is coarse. A guest compiled at `material3@5` that uses
   only level-1 widgets is refused by a level-4 host. Computing the levels a bundle actually uses
   (the stubs' tags are constants that survive dead-code elimination, so a manifest step can scan

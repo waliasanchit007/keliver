@@ -519,13 +519,21 @@ that opens.
   whose first load failed loads again at the next update check (§2), so one
   process can send `not-loaded` more than once, then `loaded`. WS6 adds
   `crash-rollback`: a bundle was set aside for failing on this install
-  ("Crash rollback", below).
+  ("Crash rollback", below). MS4-04 adds `schema-mismatch` (0.5 line): the
+  bundle used a widget, modifier, property, children or event tag the host's
+  schema lacks. The host ignores that tag and shows the rest, as it always did,
+  and now reports it once per tag for each loaded bundle, however many screens
+  meet it. The record's `detail` (the app's only) names the tag, for example
+  `unknown modifier 7`. Hosts declare it as `keliver.schemaMismatchReports@1`
+  (the line's `HostFeatures.kt`); the 0.4 line never sends it.
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `set-aside`
   (WS6), `bridge-missing` and `bridge-shape` (B4, below), `bridge-bind` (B5,
   below), `signature`, `lookup-failed`, `network`, `config`, `exception` (for
   `screen-failed`), `previous-good`, `newer-bundle` or `app-view` (for
-  `crash-rollback`: what runs instead), or `other`. A relay older than the host
-  refuses an outcome or a reason it does not know, and that report is dropped.
+  `crash-rollback`: what runs instead), `schema-mismatch` (for
+  `schema-mismatch`), or `other`. A relay older than the host refuses an
+  outcome or a reason it does not know, and that report is dropped. The relay
+  counts both per bundle (`GET /reports`, `GET /reports/view`).
 
 Where the records go:
 - **In code**, always: Android `KeliverHost.reports`, a `SharedFlow` that

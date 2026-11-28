@@ -19,5 +19,7 @@ package @@PACKAGE@@
  */
 internal object HostFeatures {
   val implemented: Set<String> = setOf(
+    // MS4-04: each unknown tag a loaded bundle uses is reported once (reason schema-mismatch).
+    "keliver.schemaMismatchReports@1",
   )
 }
