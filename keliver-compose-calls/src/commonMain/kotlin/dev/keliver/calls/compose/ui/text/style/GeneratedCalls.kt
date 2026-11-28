@@ -11,14 +11,14 @@ public class BaselineShift @dev.keliver.calls.runtime.InternalCallApi constructo
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val multiplier: kotlin.Float get() = (readValues("BaselineShift.multiplier")["multiplier"] as kotlin.Float?)!!
   public companion object {
-    /** `androidx.compose.ui.text.style.BaselineShift.Companion#None`, recorded: the host makes the same call (lock tag 308). */
-    public val None: dev.keliver.calls.compose.ui.text.style.BaselineShift get() = dev.keliver.calls.compose.ui.text.style.BaselineShift(dev.keliver.calls.runtime.CallRecord(308))
-    /** `androidx.compose.ui.text.style.BaselineShift.Companion#Subscript`, recorded: the host makes the same call (lock tag 309). */
-    public val Subscript: dev.keliver.calls.compose.ui.text.style.BaselineShift get() = dev.keliver.calls.compose.ui.text.style.BaselineShift(dev.keliver.calls.runtime.CallRecord(309))
-    /** `androidx.compose.ui.text.style.BaselineShift.Companion#Superscript`, recorded: the host makes the same call (lock tag 310). */
-    public val Superscript: dev.keliver.calls.compose.ui.text.style.BaselineShift get() = dev.keliver.calls.compose.ui.text.style.BaselineShift(dev.keliver.calls.runtime.CallRecord(310))
-    /** `androidx.compose.ui.text.style.BaselineShift.Companion#Unspecified`, recorded: the host makes the same call (lock tag 311). */
-    public val Unspecified: dev.keliver.calls.compose.ui.text.style.BaselineShift get() = dev.keliver.calls.compose.ui.text.style.BaselineShift(dev.keliver.calls.runtime.CallRecord(311))
+    /** `androidx.compose.ui.text.style.BaselineShift.Companion#None`, recorded: the host makes the same call (lock tag 785). */
+    public val None: dev.keliver.calls.compose.ui.text.style.BaselineShift get() = dev.keliver.calls.compose.ui.text.style.BaselineShift(dev.keliver.calls.runtime.CallRecord(785))
+    /** `androidx.compose.ui.text.style.BaselineShift.Companion#Subscript`, recorded: the host makes the same call (lock tag 786). */
+    public val Subscript: dev.keliver.calls.compose.ui.text.style.BaselineShift get() = dev.keliver.calls.compose.ui.text.style.BaselineShift(dev.keliver.calls.runtime.CallRecord(786))
+    /** `androidx.compose.ui.text.style.BaselineShift.Companion#Superscript`, recorded: the host makes the same call (lock tag 787). */
+    public val Superscript: dev.keliver.calls.compose.ui.text.style.BaselineShift get() = dev.keliver.calls.compose.ui.text.style.BaselineShift(dev.keliver.calls.runtime.CallRecord(787))
+    /** `androidx.compose.ui.text.style.BaselineShift.Companion#Unspecified`, recorded: the host makes the same call (lock tag 788). */
+    public val Unspecified: dev.keliver.calls.compose.ui.text.style.BaselineShift get() = dev.keliver.calls.compose.ui.text.style.BaselineShift(dev.keliver.calls.runtime.CallRecord(788))
   }
 }
 
@@ -27,18 +27,18 @@ public class Hyphens @dev.keliver.calls.runtime.InternalCallApi constructor(call
   @Deprecated("Keliver: `Hyphens.value` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val value: Nothing get() = error("call-recorded")
   public companion object {
-    /** `androidx.compose.ui.text.style.Hyphens.Companion#Auto`, recorded: the host makes the same call (lock tag 312). */
-    public val Auto: dev.keliver.calls.compose.ui.text.style.Hyphens get() = dev.keliver.calls.compose.ui.text.style.Hyphens(dev.keliver.calls.runtime.CallRecord(312))
-    /** `androidx.compose.ui.text.style.Hyphens.Companion#None`, recorded: the host makes the same call (lock tag 313). */
-    public val None: dev.keliver.calls.compose.ui.text.style.Hyphens get() = dev.keliver.calls.compose.ui.text.style.Hyphens(dev.keliver.calls.runtime.CallRecord(313))
-    /** `androidx.compose.ui.text.style.Hyphens.Companion#Unspecified`, recorded: the host makes the same call (lock tag 314). */
-    public val Unspecified: dev.keliver.calls.compose.ui.text.style.Hyphens get() = dev.keliver.calls.compose.ui.text.style.Hyphens(dev.keliver.calls.runtime.CallRecord(314))
-    /** `androidx.compose.ui.text.style.Hyphens.Companion#valueOf(value:Int)`, recorded: the host makes the same call (lock tag 315). */
+    /** `androidx.compose.ui.text.style.Hyphens.Companion#Auto`, recorded: the host makes the same call (lock tag 789). */
+    public val Auto: dev.keliver.calls.compose.ui.text.style.Hyphens get() = dev.keliver.calls.compose.ui.text.style.Hyphens(dev.keliver.calls.runtime.CallRecord(789))
+    /** `androidx.compose.ui.text.style.Hyphens.Companion#None`, recorded: the host makes the same call (lock tag 790). */
+    public val None: dev.keliver.calls.compose.ui.text.style.Hyphens get() = dev.keliver.calls.compose.ui.text.style.Hyphens(dev.keliver.calls.runtime.CallRecord(790))
+    /** `androidx.compose.ui.text.style.Hyphens.Companion#Unspecified`, recorded: the host makes the same call (lock tag 791). */
+    public val Unspecified: dev.keliver.calls.compose.ui.text.style.Hyphens get() = dev.keliver.calls.compose.ui.text.style.Hyphens(dev.keliver.calls.runtime.CallRecord(791))
+    /** `androidx.compose.ui.text.style.Hyphens.Companion#valueOf(value:Int)`, recorded: the host makes the same call (lock tag 792). */
     public fun valueOf(
       value: kotlin.Int,
     ): dev.keliver.calls.compose.ui.text.style.Hyphens = dev.keliver.calls.compose.ui.text.style.Hyphens(
       dev.keliver.calls.runtime.CallRecord(
-        315,
+        792,
         kotlinx.serialization.json.buildJsonObject {
           put("value", kotlinx.serialization.json.JsonPrimitive(value))
         },
@@ -50,14 +50,14 @@ public class Hyphens @dev.keliver.calls.runtime.InternalCallApi constructor(call
 /** Guest mirror of `androidx.compose.ui.text.style.LineBreak`: a recorded call the host replays (MS4-42, call records). */
 public class LineBreak @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   public companion object {
-    /** `androidx.compose.ui.text.style.LineBreak.Companion#Heading`, recorded: the host makes the same call (lock tag 316). */
-    public val Heading: dev.keliver.calls.compose.ui.text.style.LineBreak get() = dev.keliver.calls.compose.ui.text.style.LineBreak(dev.keliver.calls.runtime.CallRecord(316))
-    /** `androidx.compose.ui.text.style.LineBreak.Companion#Paragraph`, recorded: the host makes the same call (lock tag 317). */
-    public val Paragraph: dev.keliver.calls.compose.ui.text.style.LineBreak get() = dev.keliver.calls.compose.ui.text.style.LineBreak(dev.keliver.calls.runtime.CallRecord(317))
-    /** `androidx.compose.ui.text.style.LineBreak.Companion#Simple`, recorded: the host makes the same call (lock tag 318). */
-    public val Simple: dev.keliver.calls.compose.ui.text.style.LineBreak get() = dev.keliver.calls.compose.ui.text.style.LineBreak(dev.keliver.calls.runtime.CallRecord(318))
-    /** `androidx.compose.ui.text.style.LineBreak.Companion#Unspecified`, recorded: the host makes the same call (lock tag 319). */
-    public val Unspecified: dev.keliver.calls.compose.ui.text.style.LineBreak get() = dev.keliver.calls.compose.ui.text.style.LineBreak(dev.keliver.calls.runtime.CallRecord(319))
+    /** `androidx.compose.ui.text.style.LineBreak.Companion#Heading`, recorded: the host makes the same call (lock tag 793). */
+    public val Heading: dev.keliver.calls.compose.ui.text.style.LineBreak get() = dev.keliver.calls.compose.ui.text.style.LineBreak(dev.keliver.calls.runtime.CallRecord(793))
+    /** `androidx.compose.ui.text.style.LineBreak.Companion#Paragraph`, recorded: the host makes the same call (lock tag 794). */
+    public val Paragraph: dev.keliver.calls.compose.ui.text.style.LineBreak get() = dev.keliver.calls.compose.ui.text.style.LineBreak(dev.keliver.calls.runtime.CallRecord(794))
+    /** `androidx.compose.ui.text.style.LineBreak.Companion#Simple`, recorded: the host makes the same call (lock tag 795). */
+    public val Simple: dev.keliver.calls.compose.ui.text.style.LineBreak get() = dev.keliver.calls.compose.ui.text.style.LineBreak(dev.keliver.calls.runtime.CallRecord(795))
+    /** `androidx.compose.ui.text.style.LineBreak.Companion#Unspecified`, recorded: the host makes the same call (lock tag 796). */
+    public val Unspecified: dev.keliver.calls.compose.ui.text.style.LineBreak get() = dev.keliver.calls.compose.ui.text.style.LineBreak(dev.keliver.calls.runtime.CallRecord(796))
   }
 }
 
@@ -69,29 +69,29 @@ public class LineHeightStyle @dev.keliver.calls.runtime.InternalCallApi construc
   public val trim: Nothing get() = error("call-recorded")
   @Deprecated("Keliver: `LineHeightStyle.mode` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val mode: Nothing get() = error("call-recorded")
-  /** `androidx.compose.ui.text.style.LineHeightStyle#copy(alignment:LineHeightStyle.Alignment,trim:LineHeightStyle.Trim,mode:LineHeightStyle.Mode)` on a recorded value: the call carries the receiver (lock tag 320). */
+  /** `androidx.compose.ui.text.style.LineHeightStyle#copy(alignment:LineHeightStyle.Alignment,trim:LineHeightStyle.Trim,mode:LineHeightStyle.Mode)` on a recorded value: the call carries the receiver (lock tag 797). */
   public fun copy(
   ): dev.keliver.calls.compose.ui.text.style.LineHeightStyle = dev.keliver.calls.compose.ui.text.style.LineHeightStyle(
     dev.keliver.calls.runtime.CallRecord(
-      320,
+      797,
       kotlinx.serialization.json.buildJsonObject {
       },
       on = call,
     ),
   )
   public companion object {
-    /** `androidx.compose.ui.text.style.LineHeightStyle.Companion#Default`, recorded: the host makes the same call (lock tag 321). */
-    public val Default: dev.keliver.calls.compose.ui.text.style.LineHeightStyle get() = dev.keliver.calls.compose.ui.text.style.LineHeightStyle(dev.keliver.calls.runtime.CallRecord(321))
+    /** `androidx.compose.ui.text.style.LineHeightStyle.Companion#Default`, recorded: the host makes the same call (lock tag 798). */
+    public val Default: dev.keliver.calls.compose.ui.text.style.LineHeightStyle get() = dev.keliver.calls.compose.ui.text.style.LineHeightStyle(dev.keliver.calls.runtime.CallRecord(798))
   }
 }
 
 /** Guest mirror of `androidx.compose.ui.text.style.ResolvedTextDirection`: a recorded call the host replays (MS4-42, call records). */
 public class ResolvedTextDirection @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   public companion object {
-    /** `androidx.compose.ui.text.style.ResolvedTextDirection#Ltr`, recorded: the host makes the same call (lock tag 322). */
-    public val Ltr: dev.keliver.calls.compose.ui.text.style.ResolvedTextDirection get() = dev.keliver.calls.compose.ui.text.style.ResolvedTextDirection(dev.keliver.calls.runtime.CallRecord(322))
-    /** `androidx.compose.ui.text.style.ResolvedTextDirection#Rtl`, recorded: the host makes the same call (lock tag 323). */
-    public val Rtl: dev.keliver.calls.compose.ui.text.style.ResolvedTextDirection get() = dev.keliver.calls.compose.ui.text.style.ResolvedTextDirection(dev.keliver.calls.runtime.CallRecord(323))
+    /** `androidx.compose.ui.text.style.ResolvedTextDirection#Ltr`, recorded: the host makes the same call (lock tag 799). */
+    public val Ltr: dev.keliver.calls.compose.ui.text.style.ResolvedTextDirection get() = dev.keliver.calls.compose.ui.text.style.ResolvedTextDirection(dev.keliver.calls.runtime.CallRecord(799))
+    /** `androidx.compose.ui.text.style.ResolvedTextDirection#Rtl`, recorded: the host makes the same call (lock tag 800). */
+    public val Rtl: dev.keliver.calls.compose.ui.text.style.ResolvedTextDirection get() = dev.keliver.calls.compose.ui.text.style.ResolvedTextDirection(dev.keliver.calls.runtime.CallRecord(800))
   }
 }
 
@@ -100,26 +100,26 @@ public class TextAlign @dev.keliver.calls.runtime.InternalCallApi constructor(ca
   @Deprecated("Keliver: `TextAlign.value` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val value: Nothing get() = error("call-recorded")
   public companion object {
-    /** `androidx.compose.ui.text.style.TextAlign.Companion#Center`, recorded: the host makes the same call (lock tag 324). */
-    public val Center: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(324))
-    /** `androidx.compose.ui.text.style.TextAlign.Companion#End`, recorded: the host makes the same call (lock tag 325). */
-    public val End: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(325))
-    /** `androidx.compose.ui.text.style.TextAlign.Companion#Justify`, recorded: the host makes the same call (lock tag 326). */
-    public val Justify: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(326))
-    /** `androidx.compose.ui.text.style.TextAlign.Companion#Left`, recorded: the host makes the same call (lock tag 327). */
-    public val Left: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(327))
-    /** `androidx.compose.ui.text.style.TextAlign.Companion#Right`, recorded: the host makes the same call (lock tag 328). */
-    public val Right: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(328))
-    /** `androidx.compose.ui.text.style.TextAlign.Companion#Start`, recorded: the host makes the same call (lock tag 329). */
-    public val Start: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(329))
-    /** `androidx.compose.ui.text.style.TextAlign.Companion#Unspecified`, recorded: the host makes the same call (lock tag 330). */
-    public val Unspecified: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(330))
-    /** `androidx.compose.ui.text.style.TextAlign.Companion#valueOf(value:Int)`, recorded: the host makes the same call (lock tag 331). */
+    /** `androidx.compose.ui.text.style.TextAlign.Companion#Center`, recorded: the host makes the same call (lock tag 801). */
+    public val Center: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(801))
+    /** `androidx.compose.ui.text.style.TextAlign.Companion#End`, recorded: the host makes the same call (lock tag 802). */
+    public val End: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(802))
+    /** `androidx.compose.ui.text.style.TextAlign.Companion#Justify`, recorded: the host makes the same call (lock tag 803). */
+    public val Justify: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(803))
+    /** `androidx.compose.ui.text.style.TextAlign.Companion#Left`, recorded: the host makes the same call (lock tag 804). */
+    public val Left: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(804))
+    /** `androidx.compose.ui.text.style.TextAlign.Companion#Right`, recorded: the host makes the same call (lock tag 805). */
+    public val Right: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(805))
+    /** `androidx.compose.ui.text.style.TextAlign.Companion#Start`, recorded: the host makes the same call (lock tag 806). */
+    public val Start: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(806))
+    /** `androidx.compose.ui.text.style.TextAlign.Companion#Unspecified`, recorded: the host makes the same call (lock tag 807). */
+    public val Unspecified: dev.keliver.calls.compose.ui.text.style.TextAlign get() = dev.keliver.calls.compose.ui.text.style.TextAlign(dev.keliver.calls.runtime.CallRecord(807))
+    /** `androidx.compose.ui.text.style.TextAlign.Companion#valueOf(value:Int)`, recorded: the host makes the same call (lock tag 808). */
     public fun valueOf(
       value: kotlin.Int,
     ): dev.keliver.calls.compose.ui.text.style.TextAlign = dev.keliver.calls.compose.ui.text.style.TextAlign(
       dev.keliver.calls.runtime.CallRecord(
-        331,
+        808,
         kotlinx.serialization.json.buildJsonObject {
           put("value", kotlinx.serialization.json.JsonPrimitive(value))
         },
@@ -132,12 +132,12 @@ public class TextAlign @dev.keliver.calls.runtime.InternalCallApi constructor(ca
 public class TextDecoration @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   @Deprecated("Keliver: `TextDecoration.mask` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val mask: Nothing get() = error("call-recorded")
-  /** `androidx.compose.ui.text.style.TextDecoration#plus(decoration:TextDecoration)` on a recorded value: the call carries the receiver (lock tag 332). */
+  /** `androidx.compose.ui.text.style.TextDecoration#plus(decoration:TextDecoration)` on a recorded value: the call carries the receiver (lock tag 809). */
   public operator fun plus(
     decoration: dev.keliver.calls.compose.ui.text.style.TextDecoration,
   ): dev.keliver.calls.compose.ui.text.style.TextDecoration = dev.keliver.calls.compose.ui.text.style.TextDecoration(
     dev.keliver.calls.runtime.CallRecord(
-      332,
+      809,
       kotlinx.serialization.json.buildJsonObject {
         put("decoration", decoration.call.toJson())
       },
@@ -145,29 +145,29 @@ public class TextDecoration @dev.keliver.calls.runtime.InternalCallApi construct
     ),
   )
   public companion object {
-    /** `androidx.compose.ui.text.style.TextDecoration.Companion#LineThrough`, recorded: the host makes the same call (lock tag 333). */
-    public val LineThrough: dev.keliver.calls.compose.ui.text.style.TextDecoration get() = dev.keliver.calls.compose.ui.text.style.TextDecoration(dev.keliver.calls.runtime.CallRecord(333))
-    /** `androidx.compose.ui.text.style.TextDecoration.Companion#None`, recorded: the host makes the same call (lock tag 334). */
-    public val None: dev.keliver.calls.compose.ui.text.style.TextDecoration get() = dev.keliver.calls.compose.ui.text.style.TextDecoration(dev.keliver.calls.runtime.CallRecord(334))
-    /** `androidx.compose.ui.text.style.TextDecoration.Companion#Underline`, recorded: the host makes the same call (lock tag 335). */
-    public val Underline: dev.keliver.calls.compose.ui.text.style.TextDecoration get() = dev.keliver.calls.compose.ui.text.style.TextDecoration(dev.keliver.calls.runtime.CallRecord(335))
-    /** `androidx.compose.ui.text.style.TextDecoration.Companion#combine(decorations:List<TextDecoration>)`, recorded: the host makes the same call (lock tag 336). */
+    /** `androidx.compose.ui.text.style.TextDecoration.Companion#LineThrough`, recorded: the host makes the same call (lock tag 810). */
+    public val LineThrough: dev.keliver.calls.compose.ui.text.style.TextDecoration get() = dev.keliver.calls.compose.ui.text.style.TextDecoration(dev.keliver.calls.runtime.CallRecord(810))
+    /** `androidx.compose.ui.text.style.TextDecoration.Companion#None`, recorded: the host makes the same call (lock tag 811). */
+    public val None: dev.keliver.calls.compose.ui.text.style.TextDecoration get() = dev.keliver.calls.compose.ui.text.style.TextDecoration(dev.keliver.calls.runtime.CallRecord(811))
+    /** `androidx.compose.ui.text.style.TextDecoration.Companion#Underline`, recorded: the host makes the same call (lock tag 812). */
+    public val Underline: dev.keliver.calls.compose.ui.text.style.TextDecoration get() = dev.keliver.calls.compose.ui.text.style.TextDecoration(dev.keliver.calls.runtime.CallRecord(812))
+    /** `androidx.compose.ui.text.style.TextDecoration.Companion#combine(decorations:List<TextDecoration>)`, recorded: the host makes the same call (lock tag 813). */
     public fun combine(
       decorations: kotlin.collections.List<dev.keliver.calls.compose.ui.text.style.TextDecoration>,
     ): dev.keliver.calls.compose.ui.text.style.TextDecoration = dev.keliver.calls.compose.ui.text.style.TextDecoration(
       dev.keliver.calls.runtime.CallRecord(
-        336,
+        813,
         kotlinx.serialization.json.buildJsonObject {
           put("decorations", kotlinx.serialization.json.JsonArray(decorations.map { it.call.toJson() }))
         },
       ),
     )
-    /** `androidx.compose.ui.text.style.TextDecoration.Companion#valueOf(mask:Int)`, recorded: the host makes the same call (lock tag 337). */
+    /** `androidx.compose.ui.text.style.TextDecoration.Companion#valueOf(mask:Int)`, recorded: the host makes the same call (lock tag 814). */
     public fun valueOf(
       mask: kotlin.Int,
     ): dev.keliver.calls.compose.ui.text.style.TextDecoration = dev.keliver.calls.compose.ui.text.style.TextDecoration(
       dev.keliver.calls.runtime.CallRecord(
-        337,
+        814,
         kotlinx.serialization.json.buildJsonObject {
           put("mask", kotlinx.serialization.json.JsonPrimitive(mask))
         },
@@ -181,24 +181,24 @@ public class TextDirection @dev.keliver.calls.runtime.InternalCallApi constructo
   @Deprecated("Keliver: `TextDirection.value` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val value: Nothing get() = error("call-recorded")
   public companion object {
-    /** `androidx.compose.ui.text.style.TextDirection.Companion#Content`, recorded: the host makes the same call (lock tag 338). */
-    public val Content: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(338))
-    /** `androidx.compose.ui.text.style.TextDirection.Companion#ContentOrLtr`, recorded: the host makes the same call (lock tag 339). */
-    public val ContentOrLtr: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(339))
-    /** `androidx.compose.ui.text.style.TextDirection.Companion#ContentOrRtl`, recorded: the host makes the same call (lock tag 340). */
-    public val ContentOrRtl: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(340))
-    /** `androidx.compose.ui.text.style.TextDirection.Companion#Ltr`, recorded: the host makes the same call (lock tag 341). */
-    public val Ltr: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(341))
-    /** `androidx.compose.ui.text.style.TextDirection.Companion#Rtl`, recorded: the host makes the same call (lock tag 342). */
-    public val Rtl: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(342))
-    /** `androidx.compose.ui.text.style.TextDirection.Companion#Unspecified`, recorded: the host makes the same call (lock tag 343). */
-    public val Unspecified: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(343))
-    /** `androidx.compose.ui.text.style.TextDirection.Companion#valueOf(value:Int)`, recorded: the host makes the same call (lock tag 344). */
+    /** `androidx.compose.ui.text.style.TextDirection.Companion#Content`, recorded: the host makes the same call (lock tag 815). */
+    public val Content: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(815))
+    /** `androidx.compose.ui.text.style.TextDirection.Companion#ContentOrLtr`, recorded: the host makes the same call (lock tag 816). */
+    public val ContentOrLtr: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(816))
+    /** `androidx.compose.ui.text.style.TextDirection.Companion#ContentOrRtl`, recorded: the host makes the same call (lock tag 817). */
+    public val ContentOrRtl: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(817))
+    /** `androidx.compose.ui.text.style.TextDirection.Companion#Ltr`, recorded: the host makes the same call (lock tag 818). */
+    public val Ltr: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(818))
+    /** `androidx.compose.ui.text.style.TextDirection.Companion#Rtl`, recorded: the host makes the same call (lock tag 819). */
+    public val Rtl: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(819))
+    /** `androidx.compose.ui.text.style.TextDirection.Companion#Unspecified`, recorded: the host makes the same call (lock tag 820). */
+    public val Unspecified: dev.keliver.calls.compose.ui.text.style.TextDirection get() = dev.keliver.calls.compose.ui.text.style.TextDirection(dev.keliver.calls.runtime.CallRecord(820))
+    /** `androidx.compose.ui.text.style.TextDirection.Companion#valueOf(value:Int)`, recorded: the host makes the same call (lock tag 821). */
     public fun valueOf(
       value: kotlin.Int,
     ): dev.keliver.calls.compose.ui.text.style.TextDirection = dev.keliver.calls.compose.ui.text.style.TextDirection(
       dev.keliver.calls.runtime.CallRecord(
-        344,
+        821,
         kotlinx.serialization.json.buildJsonObject {
           put("value", kotlinx.serialization.json.JsonPrimitive(value))
         },
@@ -213,13 +213,13 @@ public class TextGeometricTransform @dev.keliver.calls.runtime.InternalCallApi c
   public val scaleX: kotlin.Float get() = (readValues("TextGeometricTransform.scaleX")["scaleX"] as kotlin.Float?) ?: 1.0f
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val skewX: kotlin.Float get() = (readValues("TextGeometricTransform.skewX")["skewX"] as kotlin.Float?) ?: 0f
-  /** `androidx.compose.ui.text.style.TextGeometricTransform#copy(scaleX:Float,skewX:Float)` on a recorded value: the call carries the receiver (lock tag 346). */
+  /** `androidx.compose.ui.text.style.TextGeometricTransform#copy(scaleX:Float,skewX:Float)` on a recorded value: the call carries the receiver (lock tag 823). */
   public fun copy(
     scaleX: kotlin.Float? = null,
     skewX: kotlin.Float? = null,
   ): dev.keliver.calls.compose.ui.text.style.TextGeometricTransform = dev.keliver.calls.compose.ui.text.style.TextGeometricTransform(
     dev.keliver.calls.runtime.CallRecord(
-      346,
+      823,
       kotlinx.serialization.json.buildJsonObject {
         if (scaleX != null) put("scaleX", kotlinx.serialization.json.JsonPrimitive(scaleX))
         if (skewX != null) put("skewX", kotlinx.serialization.json.JsonPrimitive(skewX))
@@ -236,13 +236,13 @@ public class TextIndent @dev.keliver.calls.runtime.InternalCallApi constructor(c
   public val firstLine: Nothing get() = error("call-recorded")
   @Deprecated("Keliver: `TextIndent.restLine` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
   public val restLine: Nothing get() = error("call-recorded")
-  /** `androidx.compose.ui.text.style.TextIndent#copy(firstLine:TextUnit,restLine:TextUnit)` on a recorded value: the call carries the receiver (lock tag 348). */
+  /** `androidx.compose.ui.text.style.TextIndent#copy(firstLine:TextUnit,restLine:TextUnit)` on a recorded value: the call carries the receiver (lock tag 825). */
   public fun copy(
     firstLine: dev.keliver.compose.ui.unit.TextUnit? = null,
     restLine: dev.keliver.compose.ui.unit.TextUnit? = null,
   ): dev.keliver.calls.compose.ui.text.style.TextIndent = dev.keliver.calls.compose.ui.text.style.TextIndent(
     dev.keliver.calls.runtime.CallRecord(
-      348,
+      825,
       kotlinx.serialization.json.buildJsonObject {
         if (firstLine != null) put("firstLine", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(firstLine))
         if (restLine != null) put("restLine", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(restLine))
@@ -251,43 +251,43 @@ public class TextIndent @dev.keliver.calls.runtime.InternalCallApi constructor(c
     ),
   )
   public companion object {
-    /** `androidx.compose.ui.text.style.TextIndent.Companion#None`, recorded: the host makes the same call (lock tag 349). */
-    public val None: dev.keliver.calls.compose.ui.text.style.TextIndent get() = dev.keliver.calls.compose.ui.text.style.TextIndent(dev.keliver.calls.runtime.CallRecord(349))
+    /** `androidx.compose.ui.text.style.TextIndent.Companion#None`, recorded: the host makes the same call (lock tag 826). */
+    public val None: dev.keliver.calls.compose.ui.text.style.TextIndent get() = dev.keliver.calls.compose.ui.text.style.TextIndent(dev.keliver.calls.runtime.CallRecord(826))
   }
 }
 
 /** Guest mirror of `androidx.compose.ui.text.style.TextMotion`: a recorded call the host replays (MS4-42, call records). */
 public class TextMotion @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   public companion object {
-    /** `androidx.compose.ui.text.style.TextMotion.Companion#Animated`, recorded: the host makes the same call (lock tag 350). */
-    public val Animated: dev.keliver.calls.compose.ui.text.style.TextMotion get() = dev.keliver.calls.compose.ui.text.style.TextMotion(dev.keliver.calls.runtime.CallRecord(350))
-    /** `androidx.compose.ui.text.style.TextMotion.Companion#Static`, recorded: the host makes the same call (lock tag 351). */
-    public val Static: dev.keliver.calls.compose.ui.text.style.TextMotion get() = dev.keliver.calls.compose.ui.text.style.TextMotion(dev.keliver.calls.runtime.CallRecord(351))
+    /** `androidx.compose.ui.text.style.TextMotion.Companion#Animated`, recorded: the host makes the same call (lock tag 827). */
+    public val Animated: dev.keliver.calls.compose.ui.text.style.TextMotion get() = dev.keliver.calls.compose.ui.text.style.TextMotion(dev.keliver.calls.runtime.CallRecord(827))
+    /** `androidx.compose.ui.text.style.TextMotion.Companion#Static`, recorded: the host makes the same call (lock tag 828). */
+    public val Static: dev.keliver.calls.compose.ui.text.style.TextMotion get() = dev.keliver.calls.compose.ui.text.style.TextMotion(dev.keliver.calls.runtime.CallRecord(828))
   }
 }
 
 /** Guest mirror of `androidx.compose.ui.text.style.TextOverflow`: a recorded call the host replays (MS4-42, call records). */
 public class TextOverflow @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   public companion object {
-    /** `androidx.compose.ui.text.style.TextOverflow.Companion#Clip`, recorded: the host makes the same call (lock tag 352). */
-    public val Clip: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(352))
-    /** `androidx.compose.ui.text.style.TextOverflow.Companion#Ellipsis`, recorded: the host makes the same call (lock tag 353). */
-    public val Ellipsis: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(353))
-    /** `androidx.compose.ui.text.style.TextOverflow.Companion#MiddleEllipsis`, recorded: the host makes the same call (lock tag 354). */
-    public val MiddleEllipsis: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(354))
-    /** `androidx.compose.ui.text.style.TextOverflow.Companion#StartEllipsis`, recorded: the host makes the same call (lock tag 355). */
-    public val StartEllipsis: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(355))
-    /** `androidx.compose.ui.text.style.TextOverflow.Companion#Visible`, recorded: the host makes the same call (lock tag 356). */
-    public val Visible: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(356))
+    /** `androidx.compose.ui.text.style.TextOverflow.Companion#Clip`, recorded: the host makes the same call (lock tag 829). */
+    public val Clip: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(829))
+    /** `androidx.compose.ui.text.style.TextOverflow.Companion#Ellipsis`, recorded: the host makes the same call (lock tag 830). */
+    public val Ellipsis: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(830))
+    /** `androidx.compose.ui.text.style.TextOverflow.Companion#MiddleEllipsis`, recorded: the host makes the same call (lock tag 831). */
+    public val MiddleEllipsis: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(831))
+    /** `androidx.compose.ui.text.style.TextOverflow.Companion#StartEllipsis`, recorded: the host makes the same call (lock tag 832). */
+    public val StartEllipsis: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(832))
+    /** `androidx.compose.ui.text.style.TextOverflow.Companion#Visible`, recorded: the host makes the same call (lock tag 833). */
+    public val Visible: dev.keliver.calls.compose.ui.text.style.TextOverflow get() = dev.keliver.calls.compose.ui.text.style.TextOverflow(dev.keliver.calls.runtime.CallRecord(833))
   }
 }
 
-/** `androidx.compose.ui.text.style.BaselineShift#<init>(multiplier:Float)`, recorded: the host makes the same call (lock tag 307). */
+/** `androidx.compose.ui.text.style.BaselineShift#<init>(multiplier:Float)`, recorded: the host makes the same call (lock tag 784). */
 public fun BaselineShift(
   multiplier: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.style.BaselineShift = dev.keliver.calls.compose.ui.text.style.BaselineShift(
   dev.keliver.calls.runtime.CallRecord(
-    307,
+    784,
     kotlinx.serialization.json.buildJsonObject {
       put("multiplier", kotlinx.serialization.json.JsonPrimitive(multiplier))
     },
@@ -295,13 +295,13 @@ public fun BaselineShift(
   fieldValues = buildMap<String, Any?> { put("multiplier", multiplier) },
 )
 
-/** `androidx.compose.ui.text.style.TextGeometricTransform#<init>(scaleX:Float,skewX:Float)`, recorded: the host makes the same call (lock tag 345). */
+/** `androidx.compose.ui.text.style.TextGeometricTransform#<init>(scaleX:Float,skewX:Float)`, recorded: the host makes the same call (lock tag 822). */
 public fun TextGeometricTransform(
   scaleX: kotlin.Float? = null,
   skewX: kotlin.Float? = null,
 ): dev.keliver.calls.compose.ui.text.style.TextGeometricTransform = dev.keliver.calls.compose.ui.text.style.TextGeometricTransform(
   dev.keliver.calls.runtime.CallRecord(
-    345,
+    822,
     kotlinx.serialization.json.buildJsonObject {
       if (scaleX != null) put("scaleX", kotlinx.serialization.json.JsonPrimitive(scaleX))
       if (skewX != null) put("skewX", kotlinx.serialization.json.JsonPrimitive(skewX))
@@ -310,13 +310,13 @@ public fun TextGeometricTransform(
   fieldValues = buildMap<String, Any?> { if (scaleX != null) put("scaleX", scaleX); if (skewX != null) put("skewX", skewX) },
 )
 
-/** `androidx.compose.ui.text.style.TextIndent#<init>(firstLine:TextUnit,restLine:TextUnit)`, recorded: the host makes the same call (lock tag 347). */
+/** `androidx.compose.ui.text.style.TextIndent#<init>(firstLine:TextUnit,restLine:TextUnit)`, recorded: the host makes the same call (lock tag 824). */
 public fun TextIndent(
   firstLine: dev.keliver.compose.ui.unit.TextUnit? = null,
   restLine: dev.keliver.compose.ui.unit.TextUnit? = null,
 ): dev.keliver.calls.compose.ui.text.style.TextIndent = dev.keliver.calls.compose.ui.text.style.TextIndent(
   dev.keliver.calls.runtime.CallRecord(
-    347,
+    824,
     kotlinx.serialization.json.buildJsonObject {
       if (firstLine != null) put("firstLine", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(firstLine))
       if (restLine != null) put("restLine", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(restLine))
@@ -324,14 +324,14 @@ public fun TextIndent(
   ),
 )
 
-/** `androidx.compose.ui.text.style.lerp(start:BaselineShift,stop:BaselineShift,fraction:Float)`, recorded: the host makes the same call (lock tag 357). */
+/** `androidx.compose.ui.text.style.lerp(start:BaselineShift,stop:BaselineShift,fraction:Float)`, recorded: the host makes the same call (lock tag 834). */
 public fun lerp(
   start: dev.keliver.calls.compose.ui.text.style.BaselineShift,
   stop: dev.keliver.calls.compose.ui.text.style.BaselineShift,
   fraction: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.style.BaselineShift = dev.keliver.calls.compose.ui.text.style.BaselineShift(
   dev.keliver.calls.runtime.CallRecord(
-    357,
+    834,
     kotlinx.serialization.json.buildJsonObject {
       put("start", start.call.toJson())
       put("stop", stop.call.toJson())
@@ -340,14 +340,14 @@ public fun lerp(
   ),
 )
 
-/** `androidx.compose.ui.text.style.lerp(start:TextGeometricTransform,stop:TextGeometricTransform,fraction:Float)`, recorded: the host makes the same call (lock tag 358). */
+/** `androidx.compose.ui.text.style.lerp(start:TextGeometricTransform,stop:TextGeometricTransform,fraction:Float)`, recorded: the host makes the same call (lock tag 835). */
 public fun lerp(
   start: dev.keliver.calls.compose.ui.text.style.TextGeometricTransform,
   stop: dev.keliver.calls.compose.ui.text.style.TextGeometricTransform,
   fraction: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.style.TextGeometricTransform = dev.keliver.calls.compose.ui.text.style.TextGeometricTransform(
   dev.keliver.calls.runtime.CallRecord(
-    358,
+    835,
     kotlinx.serialization.json.buildJsonObject {
       put("start", start.call.toJson())
       put("stop", stop.call.toJson())
@@ -356,14 +356,14 @@ public fun lerp(
   ),
 )
 
-/** `androidx.compose.ui.text.style.lerp(start:TextIndent,stop:TextIndent,fraction:Float)`, recorded: the host makes the same call (lock tag 359). */
+/** `androidx.compose.ui.text.style.lerp(start:TextIndent,stop:TextIndent,fraction:Float)`, recorded: the host makes the same call (lock tag 836). */
 public fun lerp(
   start: dev.keliver.calls.compose.ui.text.style.TextIndent,
   stop: dev.keliver.calls.compose.ui.text.style.TextIndent,
   fraction: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.style.TextIndent = dev.keliver.calls.compose.ui.text.style.TextIndent(
   dev.keliver.calls.runtime.CallRecord(
-    359,
+    836,
     kotlinx.serialization.json.buildJsonObject {
       put("start", start.call.toJson())
       put("stop", stop.call.toJson())

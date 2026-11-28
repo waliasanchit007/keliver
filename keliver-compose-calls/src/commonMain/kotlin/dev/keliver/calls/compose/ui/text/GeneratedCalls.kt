@@ -16,37 +16,37 @@ public class AnnotatedString @dev.keliver.calls.runtime.InternalCallApi construc
   public val paragraphStyles: Nothing get() = error("call-recorded")
   @Deprecated("Keliver: `AnnotatedString.length` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val length: Nothing get() = error("call-recorded")
-  /** `androidx.compose.ui.text.AnnotatedString#plus(other:AnnotatedString)` on a recorded value: the call carries the receiver (lock tag 186). */
+  /** `androidx.compose.ui.text.AnnotatedString#plus(other:AnnotatedString)` on a recorded value: the call carries the receiver (lock tag 591). */
   public operator fun plus(
     other: dev.keliver.calls.compose.ui.text.AnnotatedString,
   ): dev.keliver.calls.compose.ui.text.AnnotatedString = dev.keliver.calls.compose.ui.text.AnnotatedString(
     dev.keliver.calls.runtime.CallRecord(
-      186,
+      591,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.AnnotatedString#subSequence(range:TextRange)` on a recorded value: the call carries the receiver (lock tag 187). */
+  /** `androidx.compose.ui.text.AnnotatedString#subSequence(range:TextRange)` on a recorded value: the call carries the receiver (lock tag 592). */
   public fun subSequence(
     range: dev.keliver.calls.compose.ui.text.TextRange,
   ): dev.keliver.calls.compose.ui.text.AnnotatedString = dev.keliver.calls.compose.ui.text.AnnotatedString(
     dev.keliver.calls.runtime.CallRecord(
-      187,
+      592,
       kotlinx.serialization.json.buildJsonObject {
         put("range", range.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.AnnotatedString#subSequence(startIndex:Int,endIndex:Int)` on a recorded value: the call carries the receiver (lock tag 188). */
+  /** `androidx.compose.ui.text.AnnotatedString#subSequence(startIndex:Int,endIndex:Int)` on a recorded value: the call carries the receiver (lock tag 593). */
   public fun subSequence(
     startIndex: kotlin.Int,
     endIndex: kotlin.Int,
   ): dev.keliver.calls.compose.ui.text.AnnotatedString = dev.keliver.calls.compose.ui.text.AnnotatedString(
     dev.keliver.calls.runtime.CallRecord(
-      188,
+      593,
       kotlinx.serialization.json.buildJsonObject {
         put("startIndex", kotlinx.serialization.json.JsonPrimitive(startIndex))
         put("endIndex", kotlinx.serialization.json.JsonPrimitive(endIndex))
@@ -72,7 +72,7 @@ public class Bullet @dev.keliver.calls.runtime.InternalCallApi constructor(call:
   public val alpha: kotlin.Float get() = (readValues("Bullet.alpha")["alpha"] as kotlin.Float?) ?: Float.NaN
   @Deprecated("Keliver: `Bullet.drawStyle` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
   public val drawStyle: Nothing get() = error("call-recorded")
-  /** `androidx.compose.ui.text.Bullet#copy(shape:Shape,width:TextUnit,height:TextUnit,padding:TextUnit,brush:Brush?,alpha:Float,drawStyle:DrawStyle)` on a recorded value: the call carries the receiver (lock tag 192). */
+  /** `androidx.compose.ui.text.Bullet#copy(shape:Shape,width:TextUnit,height:TextUnit,padding:TextUnit,brush:Brush?,alpha:Float,drawStyle:DrawStyle)` on a recorded value: the call carries the receiver (lock tag 597). */
   public fun copy(
     shape: dev.keliver.calls.compose.ui.graphics.Shape? = null,
     width: dev.keliver.compose.ui.unit.TextUnit? = null,
@@ -83,7 +83,7 @@ public class Bullet @dev.keliver.calls.runtime.InternalCallApi constructor(call:
     drawStyle: dev.keliver.calls.compose.ui.graphics.drawscope.DrawStyle? = null,
   ): dev.keliver.calls.compose.ui.text.Bullet = dev.keliver.calls.compose.ui.text.Bullet(
     dev.keliver.calls.runtime.CallRecord(
-      192,
+      597,
       kotlinx.serialization.json.buildJsonObject {
         if (shape != null) put("shape", shape.call.toJson())
         if (width != null) put("width", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(width))
@@ -98,22 +98,22 @@ public class Bullet @dev.keliver.calls.runtime.InternalCallApi constructor(call:
     fieldValues = fieldValues?.let { old -> old + buildMap<String, Any?> { if (shape != null) put("shape", shape); if (width != null) put("width", width); if (height != null) put("height", height); if (padding != null) put("padding", padding); if (brush != null) put("brush", brush); if (alpha != null) put("alpha", alpha) } },
   )
   public companion object {
-    /** `androidx.compose.ui.text.Bullet.Companion#Default`, recorded: the host makes the same call (lock tag 193). */
-    public val Default: dev.keliver.calls.compose.ui.text.Bullet get() = dev.keliver.calls.compose.ui.text.Bullet(dev.keliver.calls.runtime.CallRecord(193))
+    /** `androidx.compose.ui.text.Bullet.Companion#Default`, recorded: the host makes the same call (lock tag 598). */
+    public val Default: dev.keliver.calls.compose.ui.text.Bullet get() = dev.keliver.calls.compose.ui.text.Bullet(dev.keliver.calls.runtime.CallRecord(598))
   }
 }
 
 /** Guest mirror of `androidx.compose.ui.text.FontHinting`: a recorded call the host replays (MS4-42, call records). */
 public class FontHinting @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   public companion object {
-    /** `androidx.compose.ui.text.FontHinting#Full`, recorded: the host makes the same call (lock tag 194). */
-    public val Full: dev.keliver.calls.compose.ui.text.FontHinting get() = dev.keliver.calls.compose.ui.text.FontHinting(dev.keliver.calls.runtime.CallRecord(194))
-    /** `androidx.compose.ui.text.FontHinting#None`, recorded: the host makes the same call (lock tag 195). */
-    public val None: dev.keliver.calls.compose.ui.text.FontHinting get() = dev.keliver.calls.compose.ui.text.FontHinting(dev.keliver.calls.runtime.CallRecord(195))
-    /** `androidx.compose.ui.text.FontHinting#Normal`, recorded: the host makes the same call (lock tag 196). */
-    public val Normal: dev.keliver.calls.compose.ui.text.FontHinting get() = dev.keliver.calls.compose.ui.text.FontHinting(dev.keliver.calls.runtime.CallRecord(196))
-    /** `androidx.compose.ui.text.FontHinting#Slight`, recorded: the host makes the same call (lock tag 197). */
-    public val Slight: dev.keliver.calls.compose.ui.text.FontHinting get() = dev.keliver.calls.compose.ui.text.FontHinting(dev.keliver.calls.runtime.CallRecord(197))
+    /** `androidx.compose.ui.text.FontHinting#Full`, recorded: the host makes the same call (lock tag 599). */
+    public val Full: dev.keliver.calls.compose.ui.text.FontHinting get() = dev.keliver.calls.compose.ui.text.FontHinting(dev.keliver.calls.runtime.CallRecord(599))
+    /** `androidx.compose.ui.text.FontHinting#None`, recorded: the host makes the same call (lock tag 600). */
+    public val None: dev.keliver.calls.compose.ui.text.FontHinting get() = dev.keliver.calls.compose.ui.text.FontHinting(dev.keliver.calls.runtime.CallRecord(600))
+    /** `androidx.compose.ui.text.FontHinting#Normal`, recorded: the host makes the same call (lock tag 601). */
+    public val Normal: dev.keliver.calls.compose.ui.text.FontHinting get() = dev.keliver.calls.compose.ui.text.FontHinting(dev.keliver.calls.runtime.CallRecord(601))
+    /** `androidx.compose.ui.text.FontHinting#Slight`, recorded: the host makes the same call (lock tag 602). */
+    public val Slight: dev.keliver.calls.compose.ui.text.FontHinting get() = dev.keliver.calls.compose.ui.text.FontHinting(dev.keliver.calls.runtime.CallRecord(602))
   }
 }
 
@@ -128,20 +128,20 @@ public class FontRasterizationSettings @dev.keliver.calls.runtime.InternalCallAp
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val autoHintingForced: kotlin.Boolean get() = (readValues("FontRasterizationSettings.autoHintingForced")["autoHintingForced"] as kotlin.Boolean?)!!
   public companion object {
-    /** `androidx.compose.ui.text.FontRasterizationSettings.Companion#PlatformDefault`, recorded: the host makes the same call (lock tag 199). */
-    public val PlatformDefault: dev.keliver.calls.compose.ui.text.FontRasterizationSettings get() = dev.keliver.calls.compose.ui.text.FontRasterizationSettings(dev.keliver.calls.runtime.CallRecord(199))
+    /** `androidx.compose.ui.text.FontRasterizationSettings.Companion#PlatformDefault`, recorded: the host makes the same call (lock tag 604). */
+    public val PlatformDefault: dev.keliver.calls.compose.ui.text.FontRasterizationSettings get() = dev.keliver.calls.compose.ui.text.FontRasterizationSettings(dev.keliver.calls.runtime.CallRecord(604))
   }
 }
 
 /** Guest mirror of `androidx.compose.ui.text.FontSmoothing`: a recorded call the host replays (MS4-42, call records). */
 public class FontSmoothing @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   public companion object {
-    /** `androidx.compose.ui.text.FontSmoothing#AntiAlias`, recorded: the host makes the same call (lock tag 200). */
-    public val AntiAlias: dev.keliver.calls.compose.ui.text.FontSmoothing get() = dev.keliver.calls.compose.ui.text.FontSmoothing(dev.keliver.calls.runtime.CallRecord(200))
-    /** `androidx.compose.ui.text.FontSmoothing#None`, recorded: the host makes the same call (lock tag 201). */
-    public val None: dev.keliver.calls.compose.ui.text.FontSmoothing get() = dev.keliver.calls.compose.ui.text.FontSmoothing(dev.keliver.calls.runtime.CallRecord(201))
-    /** `androidx.compose.ui.text.FontSmoothing#SubpixelAntiAlias`, recorded: the host makes the same call (lock tag 202). */
-    public val SubpixelAntiAlias: dev.keliver.calls.compose.ui.text.FontSmoothing get() = dev.keliver.calls.compose.ui.text.FontSmoothing(dev.keliver.calls.runtime.CallRecord(202))
+    /** `androidx.compose.ui.text.FontSmoothing#AntiAlias`, recorded: the host makes the same call (lock tag 605). */
+    public val AntiAlias: dev.keliver.calls.compose.ui.text.FontSmoothing get() = dev.keliver.calls.compose.ui.text.FontSmoothing(dev.keliver.calls.runtime.CallRecord(605))
+    /** `androidx.compose.ui.text.FontSmoothing#None`, recorded: the host makes the same call (lock tag 606). */
+    public val None: dev.keliver.calls.compose.ui.text.FontSmoothing get() = dev.keliver.calls.compose.ui.text.FontSmoothing(dev.keliver.calls.runtime.CallRecord(606))
+    /** `androidx.compose.ui.text.FontSmoothing#SubpixelAntiAlias`, recorded: the host makes the same call (lock tag 607). */
+    public val SubpixelAntiAlias: dev.keliver.calls.compose.ui.text.FontSmoothing get() = dev.keliver.calls.compose.ui.text.FontSmoothing(dev.keliver.calls.runtime.CallRecord(607))
   }
 }
 
@@ -173,7 +173,7 @@ public class ParagraphStyle @dev.keliver.calls.runtime.InternalCallApi construct
   public val deprecated_boxing_hyphens: Nothing get() = error("call-recorded")
   @Deprecated("Keliver: `ParagraphStyle.deprecated_boxing_lineBreak` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val deprecated_boxing_lineBreak: Nothing get() = error("call-recorded")
-  /** `androidx.compose.ui.text.ParagraphStyle#copy(textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformParagraphStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)` on a recorded value: the call carries the receiver (lock tag 204). */
+  /** `androidx.compose.ui.text.ParagraphStyle#copy(textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformParagraphStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)` on a recorded value: the call carries the receiver (lock tag 609). */
   public fun copy(
     textAlign: dev.keliver.calls.compose.ui.text.style.TextAlign? = null,
     textDirection: dev.keliver.calls.compose.ui.text.style.TextDirection? = null,
@@ -186,7 +186,7 @@ public class ParagraphStyle @dev.keliver.calls.runtime.InternalCallApi construct
     textMotion: dev.keliver.calls.compose.ui.text.style.TextMotion? = null,
   ): dev.keliver.calls.compose.ui.text.ParagraphStyle = dev.keliver.calls.compose.ui.text.ParagraphStyle(
     dev.keliver.calls.runtime.CallRecord(
-      204,
+      609,
       kotlinx.serialization.json.buildJsonObject {
         if (textAlign != null) put("textAlign", textAlign.call.toJson())
         if (textDirection != null) put("textDirection", textDirection.call.toJson())
@@ -202,24 +202,24 @@ public class ParagraphStyle @dev.keliver.calls.runtime.InternalCallApi construct
     ),
     fieldValues = fieldValues?.let { old -> old + buildMap<String, Any?> { if (textAlign != null) put("textAlign", textAlign); if (textDirection != null) put("textDirection", textDirection); if (lineHeight != null) put("lineHeight", lineHeight); if (textIndent != null) put("textIndent", textIndent); if (platformStyle != null) put("platformStyle", platformStyle); if (lineHeightStyle != null) put("lineHeightStyle", lineHeightStyle); if (lineBreak != null) put("lineBreak", lineBreak); if (hyphens != null) put("hyphens", hyphens); if (textMotion != null) put("textMotion", textMotion) } },
   )
-  /** `androidx.compose.ui.text.ParagraphStyle#merge(other:ParagraphStyle?)` on a recorded value: the call carries the receiver (lock tag 205). */
+  /** `androidx.compose.ui.text.ParagraphStyle#merge(other:ParagraphStyle?)` on a recorded value: the call carries the receiver (lock tag 610). */
   public fun merge(
     other: dev.keliver.calls.compose.ui.text.ParagraphStyle? = null,
   ): dev.keliver.calls.compose.ui.text.ParagraphStyle = dev.keliver.calls.compose.ui.text.ParagraphStyle(
     dev.keliver.calls.runtime.CallRecord(
-      205,
+      610,
       kotlinx.serialization.json.buildJsonObject {
         if (other != null) put("other", other.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.ParagraphStyle#plus(other:ParagraphStyle)` on a recorded value: the call carries the receiver (lock tag 206). */
+  /** `androidx.compose.ui.text.ParagraphStyle#plus(other:ParagraphStyle)` on a recorded value: the call carries the receiver (lock tag 611). */
   public operator fun plus(
     other: dev.keliver.calls.compose.ui.text.ParagraphStyle,
   ): dev.keliver.calls.compose.ui.text.ParagraphStyle = dev.keliver.calls.compose.ui.text.ParagraphStyle(
     dev.keliver.calls.runtime.CallRecord(
-      206,
+      611,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other.call.toJson())
       },
@@ -236,14 +236,14 @@ public class Placeholder @dev.keliver.calls.runtime.InternalCallApi constructor(
   public val height: dev.keliver.compose.ui.unit.TextUnit get() = (readValues("Placeholder.height")["height"] as dev.keliver.compose.ui.unit.TextUnit?)!!
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val placeholderVerticalAlign: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = (readValues("Placeholder.placeholderVerticalAlign")["placeholderVerticalAlign"] as dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign?)!!
-  /** `androidx.compose.ui.text.Placeholder#copy(width:TextUnit,height:TextUnit,placeholderVerticalAlign:PlaceholderVerticalAlign)` on a recorded value: the call carries the receiver (lock tag 208). */
+  /** `androidx.compose.ui.text.Placeholder#copy(width:TextUnit,height:TextUnit,placeholderVerticalAlign:PlaceholderVerticalAlign)` on a recorded value: the call carries the receiver (lock tag 613). */
   public fun copy(
     width: dev.keliver.compose.ui.unit.TextUnit? = null,
     height: dev.keliver.compose.ui.unit.TextUnit? = null,
     placeholderVerticalAlign: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign? = null,
   ): dev.keliver.calls.compose.ui.text.Placeholder = dev.keliver.calls.compose.ui.text.Placeholder(
     dev.keliver.calls.runtime.CallRecord(
-      208,
+      613,
       kotlinx.serialization.json.buildJsonObject {
         if (width != null) put("width", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(width))
         if (height != null) put("height", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(height))
@@ -258,20 +258,20 @@ public class Placeholder @dev.keliver.calls.runtime.InternalCallApi constructor(
 /** Guest mirror of `androidx.compose.ui.text.PlaceholderVerticalAlign`: a recorded call the host replays (MS4-42, call records). */
 public class PlaceholderVerticalAlign @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   public companion object {
-    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#AboveBaseline`, recorded: the host makes the same call (lock tag 209). */
-    public val AboveBaseline: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(209))
-    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Bottom`, recorded: the host makes the same call (lock tag 210). */
-    public val Bottom: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(210))
-    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Center`, recorded: the host makes the same call (lock tag 211). */
-    public val Center: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(211))
-    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextBottom`, recorded: the host makes the same call (lock tag 212). */
-    public val TextBottom: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(212))
-    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextCenter`, recorded: the host makes the same call (lock tag 213). */
-    public val TextCenter: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(213))
-    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextTop`, recorded: the host makes the same call (lock tag 214). */
-    public val TextTop: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(214))
-    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Top`, recorded: the host makes the same call (lock tag 215). */
-    public val Top: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(215))
+    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#AboveBaseline`, recorded: the host makes the same call (lock tag 614). */
+    public val AboveBaseline: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(614))
+    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Bottom`, recorded: the host makes the same call (lock tag 615). */
+    public val Bottom: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(615))
+    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Center`, recorded: the host makes the same call (lock tag 616). */
+    public val Center: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(616))
+    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextBottom`, recorded: the host makes the same call (lock tag 617). */
+    public val TextBottom: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(617))
+    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextCenter`, recorded: the host makes the same call (lock tag 618). */
+    public val TextCenter: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(618))
+    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextTop`, recorded: the host makes the same call (lock tag 619). */
+    public val TextTop: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(619))
+    /** `androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Top`, recorded: the host makes the same call (lock tag 620). */
+    public val Top: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign get() = dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign(dev.keliver.calls.runtime.CallRecord(620))
   }
 }
 
@@ -279,12 +279,12 @@ public class PlaceholderVerticalAlign @dev.keliver.calls.runtime.InternalCallApi
 public class PlatformParagraphStyle @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val fontRasterizationSettings: dev.keliver.calls.compose.ui.text.FontRasterizationSettings get() = (readValues("PlatformParagraphStyle.fontRasterizationSettings")["fontRasterizationSettings"] as dev.keliver.calls.compose.ui.text.FontRasterizationSettings?) ?: dev.keliver.calls.compose.ui.text.FontRasterizationSettings.PlatformDefault
-  /** `androidx.compose.ui.text.PlatformParagraphStyle#merge(other:PlatformParagraphStyle?)` on a recorded value: the call carries the receiver (lock tag 218). */
+  /** `androidx.compose.ui.text.PlatformParagraphStyle#merge(other:PlatformParagraphStyle?)` on a recorded value: the call carries the receiver (lock tag 623). */
   public fun merge(
     other: dev.keliver.calls.compose.ui.text.PlatformParagraphStyle?,
   ): dev.keliver.calls.compose.ui.text.PlatformParagraphStyle = dev.keliver.calls.compose.ui.text.PlatformParagraphStyle(
     dev.keliver.calls.runtime.CallRecord(
-      218,
+      623,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
       },
@@ -292,8 +292,8 @@ public class PlatformParagraphStyle @dev.keliver.calls.runtime.InternalCallApi c
     ),
   )
   public companion object {
-    /** `androidx.compose.ui.text.PlatformParagraphStyle.Companion#Default`, recorded: the host makes the same call (lock tag 219). */
-    public val Default: dev.keliver.calls.compose.ui.text.PlatformParagraphStyle get() = dev.keliver.calls.compose.ui.text.PlatformParagraphStyle(dev.keliver.calls.runtime.CallRecord(219))
+    /** `androidx.compose.ui.text.PlatformParagraphStyle.Companion#Default`, recorded: the host makes the same call (lock tag 624). */
+    public val Default: dev.keliver.calls.compose.ui.text.PlatformParagraphStyle get() = dev.keliver.calls.compose.ui.text.PlatformParagraphStyle(dev.keliver.calls.runtime.CallRecord(624))
   }
 }
 
@@ -301,12 +301,12 @@ public class PlatformParagraphStyle @dev.keliver.calls.runtime.InternalCallApi c
 public class PlatformSpanStyle @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val textDecorationLineStyle: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle? get() = (readValues("PlatformSpanStyle.textDecorationLineStyle")["textDecorationLineStyle"] as dev.keliver.calls.compose.ui.text.TextDecorationLineStyle?)!!
-  /** `androidx.compose.ui.text.PlatformSpanStyle#merge(other:PlatformSpanStyle?)` on a recorded value: the call carries the receiver (lock tag 222). */
+  /** `androidx.compose.ui.text.PlatformSpanStyle#merge(other:PlatformSpanStyle?)` on a recorded value: the call carries the receiver (lock tag 627). */
   public fun merge(
     other: dev.keliver.calls.compose.ui.text.PlatformSpanStyle?,
   ): dev.keliver.calls.compose.ui.text.PlatformSpanStyle = dev.keliver.calls.compose.ui.text.PlatformSpanStyle(
     dev.keliver.calls.runtime.CallRecord(
-      222,
+      627,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
       },
@@ -314,8 +314,8 @@ public class PlatformSpanStyle @dev.keliver.calls.runtime.InternalCallApi constr
     ),
   )
   public companion object {
-    /** `androidx.compose.ui.text.PlatformSpanStyle.Companion#Default`, recorded: the host makes the same call (lock tag 223). */
-    public val Default: dev.keliver.calls.compose.ui.text.PlatformSpanStyle get() = dev.keliver.calls.compose.ui.text.PlatformSpanStyle(dev.keliver.calls.runtime.CallRecord(223))
+    /** `androidx.compose.ui.text.PlatformSpanStyle.Companion#Default`, recorded: the host makes the same call (lock tag 628). */
+    public val Default: dev.keliver.calls.compose.ui.text.PlatformSpanStyle get() = dev.keliver.calls.compose.ui.text.PlatformSpanStyle(dev.keliver.calls.runtime.CallRecord(628))
   }
 }
 
@@ -365,7 +365,7 @@ public class SpanStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
   public val brush: dev.keliver.calls.compose.ui.graphics.Brush? get() = (readValues("SpanStyle.brush")["brush"] as dev.keliver.calls.compose.ui.graphics.Brush?)!!
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val alpha: kotlin.Float get() = (readValues("SpanStyle.alpha")["alpha"] as kotlin.Float?) ?: Float.NaN
-  /** `androidx.compose.ui.text.SpanStyle#copy(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)` on a recorded value: the call carries the receiver (lock tag 228). */
+  /** `androidx.compose.ui.text.SpanStyle#copy(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)` on a recorded value: the call carries the receiver (lock tag 633). */
   public fun copy(
     brush: dev.keliver.calls.compose.ui.graphics.Brush?,
     alpha: kotlin.Float? = null,
@@ -385,7 +385,7 @@ public class SpanStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
     drawStyle: dev.keliver.calls.compose.ui.graphics.drawscope.DrawStyle? = null,
   ): dev.keliver.calls.compose.ui.text.SpanStyle = dev.keliver.calls.compose.ui.text.SpanStyle(
     dev.keliver.calls.runtime.CallRecord(
-      228,
+      633,
       kotlinx.serialization.json.buildJsonObject {
         put("brush", brush?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
         if (alpha != null) put("alpha", kotlinx.serialization.json.JsonPrimitive(alpha))
@@ -408,7 +408,7 @@ public class SpanStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
     ),
     fieldValues = fieldValues?.let { old -> old + buildMap<String, Any?> { put("brush", brush); if (alpha != null) put("alpha", alpha); if (fontSize != null) put("fontSize", fontSize); if (fontWeight != null) put("fontWeight", fontWeight); if (fontStyle != null) put("fontStyle", fontStyle); if (fontSynthesis != null) put("fontSynthesis", fontSynthesis); if (fontFamily != null) put("fontFamily", fontFamily); if (fontFeatureSettings != null) put("fontFeatureSettings", fontFeatureSettings); if (letterSpacing != null) put("letterSpacing", letterSpacing); if (baselineShift != null) put("baselineShift", baselineShift); if (textGeometricTransform != null) put("textGeometricTransform", textGeometricTransform); if (background != null) put("background", background); if (textDecoration != null) put("textDecoration", textDecoration); if (shadow != null) put("shadow", shadow); if (platformStyle != null) put("platformStyle", platformStyle); if (drawStyle != null) put("drawStyle", drawStyle) } },
   )
-  /** `androidx.compose.ui.text.SpanStyle#copy(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)` on a recorded value: the call carries the receiver (lock tag 229). */
+  /** `androidx.compose.ui.text.SpanStyle#copy(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)` on a recorded value: the call carries the receiver (lock tag 634). */
   public fun copy(
     color: dev.keliver.compose.ui.graphics.Color? = null,
     fontSize: dev.keliver.compose.ui.unit.TextUnit? = null,
@@ -427,7 +427,7 @@ public class SpanStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
     drawStyle: dev.keliver.calls.compose.ui.graphics.drawscope.DrawStyle? = null,
   ): dev.keliver.calls.compose.ui.text.SpanStyle = dev.keliver.calls.compose.ui.text.SpanStyle(
     dev.keliver.calls.runtime.CallRecord(
-      229,
+      634,
       kotlinx.serialization.json.buildJsonObject {
         if (color != null) put("color", dev.keliver.compose.ui.graphics.ColorCodec.toJson(color))
         if (fontSize != null) put("fontSize", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(fontSize))
@@ -449,24 +449,24 @@ public class SpanStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
     ),
     fieldValues = fieldValues?.let { old -> old + buildMap<String, Any?> { if (color != null) put("color", color); if (fontSize != null) put("fontSize", fontSize); if (fontWeight != null) put("fontWeight", fontWeight); if (fontStyle != null) put("fontStyle", fontStyle); if (fontSynthesis != null) put("fontSynthesis", fontSynthesis); if (fontFamily != null) put("fontFamily", fontFamily); if (fontFeatureSettings != null) put("fontFeatureSettings", fontFeatureSettings); if (letterSpacing != null) put("letterSpacing", letterSpacing); if (baselineShift != null) put("baselineShift", baselineShift); if (textGeometricTransform != null) put("textGeometricTransform", textGeometricTransform); if (background != null) put("background", background); if (textDecoration != null) put("textDecoration", textDecoration); if (shadow != null) put("shadow", shadow); if (platformStyle != null) put("platformStyle", platformStyle); if (drawStyle != null) put("drawStyle", drawStyle) } },
   )
-  /** `androidx.compose.ui.text.SpanStyle#merge(other:SpanStyle?)` on a recorded value: the call carries the receiver (lock tag 230). */
+  /** `androidx.compose.ui.text.SpanStyle#merge(other:SpanStyle?)` on a recorded value: the call carries the receiver (lock tag 635). */
   public fun merge(
     other: dev.keliver.calls.compose.ui.text.SpanStyle? = null,
   ): dev.keliver.calls.compose.ui.text.SpanStyle = dev.keliver.calls.compose.ui.text.SpanStyle(
     dev.keliver.calls.runtime.CallRecord(
-      230,
+      635,
       kotlinx.serialization.json.buildJsonObject {
         if (other != null) put("other", other.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.SpanStyle#plus(other:SpanStyle)` on a recorded value: the call carries the receiver (lock tag 231). */
+  /** `androidx.compose.ui.text.SpanStyle#plus(other:SpanStyle)` on a recorded value: the call carries the receiver (lock tag 636). */
   public operator fun plus(
     other: dev.keliver.calls.compose.ui.text.SpanStyle,
   ): dev.keliver.calls.compose.ui.text.SpanStyle = dev.keliver.calls.compose.ui.text.SpanStyle(
     dev.keliver.calls.runtime.CallRecord(
-      231,
+      636,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other.call.toJson())
       },
@@ -486,38 +486,38 @@ public class TextDecorationLineStyle @dev.keliver.calls.runtime.InternalCallApi 
   @Deprecated("Keliver: `TextDecorationLineStyle.value` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val value: Nothing get() = error("call-recorded")
   public companion object {
-    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Dashed`, recorded: the host makes the same call (lock tag 233). */
-    public val Dashed: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(233))
-    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Dotted`, recorded: the host makes the same call (lock tag 234). */
-    public val Dotted: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(234))
-    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Double`, recorded: the host makes the same call (lock tag 235). */
-    public val Double: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(235))
-    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Solid`, recorded: the host makes the same call (lock tag 236). */
-    public val Solid: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(236))
-    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Wavy`, recorded: the host makes the same call (lock tag 237). */
-    public val Wavy: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(237))
+    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Dashed`, recorded: the host makes the same call (lock tag 638). */
+    public val Dashed: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(638))
+    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Dotted`, recorded: the host makes the same call (lock tag 639). */
+    public val Dotted: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(639))
+    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Double`, recorded: the host makes the same call (lock tag 640). */
+    public val Double: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(640))
+    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Solid`, recorded: the host makes the same call (lock tag 641). */
+    public val Solid: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(641))
+    /** `androidx.compose.ui.text.TextDecorationLineStyle.Companion#Wavy`, recorded: the host makes the same call (lock tag 642). */
+    public val Wavy: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle get() = dev.keliver.calls.compose.ui.text.TextDecorationLineStyle(dev.keliver.calls.runtime.CallRecord(642))
   }
 }
 
 /** Guest mirror of `androidx.compose.ui.text.TextGranularity`: a recorded call the host replays (MS4-42, call records). */
 public class TextGranularity @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
   public companion object {
-    /** `androidx.compose.ui.text.TextGranularity.Companion#Character`, recorded: the host makes the same call (lock tag 238). */
-    public val Character: dev.keliver.calls.compose.ui.text.TextGranularity get() = dev.keliver.calls.compose.ui.text.TextGranularity(dev.keliver.calls.runtime.CallRecord(238))
-    /** `androidx.compose.ui.text.TextGranularity.Companion#Word`, recorded: the host makes the same call (lock tag 239). */
-    public val Word: dev.keliver.calls.compose.ui.text.TextGranularity get() = dev.keliver.calls.compose.ui.text.TextGranularity(dev.keliver.calls.runtime.CallRecord(239))
+    /** `androidx.compose.ui.text.TextGranularity.Companion#Character`, recorded: the host makes the same call (lock tag 643). */
+    public val Character: dev.keliver.calls.compose.ui.text.TextGranularity get() = dev.keliver.calls.compose.ui.text.TextGranularity(dev.keliver.calls.runtime.CallRecord(643))
+    /** `androidx.compose.ui.text.TextGranularity.Companion#Word`, recorded: the host makes the same call (lock tag 644). */
+    public val Word: dev.keliver.calls.compose.ui.text.TextGranularity get() = dev.keliver.calls.compose.ui.text.TextGranularity(dev.keliver.calls.runtime.CallRecord(644))
   }
 }
 
 /** Guest mirror of `androidx.compose.ui.text.TextInclusionStrategy`: a recorded call the host replays (MS4-42, call records). */
 public interface TextInclusionStrategy : dev.keliver.calls.runtime.CallRecorded {
   public companion object {
-    /** `androidx.compose.ui.text.TextInclusionStrategy.Companion#AnyOverlap`, recorded: the host makes the same call (lock tag 240). */
-    public val AnyOverlap: dev.keliver.calls.compose.ui.text.TextInclusionStrategy get() = dev.keliver.calls.compose.ui.text.TextInclusionStrategyCall(dev.keliver.calls.runtime.CallRecord(240))
-    /** `androidx.compose.ui.text.TextInclusionStrategy.Companion#ContainsAll`, recorded: the host makes the same call (lock tag 241). */
-    public val ContainsAll: dev.keliver.calls.compose.ui.text.TextInclusionStrategy get() = dev.keliver.calls.compose.ui.text.TextInclusionStrategyCall(dev.keliver.calls.runtime.CallRecord(241))
-    /** `androidx.compose.ui.text.TextInclusionStrategy.Companion#ContainsCenter`, recorded: the host makes the same call (lock tag 242). */
-    public val ContainsCenter: dev.keliver.calls.compose.ui.text.TextInclusionStrategy get() = dev.keliver.calls.compose.ui.text.TextInclusionStrategyCall(dev.keliver.calls.runtime.CallRecord(242))
+    /** `androidx.compose.ui.text.TextInclusionStrategy.Companion#AnyOverlap`, recorded: the host makes the same call (lock tag 645). */
+    public val AnyOverlap: dev.keliver.calls.compose.ui.text.TextInclusionStrategy get() = dev.keliver.calls.compose.ui.text.TextInclusionStrategyCall(dev.keliver.calls.runtime.CallRecord(645))
+    /** `androidx.compose.ui.text.TextInclusionStrategy.Companion#ContainsAll`, recorded: the host makes the same call (lock tag 646). */
+    public val ContainsAll: dev.keliver.calls.compose.ui.text.TextInclusionStrategy get() = dev.keliver.calls.compose.ui.text.TextInclusionStrategyCall(dev.keliver.calls.runtime.CallRecord(646))
+    /** `androidx.compose.ui.text.TextInclusionStrategy.Companion#ContainsCenter`, recorded: the host makes the same call (lock tag 647). */
+    public val ContainsCenter: dev.keliver.calls.compose.ui.text.TextInclusionStrategy get() = dev.keliver.calls.compose.ui.text.TextInclusionStrategyCall(dev.keliver.calls.runtime.CallRecord(647))
   }
 }
 @dev.keliver.calls.runtime.InternalCallApi
@@ -552,8 +552,8 @@ public class TextRange @dev.keliver.calls.runtime.InternalCallApi constructor(ca
   @Deprecated("Keliver: `TextRange.length` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val length: Nothing get() = error("call-recorded")
   public companion object {
-    /** `androidx.compose.ui.text.TextRange.Companion#Zero`, recorded: the host makes the same call (lock tag 246). */
-    public val Zero: dev.keliver.calls.compose.ui.text.TextRange get() = dev.keliver.calls.compose.ui.text.TextRange(dev.keliver.calls.runtime.CallRecord(246))
+    /** `androidx.compose.ui.text.TextRange.Companion#Zero`, recorded: the host makes the same call (lock tag 651). */
+    public val Zero: dev.keliver.calls.compose.ui.text.TextRange get() = dev.keliver.calls.compose.ui.text.TextRange(dev.keliver.calls.runtime.CallRecord(651))
   }
 }
 
@@ -619,7 +619,7 @@ public class TextStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
   public val deprecated_boxing_lineBreak: Nothing get() = error("call-recorded")
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val textMotion: dev.keliver.calls.compose.ui.text.style.TextMotion? get() = (readValues("TextStyle.textMotion")["textMotion"] as dev.keliver.calls.compose.ui.text.style.TextMotion?) ?: null
-  /** `androidx.compose.ui.text.TextStyle#copy(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)` on a recorded value: the call carries the receiver (lock tag 360). */
+  /** `androidx.compose.ui.text.TextStyle#copy(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)` on a recorded value: the call carries the receiver (lock tag 654). */
   public fun copy(
     brush: dev.keliver.calls.compose.ui.graphics.Brush?,
     alpha: kotlin.Float? = null,
@@ -647,7 +647,7 @@ public class TextStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
     textMotion: dev.keliver.calls.compose.ui.text.style.TextMotion? = null,
   ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
     dev.keliver.calls.runtime.CallRecord(
-      360,
+      654,
       kotlinx.serialization.json.buildJsonObject {
         put("brush", brush?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
         if (alpha != null) put("alpha", kotlinx.serialization.json.JsonPrimitive(alpha))
@@ -678,7 +678,7 @@ public class TextStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
     ),
     fieldValues = fieldValues?.let { old -> old + buildMap<String, Any?> { put("brush", brush); if (alpha != null) put("alpha", alpha); if (fontSize != null) put("fontSize", fontSize); if (fontWeight != null) put("fontWeight", fontWeight); if (fontStyle != null) put("fontStyle", fontStyle); if (fontSynthesis != null) put("fontSynthesis", fontSynthesis); if (fontFamily != null) put("fontFamily", fontFamily); if (fontFeatureSettings != null) put("fontFeatureSettings", fontFeatureSettings); if (letterSpacing != null) put("letterSpacing", letterSpacing); if (baselineShift != null) put("baselineShift", baselineShift); if (textGeometricTransform != null) put("textGeometricTransform", textGeometricTransform); if (background != null) put("background", background); if (textDecoration != null) put("textDecoration", textDecoration); if (shadow != null) put("shadow", shadow); if (drawStyle != null) put("drawStyle", drawStyle); if (textAlign != null) put("textAlign", textAlign); if (textDirection != null) put("textDirection", textDirection); if (lineHeight != null) put("lineHeight", lineHeight); if (textIndent != null) put("textIndent", textIndent); if (platformStyle != null) put("platformStyle", platformStyle); if (lineHeightStyle != null) put("lineHeightStyle", lineHeightStyle); if (lineBreak != null) put("lineBreak", lineBreak); if (hyphens != null) put("hyphens", hyphens); if (textMotion != null) put("textMotion", textMotion) } },
   )
-  /** `androidx.compose.ui.text.TextStyle#copy(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)` on a recorded value: the call carries the receiver (lock tag 361). */
+  /** `androidx.compose.ui.text.TextStyle#copy(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)` on a recorded value: the call carries the receiver (lock tag 655). */
   public fun copy(
     color: dev.keliver.compose.ui.graphics.Color? = null,
     fontSize: dev.keliver.compose.ui.unit.TextUnit? = null,
@@ -705,7 +705,7 @@ public class TextStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
     textMotion: dev.keliver.calls.compose.ui.text.style.TextMotion? = null,
   ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
     dev.keliver.calls.runtime.CallRecord(
-      361,
+      655,
       kotlinx.serialization.json.buildJsonObject {
         if (color != null) put("color", dev.keliver.compose.ui.graphics.ColorCodec.toJson(color))
         if (fontSize != null) put("fontSize", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(fontSize))
@@ -735,7 +735,7 @@ public class TextStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
     ),
     fieldValues = fieldValues?.let { old -> old + buildMap<String, Any?> { if (color != null) put("color", color); if (fontSize != null) put("fontSize", fontSize); if (fontWeight != null) put("fontWeight", fontWeight); if (fontStyle != null) put("fontStyle", fontStyle); if (fontSynthesis != null) put("fontSynthesis", fontSynthesis); if (fontFamily != null) put("fontFamily", fontFamily); if (fontFeatureSettings != null) put("fontFeatureSettings", fontFeatureSettings); if (letterSpacing != null) put("letterSpacing", letterSpacing); if (baselineShift != null) put("baselineShift", baselineShift); if (textGeometricTransform != null) put("textGeometricTransform", textGeometricTransform); if (background != null) put("background", background); if (textDecoration != null) put("textDecoration", textDecoration); if (shadow != null) put("shadow", shadow); if (drawStyle != null) put("drawStyle", drawStyle); if (textAlign != null) put("textAlign", textAlign); if (textDirection != null) put("textDirection", textDirection); if (lineHeight != null) put("lineHeight", lineHeight); if (textIndent != null) put("textIndent", textIndent); if (platformStyle != null) put("platformStyle", platformStyle); if (lineHeightStyle != null) put("lineHeightStyle", lineHeightStyle); if (lineBreak != null) put("lineBreak", lineBreak); if (hyphens != null) put("hyphens", hyphens); if (textMotion != null) put("textMotion", textMotion) } },
   )
-  /** `androidx.compose.ui.text.TextStyle#merge(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,platformStyle:PlatformTextStyle?,textMotion:TextMotion?)` on a recorded value: the call carries the receiver (lock tag 249). */
+  /** `androidx.compose.ui.text.TextStyle#merge(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,platformStyle:PlatformTextStyle?,textMotion:TextMotion?)` on a recorded value: the call carries the receiver (lock tag 656). */
   public fun merge(
     color: dev.keliver.compose.ui.graphics.Color? = null,
     fontSize: dev.keliver.compose.ui.unit.TextUnit? = null,
@@ -762,7 +762,7 @@ public class TextStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
     textMotion: dev.keliver.calls.compose.ui.text.style.TextMotion? = null,
   ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
     dev.keliver.calls.runtime.CallRecord(
-      249,
+      656,
       kotlinx.serialization.json.buildJsonObject {
         if (color != null) put("color", dev.keliver.compose.ui.graphics.ColorCodec.toJson(color))
         if (fontSize != null) put("fontSize", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(fontSize))
@@ -791,101 +791,101 @@ public class TextStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.TextStyle#merge(other:ParagraphStyle)` on a recorded value: the call carries the receiver (lock tag 250). */
+  /** `androidx.compose.ui.text.TextStyle#merge(other:ParagraphStyle)` on a recorded value: the call carries the receiver (lock tag 657). */
   public fun merge(
     other: dev.keliver.calls.compose.ui.text.ParagraphStyle,
   ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
     dev.keliver.calls.runtime.CallRecord(
-      250,
+      657,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.TextStyle#merge(other:SpanStyle)` on a recorded value: the call carries the receiver (lock tag 251). */
+  /** `androidx.compose.ui.text.TextStyle#merge(other:SpanStyle)` on a recorded value: the call carries the receiver (lock tag 658). */
   public fun merge(
     other: dev.keliver.calls.compose.ui.text.SpanStyle,
   ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
     dev.keliver.calls.runtime.CallRecord(
-      251,
+      658,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.TextStyle#merge(other:TextStyle?)` on a recorded value: the call carries the receiver (lock tag 252). */
+  /** `androidx.compose.ui.text.TextStyle#merge(other:TextStyle?)` on a recorded value: the call carries the receiver (lock tag 659). */
   public fun merge(
     other: dev.keliver.calls.compose.ui.text.TextStyle? = null,
   ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
     dev.keliver.calls.runtime.CallRecord(
-      252,
+      659,
       kotlinx.serialization.json.buildJsonObject {
         if (other != null) put("other", other.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.TextStyle#plus(other:ParagraphStyle)` on a recorded value: the call carries the receiver (lock tag 253). */
+  /** `androidx.compose.ui.text.TextStyle#plus(other:ParagraphStyle)` on a recorded value: the call carries the receiver (lock tag 660). */
   public operator fun plus(
     other: dev.keliver.calls.compose.ui.text.ParagraphStyle,
   ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
     dev.keliver.calls.runtime.CallRecord(
-      253,
+      660,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.TextStyle#plus(other:SpanStyle)` on a recorded value: the call carries the receiver (lock tag 254). */
+  /** `androidx.compose.ui.text.TextStyle#plus(other:SpanStyle)` on a recorded value: the call carries the receiver (lock tag 661). */
   public operator fun plus(
     other: dev.keliver.calls.compose.ui.text.SpanStyle,
   ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
     dev.keliver.calls.runtime.CallRecord(
-      254,
+      661,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.TextStyle#plus(other:TextStyle)` on a recorded value: the call carries the receiver (lock tag 255). */
+  /** `androidx.compose.ui.text.TextStyle#plus(other:TextStyle)` on a recorded value: the call carries the receiver (lock tag 662). */
   public operator fun plus(
     other: dev.keliver.calls.compose.ui.text.TextStyle,
   ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
     dev.keliver.calls.runtime.CallRecord(
-      255,
+      662,
       kotlinx.serialization.json.buildJsonObject {
         put("other", other.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.TextStyle#toParagraphStyle()` on a recorded value: the call carries the receiver (lock tag 256). */
+  /** `androidx.compose.ui.text.TextStyle#toParagraphStyle()` on a recorded value: the call carries the receiver (lock tag 663). */
   public fun toParagraphStyle(
   ): dev.keliver.calls.compose.ui.text.ParagraphStyle = dev.keliver.calls.compose.ui.text.ParagraphStyle(
     dev.keliver.calls.runtime.CallRecord(
-      256,
+      663,
       kotlinx.serialization.json.buildJsonObject {
       },
       on = call,
     ),
   )
-  /** `androidx.compose.ui.text.TextStyle#toSpanStyle()` on a recorded value: the call carries the receiver (lock tag 257). */
+  /** `androidx.compose.ui.text.TextStyle#toSpanStyle()` on a recorded value: the call carries the receiver (lock tag 664). */
   public fun toSpanStyle(
   ): dev.keliver.calls.compose.ui.text.SpanStyle = dev.keliver.calls.compose.ui.text.SpanStyle(
     dev.keliver.calls.runtime.CallRecord(
-      257,
+      664,
       kotlinx.serialization.json.buildJsonObject {
       },
       on = call,
     ),
   )
   public companion object {
-    /** `androidx.compose.ui.text.TextStyle.Companion#Default`, recorded: the host makes the same call (lock tag 258). */
-    public val Default: dev.keliver.calls.compose.ui.text.TextStyle get() = dev.keliver.calls.compose.ui.text.TextStyle(dev.keliver.calls.runtime.CallRecord(258))
+    /** `androidx.compose.ui.text.TextStyle.Companion#Default`, recorded: the host makes the same call (lock tag 665). */
+    public val Default: dev.keliver.calls.compose.ui.text.TextStyle get() = dev.keliver.calls.compose.ui.text.TextStyle(dev.keliver.calls.runtime.CallRecord(665))
   }
 }
 
@@ -909,12 +909,12 @@ public class VerbatimTtsAnnotation @dev.keliver.calls.runtime.InternalCallApi co
   public val verbatim: kotlin.String get() = (readValues("VerbatimTtsAnnotation.verbatim")["verbatim"] as kotlin.String?)!!
 }
 
-/** `androidx.compose.ui.text.AnnotatedString#<init>(text:String,annotations:List<AnnotatedString.Range<AnnotatedString.Annotation>>)`, recorded: the host makes the same call (lock tag 185). */
+/** `androidx.compose.ui.text.AnnotatedString#<init>(text:String,annotations:List<AnnotatedString.Range<AnnotatedString.Annotation>>)`, recorded: the host makes the same call (lock tag 590). */
 public fun AnnotatedString(
   text: kotlin.String,
 ): dev.keliver.calls.compose.ui.text.AnnotatedString = dev.keliver.calls.compose.ui.text.AnnotatedString(
   dev.keliver.calls.runtime.CallRecord(
-    185,
+    590,
     kotlinx.serialization.json.buildJsonObject {
       put("text", kotlinx.serialization.json.JsonPrimitive(text))
     },
@@ -922,13 +922,13 @@ public fun AnnotatedString(
   fieldValues = buildMap<String, Any?> { put("text", text) },
 )
 
-/** `androidx.compose.ui.text.AnnotatedString(text:String,paragraphStyle:ParagraphStyle)`, recorded: the host makes the same call (lock tag 189). */
+/** `androidx.compose.ui.text.AnnotatedString(text:String,paragraphStyle:ParagraphStyle)`, recorded: the host makes the same call (lock tag 594). */
 public fun AnnotatedString(
   text: kotlin.String,
   paragraphStyle: dev.keliver.calls.compose.ui.text.ParagraphStyle,
 ): dev.keliver.calls.compose.ui.text.AnnotatedString = dev.keliver.calls.compose.ui.text.AnnotatedString(
   dev.keliver.calls.runtime.CallRecord(
-    189,
+    594,
     kotlinx.serialization.json.buildJsonObject {
       put("text", kotlinx.serialization.json.JsonPrimitive(text))
       put("paragraphStyle", paragraphStyle.call.toJson())
@@ -936,14 +936,14 @@ public fun AnnotatedString(
   ),
 )
 
-/** `androidx.compose.ui.text.AnnotatedString(text:String,spanStyle:SpanStyle,paragraphStyle:ParagraphStyle?)`, recorded: the host makes the same call (lock tag 190). */
+/** `androidx.compose.ui.text.AnnotatedString(text:String,spanStyle:SpanStyle,paragraphStyle:ParagraphStyle?)`, recorded: the host makes the same call (lock tag 595). */
 public fun AnnotatedString(
   text: kotlin.String,
   spanStyle: dev.keliver.calls.compose.ui.text.SpanStyle,
   paragraphStyle: dev.keliver.calls.compose.ui.text.ParagraphStyle? = null,
 ): dev.keliver.calls.compose.ui.text.AnnotatedString = dev.keliver.calls.compose.ui.text.AnnotatedString(
   dev.keliver.calls.runtime.CallRecord(
-    190,
+    595,
     kotlinx.serialization.json.buildJsonObject {
       put("text", kotlinx.serialization.json.JsonPrimitive(text))
       put("spanStyle", spanStyle.call.toJson())
@@ -952,7 +952,7 @@ public fun AnnotatedString(
   ),
 )
 
-/** `androidx.compose.ui.text.Bullet#<init>(shape:Shape,width:TextUnit,height:TextUnit,padding:TextUnit,brush:Brush?,alpha:Float,drawStyle:DrawStyle)`, recorded: the host makes the same call (lock tag 191). */
+/** `androidx.compose.ui.text.Bullet#<init>(shape:Shape,width:TextUnit,height:TextUnit,padding:TextUnit,brush:Brush?,alpha:Float,drawStyle:DrawStyle)`, recorded: the host makes the same call (lock tag 596). */
 public fun Bullet(
   shape: dev.keliver.calls.compose.ui.graphics.Shape,
   width: dev.keliver.compose.ui.unit.TextUnit,
@@ -963,7 +963,7 @@ public fun Bullet(
   drawStyle: dev.keliver.calls.compose.ui.graphics.drawscope.DrawStyle? = null,
 ): dev.keliver.calls.compose.ui.text.Bullet = dev.keliver.calls.compose.ui.text.Bullet(
   dev.keliver.calls.runtime.CallRecord(
-    191,
+    596,
     kotlinx.serialization.json.buildJsonObject {
       put("shape", shape.call.toJson())
       put("width", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(width))
@@ -977,7 +977,7 @@ public fun Bullet(
   fieldValues = buildMap<String, Any?> { put("shape", shape); put("width", width); put("height", height); put("padding", padding); if (brush != null) put("brush", brush); if (alpha != null) put("alpha", alpha) },
 )
 
-/** `androidx.compose.ui.text.FontRasterizationSettings#<init>(smoothing:FontSmoothing,hinting:FontHinting,subpixelPositioning:Boolean,autoHintingForced:Boolean)`, recorded: the host makes the same call (lock tag 198). */
+/** `androidx.compose.ui.text.FontRasterizationSettings#<init>(smoothing:FontSmoothing,hinting:FontHinting,subpixelPositioning:Boolean,autoHintingForced:Boolean)`, recorded: the host makes the same call (lock tag 603). */
 public fun FontRasterizationSettings(
   smoothing: dev.keliver.calls.compose.ui.text.FontSmoothing,
   hinting: dev.keliver.calls.compose.ui.text.FontHinting,
@@ -985,7 +985,7 @@ public fun FontRasterizationSettings(
   autoHintingForced: kotlin.Boolean,
 ): dev.keliver.calls.compose.ui.text.FontRasterizationSettings = dev.keliver.calls.compose.ui.text.FontRasterizationSettings(
   dev.keliver.calls.runtime.CallRecord(
-    198,
+    603,
     kotlinx.serialization.json.buildJsonObject {
       put("smoothing", smoothing.call.toJson())
       put("hinting", hinting.call.toJson())
@@ -996,7 +996,7 @@ public fun FontRasterizationSettings(
   fieldValues = buildMap<String, Any?> { put("smoothing", smoothing); put("hinting", hinting); put("subpixelPositioning", subpixelPositioning); put("autoHintingForced", autoHintingForced) },
 )
 
-/** `androidx.compose.ui.text.ParagraphStyle#<init>(textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformParagraphStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)`, recorded: the host makes the same call (lock tag 203). */
+/** `androidx.compose.ui.text.ParagraphStyle#<init>(textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformParagraphStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)`, recorded: the host makes the same call (lock tag 608). */
 public fun ParagraphStyle(
   textAlign: dev.keliver.calls.compose.ui.text.style.TextAlign? = null,
   textDirection: dev.keliver.calls.compose.ui.text.style.TextDirection? = null,
@@ -1009,7 +1009,7 @@ public fun ParagraphStyle(
   textMotion: dev.keliver.calls.compose.ui.text.style.TextMotion? = null,
 ): dev.keliver.calls.compose.ui.text.ParagraphStyle = dev.keliver.calls.compose.ui.text.ParagraphStyle(
   dev.keliver.calls.runtime.CallRecord(
-    203,
+    608,
     kotlinx.serialization.json.buildJsonObject {
       if (textAlign != null) put("textAlign", textAlign.call.toJson())
       if (textDirection != null) put("textDirection", textDirection.call.toJson())
@@ -1025,14 +1025,14 @@ public fun ParagraphStyle(
   fieldValues = buildMap<String, Any?> { if (textAlign != null) put("textAlign", textAlign); if (textDirection != null) put("textDirection", textDirection); if (lineHeight != null) put("lineHeight", lineHeight); if (textIndent != null) put("textIndent", textIndent); if (platformStyle != null) put("platformStyle", platformStyle); if (lineHeightStyle != null) put("lineHeightStyle", lineHeightStyle); if (lineBreak != null) put("lineBreak", lineBreak); if (hyphens != null) put("hyphens", hyphens); if (textMotion != null) put("textMotion", textMotion) },
 )
 
-/** `androidx.compose.ui.text.Placeholder#<init>(width:TextUnit,height:TextUnit,placeholderVerticalAlign:PlaceholderVerticalAlign)`, recorded: the host makes the same call (lock tag 207). */
+/** `androidx.compose.ui.text.Placeholder#<init>(width:TextUnit,height:TextUnit,placeholderVerticalAlign:PlaceholderVerticalAlign)`, recorded: the host makes the same call (lock tag 612). */
 public fun Placeholder(
   width: dev.keliver.compose.ui.unit.TextUnit,
   height: dev.keliver.compose.ui.unit.TextUnit,
   placeholderVerticalAlign: dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign,
 ): dev.keliver.calls.compose.ui.text.Placeholder = dev.keliver.calls.compose.ui.text.Placeholder(
   dev.keliver.calls.runtime.CallRecord(
-    207,
+    612,
     kotlinx.serialization.json.buildJsonObject {
       put("width", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(width))
       put("height", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(height))
@@ -1042,23 +1042,23 @@ public fun Placeholder(
   fieldValues = buildMap<String, Any?> { put("width", width); put("height", height); put("placeholderVerticalAlign", placeholderVerticalAlign) },
 )
 
-/** `androidx.compose.ui.text.PlatformParagraphStyle#<init>()`, recorded: the host makes the same call (lock tag 216). */
+/** `androidx.compose.ui.text.PlatformParagraphStyle#<init>()`, recorded: the host makes the same call (lock tag 621). */
 public fun PlatformParagraphStyle(
 ): dev.keliver.calls.compose.ui.text.PlatformParagraphStyle = dev.keliver.calls.compose.ui.text.PlatformParagraphStyle(
   dev.keliver.calls.runtime.CallRecord(
-    216,
+    621,
     kotlinx.serialization.json.buildJsonObject {
     },
   ),
   fieldValues = buildMap<String, Any?> {  },
 )
 
-/** `androidx.compose.ui.text.PlatformParagraphStyle#<init>(fontRasterizationSettings:FontRasterizationSettings)`, recorded: the host makes the same call (lock tag 217). */
+/** `androidx.compose.ui.text.PlatformParagraphStyle#<init>(fontRasterizationSettings:FontRasterizationSettings)`, recorded: the host makes the same call (lock tag 622). */
 public fun PlatformParagraphStyle(
   fontRasterizationSettings: dev.keliver.calls.compose.ui.text.FontRasterizationSettings? = null,
 ): dev.keliver.calls.compose.ui.text.PlatformParagraphStyle = dev.keliver.calls.compose.ui.text.PlatformParagraphStyle(
   dev.keliver.calls.runtime.CallRecord(
-    217,
+    622,
     kotlinx.serialization.json.buildJsonObject {
       if (fontRasterizationSettings != null) put("fontRasterizationSettings", fontRasterizationSettings.call.toJson())
     },
@@ -1066,23 +1066,23 @@ public fun PlatformParagraphStyle(
   fieldValues = buildMap<String, Any?> { if (fontRasterizationSettings != null) put("fontRasterizationSettings", fontRasterizationSettings) },
 )
 
-/** `androidx.compose.ui.text.PlatformSpanStyle#<init>()`, recorded: the host makes the same call (lock tag 220). */
+/** `androidx.compose.ui.text.PlatformSpanStyle#<init>()`, recorded: the host makes the same call (lock tag 625). */
 public fun PlatformSpanStyle(
 ): dev.keliver.calls.compose.ui.text.PlatformSpanStyle = dev.keliver.calls.compose.ui.text.PlatformSpanStyle(
   dev.keliver.calls.runtime.CallRecord(
-    220,
+    625,
     kotlinx.serialization.json.buildJsonObject {
     },
   ),
   fieldValues = buildMap<String, Any?> {  },
 )
 
-/** `androidx.compose.ui.text.PlatformSpanStyle#<init>(textDecorationLineStyle:TextDecorationLineStyle?)`, recorded: the host makes the same call (lock tag 221). */
+/** `androidx.compose.ui.text.PlatformSpanStyle#<init>(textDecorationLineStyle:TextDecorationLineStyle?)`, recorded: the host makes the same call (lock tag 626). */
 public fun PlatformSpanStyle(
   textDecorationLineStyle: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle?,
 ): dev.keliver.calls.compose.ui.text.PlatformSpanStyle = dev.keliver.calls.compose.ui.text.PlatformSpanStyle(
   dev.keliver.calls.runtime.CallRecord(
-    221,
+    626,
     kotlinx.serialization.json.buildJsonObject {
       put("textDecorationLineStyle", textDecorationLineStyle?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
     },
@@ -1090,13 +1090,13 @@ public fun PlatformSpanStyle(
   fieldValues = buildMap<String, Any?> { put("textDecorationLineStyle", textDecorationLineStyle) },
 )
 
-/** `androidx.compose.ui.text.PlatformTextStyle#<init>(spanStyle:PlatformSpanStyle?,paragraphStyle:PlatformParagraphStyle?)`, recorded: the host makes the same call (lock tag 224). */
+/** `androidx.compose.ui.text.PlatformTextStyle#<init>(spanStyle:PlatformSpanStyle?,paragraphStyle:PlatformParagraphStyle?)`, recorded: the host makes the same call (lock tag 629). */
 public fun PlatformTextStyle(
   spanStyle: dev.keliver.calls.compose.ui.text.PlatformSpanStyle?,
   paragraphStyle: dev.keliver.calls.compose.ui.text.PlatformParagraphStyle?,
 ): dev.keliver.calls.compose.ui.text.PlatformTextStyle = dev.keliver.calls.compose.ui.text.PlatformTextStyle(
   dev.keliver.calls.runtime.CallRecord(
-    224,
+    629,
     kotlinx.serialization.json.buildJsonObject {
       put("spanStyle", spanStyle?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
       put("paragraphStyle", paragraphStyle?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
@@ -1105,12 +1105,12 @@ public fun PlatformTextStyle(
   fieldValues = buildMap<String, Any?> { put("spanStyle", spanStyle); put("paragraphStyle", paragraphStyle) },
 )
 
-/** `androidx.compose.ui.text.PlatformTextStyle#<init>(textDecorationLineStyle:TextDecorationLineStyle?)`, recorded: the host makes the same call (lock tag 225). */
+/** `androidx.compose.ui.text.PlatformTextStyle#<init>(textDecorationLineStyle:TextDecorationLineStyle?)`, recorded: the host makes the same call (lock tag 630). */
 public fun PlatformTextStyle(
   textDecorationLineStyle: dev.keliver.calls.compose.ui.text.TextDecorationLineStyle?,
 ): dev.keliver.calls.compose.ui.text.PlatformTextStyle = dev.keliver.calls.compose.ui.text.PlatformTextStyle(
   dev.keliver.calls.runtime.CallRecord(
-    225,
+    630,
     kotlinx.serialization.json.buildJsonObject {
       put("textDecorationLineStyle", textDecorationLineStyle?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
     },
@@ -1118,7 +1118,7 @@ public fun PlatformTextStyle(
   fieldValues = buildMap<String, Any?> {  },
 )
 
-/** `androidx.compose.ui.text.SpanStyle#<init>(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)`, recorded: the host makes the same call (lock tag 226). */
+/** `androidx.compose.ui.text.SpanStyle#<init>(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)`, recorded: the host makes the same call (lock tag 631). */
 public fun SpanStyle(
   brush: dev.keliver.calls.compose.ui.graphics.Brush?,
   alpha: kotlin.Float? = null,
@@ -1138,7 +1138,7 @@ public fun SpanStyle(
   drawStyle: dev.keliver.calls.compose.ui.graphics.drawscope.DrawStyle? = null,
 ): dev.keliver.calls.compose.ui.text.SpanStyle = dev.keliver.calls.compose.ui.text.SpanStyle(
   dev.keliver.calls.runtime.CallRecord(
-    226,
+    631,
     kotlinx.serialization.json.buildJsonObject {
       put("brush", brush?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
       if (alpha != null) put("alpha", kotlinx.serialization.json.JsonPrimitive(alpha))
@@ -1161,7 +1161,7 @@ public fun SpanStyle(
   fieldValues = buildMap<String, Any?> { put("brush", brush); if (alpha != null) put("alpha", alpha); if (fontSize != null) put("fontSize", fontSize); if (fontWeight != null) put("fontWeight", fontWeight); if (fontStyle != null) put("fontStyle", fontStyle); if (fontSynthesis != null) put("fontSynthesis", fontSynthesis); if (fontFamily != null) put("fontFamily", fontFamily); if (fontFeatureSettings != null) put("fontFeatureSettings", fontFeatureSettings); if (letterSpacing != null) put("letterSpacing", letterSpacing); if (baselineShift != null) put("baselineShift", baselineShift); if (textGeometricTransform != null) put("textGeometricTransform", textGeometricTransform); if (background != null) put("background", background); if (textDecoration != null) put("textDecoration", textDecoration); if (shadow != null) put("shadow", shadow); if (platformStyle != null) put("platformStyle", platformStyle); if (drawStyle != null) put("drawStyle", drawStyle) },
 )
 
-/** `androidx.compose.ui.text.SpanStyle#<init>(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)`, recorded: the host makes the same call (lock tag 227). */
+/** `androidx.compose.ui.text.SpanStyle#<init>(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)`, recorded: the host makes the same call (lock tag 632). */
 public fun SpanStyle(
   color: dev.keliver.compose.ui.graphics.Color? = null,
   fontSize: dev.keliver.compose.ui.unit.TextUnit? = null,
@@ -1180,7 +1180,7 @@ public fun SpanStyle(
   drawStyle: dev.keliver.calls.compose.ui.graphics.drawscope.DrawStyle? = null,
 ): dev.keliver.calls.compose.ui.text.SpanStyle = dev.keliver.calls.compose.ui.text.SpanStyle(
   dev.keliver.calls.runtime.CallRecord(
-    227,
+    632,
     kotlinx.serialization.json.buildJsonObject {
       if (color != null) put("color", dev.keliver.compose.ui.graphics.ColorCodec.toJson(color))
       if (fontSize != null) put("fontSize", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(fontSize))
@@ -1202,12 +1202,12 @@ public fun SpanStyle(
   fieldValues = buildMap<String, Any?> { if (color != null) put("color", color); if (fontSize != null) put("fontSize", fontSize); if (fontWeight != null) put("fontWeight", fontWeight); if (fontStyle != null) put("fontStyle", fontStyle); if (fontSynthesis != null) put("fontSynthesis", fontSynthesis); if (fontFamily != null) put("fontFamily", fontFamily); if (fontFeatureSettings != null) put("fontFeatureSettings", fontFeatureSettings); if (letterSpacing != null) put("letterSpacing", letterSpacing); if (baselineShift != null) put("baselineShift", baselineShift); if (textGeometricTransform != null) put("textGeometricTransform", textGeometricTransform); if (background != null) put("background", background); if (textDecoration != null) put("textDecoration", textDecoration); if (shadow != null) put("shadow", shadow); if (platformStyle != null) put("platformStyle", platformStyle); if (drawStyle != null) put("drawStyle", drawStyle) },
 )
 
-/** `androidx.compose.ui.text.StringAnnotation#<init>(value:String)`, recorded: the host makes the same call (lock tag 232). */
+/** `androidx.compose.ui.text.StringAnnotation#<init>(value:String)`, recorded: the host makes the same call (lock tag 637). */
 public fun StringAnnotation(
   value: kotlin.String,
 ): dev.keliver.calls.compose.ui.text.StringAnnotation = dev.keliver.calls.compose.ui.text.StringAnnotation(
   dev.keliver.calls.runtime.CallRecord(
-    232,
+    637,
     kotlinx.serialization.json.buildJsonObject {
       put("value", kotlinx.serialization.json.JsonPrimitive(value))
     },
@@ -1215,7 +1215,7 @@ public fun StringAnnotation(
   fieldValues = buildMap<String, Any?> { put("value", value) },
 )
 
-/** `androidx.compose.ui.text.TextLinkStyles#<init>(style:SpanStyle?,focusedStyle:SpanStyle?,hoveredStyle:SpanStyle?,pressedStyle:SpanStyle?)`, recorded: the host makes the same call (lock tag 243). */
+/** `androidx.compose.ui.text.TextLinkStyles#<init>(style:SpanStyle?,focusedStyle:SpanStyle?,hoveredStyle:SpanStyle?,pressedStyle:SpanStyle?)`, recorded: the host makes the same call (lock tag 648). */
 public fun TextLinkStyles(
   style: dev.keliver.calls.compose.ui.text.SpanStyle? = null,
   focusedStyle: dev.keliver.calls.compose.ui.text.SpanStyle? = null,
@@ -1223,7 +1223,7 @@ public fun TextLinkStyles(
   pressedStyle: dev.keliver.calls.compose.ui.text.SpanStyle? = null,
 ): dev.keliver.calls.compose.ui.text.TextLinkStyles = dev.keliver.calls.compose.ui.text.TextLinkStyles(
   dev.keliver.calls.runtime.CallRecord(
-    243,
+    648,
     kotlinx.serialization.json.buildJsonObject {
       if (style != null) put("style", style.call.toJson())
       if (focusedStyle != null) put("focusedStyle", focusedStyle.call.toJson())
@@ -1234,25 +1234,25 @@ public fun TextLinkStyles(
   fieldValues = buildMap<String, Any?> { if (style != null) put("style", style); if (focusedStyle != null) put("focusedStyle", focusedStyle); if (hoveredStyle != null) put("hoveredStyle", hoveredStyle); if (pressedStyle != null) put("pressedStyle", pressedStyle) },
 )
 
-/** `androidx.compose.ui.text.TextRange(index:Int)`, recorded: the host makes the same call (lock tag 244). */
+/** `androidx.compose.ui.text.TextRange(index:Int)`, recorded: the host makes the same call (lock tag 649). */
 public fun TextRange(
   index: kotlin.Int,
 ): dev.keliver.calls.compose.ui.text.TextRange = dev.keliver.calls.compose.ui.text.TextRange(
   dev.keliver.calls.runtime.CallRecord(
-    244,
+    649,
     kotlinx.serialization.json.buildJsonObject {
       put("index", kotlinx.serialization.json.JsonPrimitive(index))
     },
   ),
 )
 
-/** `androidx.compose.ui.text.TextRange(start:Int,end:Int)`, recorded: the host makes the same call (lock tag 245). */
+/** `androidx.compose.ui.text.TextRange(start:Int,end:Int)`, recorded: the host makes the same call (lock tag 650). */
 public fun TextRange(
   start: kotlin.Int,
   end: kotlin.Int,
 ): dev.keliver.calls.compose.ui.text.TextRange = dev.keliver.calls.compose.ui.text.TextRange(
   dev.keliver.calls.runtime.CallRecord(
-    245,
+    650,
     kotlinx.serialization.json.buildJsonObject {
       put("start", kotlinx.serialization.json.JsonPrimitive(start))
       put("end", kotlinx.serialization.json.JsonPrimitive(end))
@@ -1260,7 +1260,7 @@ public fun TextRange(
   ),
 )
 
-/** `androidx.compose.ui.text.TextStyle#<init>(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)`, recorded: the host makes the same call (lock tag 247). */
+/** `androidx.compose.ui.text.TextStyle#<init>(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)`, recorded: the host makes the same call (lock tag 652). */
 public fun TextStyle(
   brush: dev.keliver.calls.compose.ui.graphics.Brush?,
   alpha: kotlin.Float? = null,
@@ -1288,7 +1288,7 @@ public fun TextStyle(
   textMotion: dev.keliver.calls.compose.ui.text.style.TextMotion? = null,
 ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
   dev.keliver.calls.runtime.CallRecord(
-    247,
+    652,
     kotlinx.serialization.json.buildJsonObject {
       put("brush", brush?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
       if (alpha != null) put("alpha", kotlinx.serialization.json.JsonPrimitive(alpha))
@@ -1319,7 +1319,7 @@ public fun TextStyle(
   fieldValues = buildMap<String, Any?> { put("brush", brush); if (alpha != null) put("alpha", alpha); if (fontSize != null) put("fontSize", fontSize); if (fontWeight != null) put("fontWeight", fontWeight); if (fontStyle != null) put("fontStyle", fontStyle); if (fontSynthesis != null) put("fontSynthesis", fontSynthesis); if (fontFamily != null) put("fontFamily", fontFamily); if (fontFeatureSettings != null) put("fontFeatureSettings", fontFeatureSettings); if (letterSpacing != null) put("letterSpacing", letterSpacing); if (baselineShift != null) put("baselineShift", baselineShift); if (textGeometricTransform != null) put("textGeometricTransform", textGeometricTransform); if (background != null) put("background", background); if (textDecoration != null) put("textDecoration", textDecoration); if (shadow != null) put("shadow", shadow); if (drawStyle != null) put("drawStyle", drawStyle); if (textAlign != null) put("textAlign", textAlign); if (textDirection != null) put("textDirection", textDirection); if (lineHeight != null) put("lineHeight", lineHeight); if (textIndent != null) put("textIndent", textIndent); if (platformStyle != null) put("platformStyle", platformStyle); if (lineHeightStyle != null) put("lineHeightStyle", lineHeightStyle); if (lineBreak != null) put("lineBreak", lineBreak); if (hyphens != null) put("hyphens", hyphens); if (textMotion != null) put("textMotion", textMotion) },
 )
 
-/** `androidx.compose.ui.text.TextStyle#<init>(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)`, recorded: the host makes the same call (lock tag 248). */
+/** `androidx.compose.ui.text.TextStyle#<init>(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)`, recorded: the host makes the same call (lock tag 653). */
 public fun TextStyle(
   color: dev.keliver.compose.ui.graphics.Color? = null,
   fontSize: dev.keliver.compose.ui.unit.TextUnit? = null,
@@ -1346,7 +1346,7 @@ public fun TextStyle(
   textMotion: dev.keliver.calls.compose.ui.text.style.TextMotion? = null,
 ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
   dev.keliver.calls.runtime.CallRecord(
-    248,
+    653,
     kotlinx.serialization.json.buildJsonObject {
       if (color != null) put("color", dev.keliver.compose.ui.graphics.ColorCodec.toJson(color))
       if (fontSize != null) put("fontSize", dev.keliver.compose.ui.unit.TextUnitCodec.toJson(fontSize))
@@ -1376,22 +1376,22 @@ public fun TextStyle(
   fieldValues = buildMap<String, Any?> { if (color != null) put("color", color); if (fontSize != null) put("fontSize", fontSize); if (fontWeight != null) put("fontWeight", fontWeight); if (fontStyle != null) put("fontStyle", fontStyle); if (fontSynthesis != null) put("fontSynthesis", fontSynthesis); if (fontFamily != null) put("fontFamily", fontFamily); if (fontFeatureSettings != null) put("fontFeatureSettings", fontFeatureSettings); if (letterSpacing != null) put("letterSpacing", letterSpacing); if (baselineShift != null) put("baselineShift", baselineShift); if (textGeometricTransform != null) put("textGeometricTransform", textGeometricTransform); if (background != null) put("background", background); if (textDecoration != null) put("textDecoration", textDecoration); if (shadow != null) put("shadow", shadow); if (drawStyle != null) put("drawStyle", drawStyle); if (textAlign != null) put("textAlign", textAlign); if (textDirection != null) put("textDirection", textDirection); if (lineHeight != null) put("lineHeight", lineHeight); if (textIndent != null) put("textIndent", textIndent); if (platformStyle != null) put("platformStyle", platformStyle); if (lineHeightStyle != null) put("lineHeightStyle", lineHeightStyle); if (lineBreak != null) put("lineBreak", lineBreak); if (hyphens != null) put("hyphens", hyphens); if (textMotion != null) put("textMotion", textMotion) },
 )
 
-/** `androidx.compose.ui.text.UnresolvedSymbolsRegistry#<init>()`, recorded: the host makes the same call (lock tag 259). */
+/** `androidx.compose.ui.text.UnresolvedSymbolsRegistry#<init>()`, recorded: the host makes the same call (lock tag 666). */
 public fun UnresolvedSymbolsRegistry(
 ): dev.keliver.calls.compose.ui.text.UnresolvedSymbolsRegistry = dev.keliver.calls.compose.ui.text.UnresolvedSymbolsRegistry(
   dev.keliver.calls.runtime.CallRecord(
-    259,
+    666,
     kotlinx.serialization.json.buildJsonObject {
     },
   ),
 )
 
-/** `androidx.compose.ui.text.UrlAnnotation#<init>(url:String)`, recorded: the host makes the same call (lock tag 260). */
+/** `androidx.compose.ui.text.UrlAnnotation#<init>(url:String)`, recorded: the host makes the same call (lock tag 667). */
 public fun UrlAnnotation(
   url: kotlin.String,
 ): dev.keliver.calls.compose.ui.text.UrlAnnotation = dev.keliver.calls.compose.ui.text.UrlAnnotation(
   dev.keliver.calls.runtime.CallRecord(
-    260,
+    667,
     kotlinx.serialization.json.buildJsonObject {
       put("url", kotlinx.serialization.json.JsonPrimitive(url))
     },
@@ -1399,12 +1399,12 @@ public fun UrlAnnotation(
   fieldValues = buildMap<String, Any?> { put("url", url) },
 )
 
-/** `androidx.compose.ui.text.VerbatimTtsAnnotation#<init>(verbatim:String)`, recorded: the host makes the same call (lock tag 261). */
+/** `androidx.compose.ui.text.VerbatimTtsAnnotation#<init>(verbatim:String)`, recorded: the host makes the same call (lock tag 668). */
 public fun VerbatimTtsAnnotation(
   verbatim: kotlin.String,
 ): dev.keliver.calls.compose.ui.text.VerbatimTtsAnnotation = dev.keliver.calls.compose.ui.text.VerbatimTtsAnnotation(
   dev.keliver.calls.runtime.CallRecord(
-    261,
+    668,
     kotlinx.serialization.json.buildJsonObject {
       put("verbatim", kotlinx.serialization.json.JsonPrimitive(verbatim))
     },
@@ -1412,14 +1412,14 @@ public fun VerbatimTtsAnnotation(
   fieldValues = buildMap<String, Any?> { put("verbatim", verbatim) },
 )
 
-/** `androidx.compose.ui.text.lerp(start:ParagraphStyle,stop:ParagraphStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 302). */
+/** `androidx.compose.ui.text.lerp(start:ParagraphStyle,stop:ParagraphStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 778). */
 public fun lerp(
   start: dev.keliver.calls.compose.ui.text.ParagraphStyle,
   stop: dev.keliver.calls.compose.ui.text.ParagraphStyle,
   fraction: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.ParagraphStyle = dev.keliver.calls.compose.ui.text.ParagraphStyle(
   dev.keliver.calls.runtime.CallRecord(
-    302,
+    778,
     kotlinx.serialization.json.buildJsonObject {
       put("start", start.call.toJson())
       put("stop", stop.call.toJson())
@@ -1428,14 +1428,14 @@ public fun lerp(
   ),
 )
 
-/** `androidx.compose.ui.text.lerp(start:PlatformParagraphStyle,stop:PlatformParagraphStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 303). */
+/** `androidx.compose.ui.text.lerp(start:PlatformParagraphStyle,stop:PlatformParagraphStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 779). */
 public fun lerp(
   start: dev.keliver.calls.compose.ui.text.PlatformParagraphStyle,
   stop: dev.keliver.calls.compose.ui.text.PlatformParagraphStyle,
   fraction: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.PlatformParagraphStyle = dev.keliver.calls.compose.ui.text.PlatformParagraphStyle(
   dev.keliver.calls.runtime.CallRecord(
-    303,
+    779,
     kotlinx.serialization.json.buildJsonObject {
       put("start", start.call.toJson())
       put("stop", stop.call.toJson())
@@ -1444,14 +1444,14 @@ public fun lerp(
   ),
 )
 
-/** `androidx.compose.ui.text.lerp(start:PlatformSpanStyle,stop:PlatformSpanStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 304). */
+/** `androidx.compose.ui.text.lerp(start:PlatformSpanStyle,stop:PlatformSpanStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 780). */
 public fun lerp(
   start: dev.keliver.calls.compose.ui.text.PlatformSpanStyle,
   stop: dev.keliver.calls.compose.ui.text.PlatformSpanStyle,
   fraction: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.PlatformSpanStyle = dev.keliver.calls.compose.ui.text.PlatformSpanStyle(
   dev.keliver.calls.runtime.CallRecord(
-    304,
+    780,
     kotlinx.serialization.json.buildJsonObject {
       put("start", start.call.toJson())
       put("stop", stop.call.toJson())
@@ -1460,14 +1460,14 @@ public fun lerp(
   ),
 )
 
-/** `androidx.compose.ui.text.lerp(start:SpanStyle,stop:SpanStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 305). */
+/** `androidx.compose.ui.text.lerp(start:SpanStyle,stop:SpanStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 781). */
 public fun lerp(
   start: dev.keliver.calls.compose.ui.text.SpanStyle,
   stop: dev.keliver.calls.compose.ui.text.SpanStyle,
   fraction: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.SpanStyle = dev.keliver.calls.compose.ui.text.SpanStyle(
   dev.keliver.calls.runtime.CallRecord(
-    305,
+    781,
     kotlinx.serialization.json.buildJsonObject {
       put("start", start.call.toJson())
       put("stop", stop.call.toJson())
@@ -1476,18 +1476,32 @@ public fun lerp(
   ),
 )
 
-/** `androidx.compose.ui.text.lerp(start:TextStyle,stop:TextStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 306). */
+/** `androidx.compose.ui.text.lerp(start:TextStyle,stop:TextStyle,fraction:Float)`, recorded: the host makes the same call (lock tag 782). */
 public fun lerp(
   start: dev.keliver.calls.compose.ui.text.TextStyle,
   stop: dev.keliver.calls.compose.ui.text.TextStyle,
   fraction: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
   dev.keliver.calls.runtime.CallRecord(
-    306,
+    782,
     kotlinx.serialization.json.buildJsonObject {
       put("start", start.call.toJson())
       put("stop", stop.call.toJson())
       put("fraction", kotlinx.serialization.json.JsonPrimitive(fraction))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.text.resolveDefaults(style:TextStyle,direction:LayoutDirection)`, recorded: the host makes the same call (lock tag 783). */
+public fun resolveDefaults(
+  style: dev.keliver.calls.compose.ui.text.TextStyle,
+  direction: dev.keliver.calls.compose.ui.unit.LayoutDirection,
+): dev.keliver.calls.compose.ui.text.TextStyle = dev.keliver.calls.compose.ui.text.TextStyle(
+  dev.keliver.calls.runtime.CallRecord(
+    783,
+    kotlinx.serialization.json.buildJsonObject {
+      put("style", style.call.toJson())
+      put("direction", direction.call.toJson())
     },
   ),
 )

@@ -21,10 +21,10 @@ public interface DrawScope : dev.keliver.calls.runtime.CallRecorded, dev.keliver
   @Deprecated("Keliver: `DrawScope.layoutDirection` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val layoutDirection: Nothing get() = error("call-recorded")
   public companion object {
-    /** `androidx.compose.ui.graphics.drawscope.DrawScope.Companion#DefaultBlendMode`, recorded: the host makes the same call (lock tag 179). */
-    public val DefaultBlendMode: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(179))
-    /** `androidx.compose.ui.graphics.drawscope.DrawScope.Companion#DefaultFilterQuality`, recorded: the host makes the same call (lock tag 180). */
-    public val DefaultFilterQuality: dev.keliver.calls.compose.ui.graphics.FilterQuality get() = dev.keliver.calls.compose.ui.graphics.FilterQuality(dev.keliver.calls.runtime.CallRecord(180))
+    /** `androidx.compose.ui.graphics.drawscope.DrawScope.Companion#DefaultBlendMode`, recorded: the host makes the same call (lock tag 539). */
+    public val DefaultBlendMode: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(539))
+    /** `androidx.compose.ui.graphics.drawscope.DrawScope.Companion#DefaultFilterQuality`, recorded: the host makes the same call (lock tag 540). */
+    public val DefaultFilterQuality: dev.keliver.calls.compose.ui.graphics.FilterQuality get() = dev.keliver.calls.compose.ui.graphics.FilterQuality(dev.keliver.calls.runtime.CallRecord(540))
   }
 }
 
@@ -45,24 +45,24 @@ public class Stroke @dev.keliver.calls.runtime.InternalCallApi constructor(call:
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val pathEffect: dev.keliver.calls.compose.ui.graphics.PathEffect? get() = (readValues("Stroke.pathEffect")["pathEffect"] as dev.keliver.calls.compose.ui.graphics.PathEffect?) ?: null
   public companion object {
-    /** `androidx.compose.ui.graphics.drawscope.Stroke.Companion#DefaultCap`, recorded: the host makes the same call (lock tag 182). */
-    public val DefaultCap: dev.keliver.calls.compose.ui.graphics.StrokeCap get() = dev.keliver.calls.compose.ui.graphics.StrokeCap(dev.keliver.calls.runtime.CallRecord(182))
-    /** `androidx.compose.ui.graphics.drawscope.Stroke.Companion#DefaultJoin`, recorded: the host makes the same call (lock tag 183). */
-    public val DefaultJoin: dev.keliver.calls.compose.ui.graphics.StrokeJoin get() = dev.keliver.calls.compose.ui.graphics.StrokeJoin(dev.keliver.calls.runtime.CallRecord(183))
+    /** `androidx.compose.ui.graphics.drawscope.Stroke.Companion#DefaultCap`, recorded: the host makes the same call (lock tag 542). */
+    public val DefaultCap: dev.keliver.calls.compose.ui.graphics.StrokeCap get() = dev.keliver.calls.compose.ui.graphics.StrokeCap(dev.keliver.calls.runtime.CallRecord(542))
+    /** `androidx.compose.ui.graphics.drawscope.Stroke.Companion#DefaultJoin`, recorded: the host makes the same call (lock tag 543). */
+    public val DefaultJoin: dev.keliver.calls.compose.ui.graphics.StrokeJoin get() = dev.keliver.calls.compose.ui.graphics.StrokeJoin(dev.keliver.calls.runtime.CallRecord(543))
   }
 }
 
-/** `androidx.compose.ui.graphics.drawscope.CanvasDrawScope#<init>()`, recorded: the host makes the same call (lock tag 178). */
+/** `androidx.compose.ui.graphics.drawscope.CanvasDrawScope#<init>()`, recorded: the host makes the same call (lock tag 538). */
 public fun CanvasDrawScope(
 ): dev.keliver.calls.compose.ui.graphics.drawscope.CanvasDrawScope = dev.keliver.calls.compose.ui.graphics.drawscope.CanvasDrawScope(
   dev.keliver.calls.runtime.CallRecord(
-    178,
+    538,
     kotlinx.serialization.json.buildJsonObject {
     },
   ),
 )
 
-/** `androidx.compose.ui.graphics.drawscope.Stroke#<init>(width:Float,miter:Float,cap:StrokeCap,join:StrokeJoin,pathEffect:PathEffect?)`, recorded: the host makes the same call (lock tag 181). */
+/** `androidx.compose.ui.graphics.drawscope.Stroke#<init>(width:Float,miter:Float,cap:StrokeCap,join:StrokeJoin,pathEffect:PathEffect?)`, recorded: the host makes the same call (lock tag 541). */
 public fun Stroke(
   width: kotlin.Float? = null,
   miter: kotlin.Float? = null,
@@ -71,7 +71,7 @@ public fun Stroke(
   pathEffect: dev.keliver.calls.compose.ui.graphics.PathEffect? = null,
 ): dev.keliver.calls.compose.ui.graphics.drawscope.Stroke = dev.keliver.calls.compose.ui.graphics.drawscope.Stroke(
   dev.keliver.calls.runtime.CallRecord(
-    181,
+    541,
     kotlinx.serialization.json.buildJsonObject {
       if (width != null) put("width", kotlinx.serialization.json.JsonPrimitive(width))
       if (miter != null) put("miter", kotlinx.serialization.json.JsonPrimitive(miter))

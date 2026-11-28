@@ -2,15 +2,33 @@
   "guestRoot": "dev.keliver.calls",
   "hostPackage": "dev.keliver.calls.composeui",
   "packages": [
+    "androidx.compose.animation",
+    "androidx.compose.animation.core",
+    "androidx.compose.foundation",
+    "androidx.compose.foundation.layout",
     "androidx.compose.foundation.shape",
+    "androidx.compose.foundation.text",
+    "androidx.compose.material3",
+    "androidx.compose.ui",
+    "androidx.compose.ui.geometry",
     "androidx.compose.ui.graphics",
     "androidx.compose.ui.graphics.drawscope",
+    "androidx.compose.ui.layout",
     "androidx.compose.ui.text",
     "androidx.compose.ui.text.font",
-    "androidx.compose.ui.text.style"
+    "androidx.compose.ui.text.input",
+    "androidx.compose.ui.text.style",
+    "androidx.compose.ui.unit"
   ],
   "excludeTypes": [
-    "androidx.compose.ui.Modifier"
+    "androidx.compose.ui.Modifier",
+    "androidx.compose.foundation.ContextMenuState",
+    "androidx.compose.foundation.DarkDefaultContextMenuRepresentation",
+    "androidx.compose.foundation.DefaultContextMenuRepresentation",
+    "androidx.compose.foundation.LightDefaultContextMenuRepresentation",
+    "androidx.compose.foundation.text.TextContextMenu"
   ],
-  "excludeKeys": {}
+  "excludeKeys": {
+    "androidx.compose.ui.text.font.FontFamily(familyName:String)": "platform-specific (Android and desktop only): not in common, so not on js, wasm or iOS"
+  }
 }

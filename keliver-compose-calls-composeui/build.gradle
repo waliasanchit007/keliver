@@ -23,6 +23,7 @@ kotlin {
         api libs.jetbrains.compose.foundation
         api libs.jetbrains.compose.ui
         api libs.jetbrains.compose.animation
+        api libs.jetbrains.compose.material3
       }
     }
     commonTest {

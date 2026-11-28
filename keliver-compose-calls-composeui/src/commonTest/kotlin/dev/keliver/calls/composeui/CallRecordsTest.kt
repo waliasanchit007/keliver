@@ -136,6 +136,6 @@ class CallRecordsTest {
 
 /** Lock tags the test pins (values.lock.json never changes a tag). */
 private object Tags {
-  const val RoundedCornerShapeSize = 38
-  const val TextStyleCtor = 248
+  const val RoundedCornerShapeSize = 216
+  const val TextStyleCtor = 653
 }

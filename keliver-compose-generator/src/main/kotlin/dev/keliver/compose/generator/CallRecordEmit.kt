@@ -316,8 +316,10 @@ class CallRecordEmitter(
       Kind.PACKAGE_FN, Kind.PACKAGE_PROP -> null
       else -> c.ownerFq!!.removePrefix(c.pkg + ".")
     }
-    val (d, imp) = src.defaultsOf(c.pkg, owner, c.name, c.params.map { it.name }, c.params.map { it.type.toRef() })
-      ?: return false.also { reject("default expressions not found in the sources", c.key) }
+    val found = src.defaultsOf(c.pkg, owner, c.name, c.params.map { it.name }, c.params.map { it.valueType.toRef() })
+    // A data class's synthesized `copy` has no source: its defaults are "keep the receiver's value".
+    if (found == null && c.params.filter { it.declaresDefaultValue }.all { copyRead(c, it) != null }) return true
+    val (d, imp) = found ?: return false.also { reject("default expressions not found in the sources", c.key) }
     c.defaults = d
     c.imports = imp
     return true
@@ -326,7 +328,7 @@ class CallRecordEmitter(
   /** The defaulted, carried parameters whose default text cannot be evaluated at the host's call site (design §5's presence split). */
   private fun splitParams(c: Cand): List<KmValueParameter> {
     val siblings = c.params.map { it.name }.toSet()
-    return c.params.filter { p -> p.declaresDefaultValue && supported(p.valueType) && copyRead(c, p) == null && !hostEvaluable(c.defaults[p.name] ?: "", siblings, c.typeFq) }
+    return c.params.filter { p -> p.declaresDefaultValue && supported(p.valueType) && copyRead(c, p) == null && !hostEvaluable(c, c.defaults[p.name] ?: "", siblings) }
   }
 
   /**
@@ -396,7 +398,13 @@ class CallRecordEmitter(
         if (f.visibility != Visibility.PUBLIC || f.receiverParameterType != null || f.isSuspend || f.typeParameters.isNotEmpty()) continue
         if (f.name in memberNameDenylist || index.isHidden(jvm, f) || isComposable(f.signature?.descriptor)) continue
         val r = fqOf(f.returnType)?.takeIf { it in set && f.returnType.arguments.isEmpty() && !f.returnType.isNullable } ?: continue
-        members += Cand(Kind.MEMBER, pkg, fq, f.name, r, f.valueParameters, f.isOperator)
+        // An override is the supertype mirror's member already (the host's call dispatches virtually).
+        val sig = f.valueParameters.map { typeText(it.type) }
+        val overrides = index.allSupertypes(fq).any { s ->
+          s in set && index.classes[s]?.functions?.any { g -> g.name == f.name && g.valueParameters.map { typeText(it.type) } == sig } == true
+        }
+        if (overrides) continue
+        members +=Cand(Kind.MEMBER, pkg, fq, f.name, r, f.valueParameters, f.isOperator)
       }
     }
     for (c in members.filter { cfg.excludeKeys[it.key] == null }) {
@@ -706,9 +714,14 @@ class CallRecordEmitter(
   // ---------------------------------------------------------------- host
 
   /** Whether a copied default compiles at the host's call site: not if it names a sibling parameter or a private member. */
-  private fun hostEvaluable(text: String, siblings: Set<String>, ownerFq: String?): Boolean {
+  private fun hostEvaluable(c: Cand, text: String, siblings: Set<String>): Boolean {
     if (Regex("(?<![.\\w])([a-z][A-Za-z0-9_]*)\\b").findAll(text).any { it.value in siblings }) return false
-    val owner = ownerFq?.let { index.classes[it] } ?: return true
+    // A default that names an internal type (`TypographyTokens.DisplayLarge`) does not compile outside Compose.
+    for (m in Regex("(?<![.\\w])([A-Z][A-Za-z0-9_]*)").findAll(text)) {
+      val k = index.classes[resolveName(m.value, c.imports, c.pkg, c.typeFq)]
+      if (k != null && k.visibility != Visibility.PUBLIC) return false
+    }
+    val owner = c.typeFq?.let { index.classes[it] } ?: return true
     // A bare member name (implicit receiver) is the type's own, which the host's call site does not have.
     val members = (owner.functions.map { it.name } + owner.properties.map { it.name }).toSet()
     if (Regex("(?<![.\\w])([a-z][A-Za-z0-9_]*)\\b").findAll(text).any { it.value in members }) return false
@@ -720,21 +733,22 @@ class CallRecordEmitter(
   /** The extension functions the copied defaults use (`0.dp`), imported by the generated file as in the file they came from. */
   private val hostImports = linkedSetOf<String>()
 
+  /** The fully qualified name a capitalised simple name in a default expression stands for (an import, the file's package, the owner's companion). */
+  private fun resolveName(n: String, imports: Map<String, String>, pkg: String, ownerFq: String?): String = when {
+    imports[n] != null -> imports.getValue(n)
+    index.classes.containsKey("$pkg.$n") -> "$pkg.$n"
+    index.packageProperties[pkg]?.any { it.name == n } == true -> "$pkg.$n"
+    ownerFq != null && index.classes["$ownerFq.Companion"]?.properties?.any { it.name == n } == true -> "$ownerFq.$n"
+    else -> n
+  }
+
   /** A default expression from the sources, with simple names qualified so it compiles anywhere. */
   private fun qualify(text: String, imports: Map<String, String>, pkg: String, ownerFq: String?, receiver: String? = null): String {
     for (m in Regex("\\.([a-z][A-Za-z0-9_]*)\\b").findAll(text)) {
       val fq = imports[m.groupValues[1]] ?: continue
       if (fq.substringBeforeLast('.').let { p -> p.isNotEmpty() && p.none { it.isUpperCase() } }) hostImports += fq
     }
-    val q = Regex("(?<![.\\w])([A-Z][A-Za-z0-9_]*)").replace(text) { m ->
-      val n = m.value
-      when {
-        imports[n] != null -> imports.getValue(n)
-        index.classes.containsKey("$pkg.$n") -> "$pkg.$n"
-        ownerFq != null && index.classes["$ownerFq.Companion"]?.properties?.any { it.name == n } == true -> "$ownerFq.$n"
-        else -> n
-      }
-    }
+    val q = Regex("(?<![.\\w])([A-Z][A-Za-z0-9_]*)").replace(text) { m -> resolveName(m.value, imports, pkg, ownerFq) }
     // A member's `this.x` is the receiver the guest recorded the call on.
     return if (receiver == null) q else q.replace(Regex("\\bthis\\b"), "($receiver)")
   }
@@ -748,7 +762,7 @@ class CallRecordEmitter(
     val carried = c.params.filter { supported(it.valueType) }
     val siblings = c.params.map { it.name }.toSet()
     val ownerForDefaults = c.typeFq
-    val split = carried.filter { p -> p.declaresDefaultValue && copyRead(c, p) == null && !hostEvaluable(c.defaults[p.name] ?: "", siblings, ownerForDefaults) }
+    val split = carried.filter { p -> p.declaresDefaultValue && copyRead(c, p) == null && !hostEvaluable(c, c.defaults[p.name] ?: "", siblings) }
     val pkg = packageOf(c.typeFq ?: c.returns).let { if (c.typeFq == null) c.pkg else it }
     fun arg(p: KmValueParameter, present: Set<String>): String {
       val t = p.valueType

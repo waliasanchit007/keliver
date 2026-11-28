@@ -23,16 +23,16 @@ public interface FontFamily : dev.keliver.calls.runtime.CallRecorded {
   @Deprecated("Keliver: `FontFamily.canLoadSynchronously` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val canLoadSynchronously: Nothing get() = error("call-recorded")
   public companion object {
-    /** `androidx.compose.ui.text.font.FontFamily.Companion#Cursive`, recorded: the host makes the same call (lock tag 266). */
-    public val Cursive: dev.keliver.calls.compose.ui.text.font.GenericFontFamily get() = dev.keliver.calls.compose.ui.text.font.GenericFontFamily(dev.keliver.calls.runtime.CallRecord(266))
-    /** `androidx.compose.ui.text.font.FontFamily.Companion#Default`, recorded: the host makes the same call (lock tag 267). */
-    public val Default: dev.keliver.calls.compose.ui.text.font.SystemFontFamily get() = dev.keliver.calls.compose.ui.text.font.SystemFontFamilyCall(dev.keliver.calls.runtime.CallRecord(267))
-    /** `androidx.compose.ui.text.font.FontFamily.Companion#Monospace`, recorded: the host makes the same call (lock tag 268). */
-    public val Monospace: dev.keliver.calls.compose.ui.text.font.GenericFontFamily get() = dev.keliver.calls.compose.ui.text.font.GenericFontFamily(dev.keliver.calls.runtime.CallRecord(268))
-    /** `androidx.compose.ui.text.font.FontFamily.Companion#SansSerif`, recorded: the host makes the same call (lock tag 269). */
-    public val SansSerif: dev.keliver.calls.compose.ui.text.font.GenericFontFamily get() = dev.keliver.calls.compose.ui.text.font.GenericFontFamily(dev.keliver.calls.runtime.CallRecord(269))
-    /** `androidx.compose.ui.text.font.FontFamily.Companion#Serif`, recorded: the host makes the same call (lock tag 270). */
-    public val Serif: dev.keliver.calls.compose.ui.text.font.GenericFontFamily get() = dev.keliver.calls.compose.ui.text.font.GenericFontFamily(dev.keliver.calls.runtime.CallRecord(270))
+    /** `androidx.compose.ui.text.font.FontFamily.Companion#Cursive`, recorded: the host makes the same call (lock tag 672). */
+    public val Cursive: dev.keliver.calls.compose.ui.text.font.GenericFontFamily get() = dev.keliver.calls.compose.ui.text.font.GenericFontFamily(dev.keliver.calls.runtime.CallRecord(672))
+    /** `androidx.compose.ui.text.font.FontFamily.Companion#Default`, recorded: the host makes the same call (lock tag 673). */
+    public val Default: dev.keliver.calls.compose.ui.text.font.SystemFontFamily get() = dev.keliver.calls.compose.ui.text.font.SystemFontFamilyCall(dev.keliver.calls.runtime.CallRecord(673))
+    /** `androidx.compose.ui.text.font.FontFamily.Companion#Monospace`, recorded: the host makes the same call (lock tag 674). */
+    public val Monospace: dev.keliver.calls.compose.ui.text.font.GenericFontFamily get() = dev.keliver.calls.compose.ui.text.font.GenericFontFamily(dev.keliver.calls.runtime.CallRecord(674))
+    /** `androidx.compose.ui.text.font.FontFamily.Companion#SansSerif`, recorded: the host makes the same call (lock tag 675). */
+    public val SansSerif: dev.keliver.calls.compose.ui.text.font.GenericFontFamily get() = dev.keliver.calls.compose.ui.text.font.GenericFontFamily(dev.keliver.calls.runtime.CallRecord(675))
+    /** `androidx.compose.ui.text.font.FontFamily.Companion#Serif`, recorded: the host makes the same call (lock tag 676). */
+    public val Serif: dev.keliver.calls.compose.ui.text.font.GenericFontFamily get() = dev.keliver.calls.compose.ui.text.font.GenericFontFamily(dev.keliver.calls.runtime.CallRecord(676))
   }
 }
 @dev.keliver.calls.runtime.InternalCallApi
@@ -43,12 +43,12 @@ public class FontLoadingStrategy @dev.keliver.calls.runtime.InternalCallApi cons
   @Deprecated("Keliver: `FontLoadingStrategy.value` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val value: Nothing get() = error("call-recorded")
   public companion object {
-    /** `androidx.compose.ui.text.font.FontLoadingStrategy.Companion#Async`, recorded: the host makes the same call (lock tag 271). */
-    public val Async: dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy get() = dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy(dev.keliver.calls.runtime.CallRecord(271))
-    /** `androidx.compose.ui.text.font.FontLoadingStrategy.Companion#Blocking`, recorded: the host makes the same call (lock tag 272). */
-    public val Blocking: dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy get() = dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy(dev.keliver.calls.runtime.CallRecord(272))
-    /** `androidx.compose.ui.text.font.FontLoadingStrategy.Companion#OptionalLocal`, recorded: the host makes the same call (lock tag 273). */
-    public val OptionalLocal: dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy get() = dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy(dev.keliver.calls.runtime.CallRecord(273))
+    /** `androidx.compose.ui.text.font.FontLoadingStrategy.Companion#Async`, recorded: the host makes the same call (lock tag 677). */
+    public val Async: dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy get() = dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy(dev.keliver.calls.runtime.CallRecord(677))
+    /** `androidx.compose.ui.text.font.FontLoadingStrategy.Companion#Blocking`, recorded: the host makes the same call (lock tag 678). */
+    public val Blocking: dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy get() = dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy(dev.keliver.calls.runtime.CallRecord(678))
+    /** `androidx.compose.ui.text.font.FontLoadingStrategy.Companion#OptionalLocal`, recorded: the host makes the same call (lock tag 679). */
+    public val OptionalLocal: dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy get() = dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy(dev.keliver.calls.runtime.CallRecord(679))
   }
 }
 
@@ -57,10 +57,10 @@ public class FontStyle @dev.keliver.calls.runtime.InternalCallApi constructor(ca
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val value: kotlin.Int get() = (readValues("FontStyle.value")["value"] as kotlin.Int?)!!
   public companion object {
-    /** `androidx.compose.ui.text.font.FontStyle.Companion#Italic`, recorded: the host makes the same call (lock tag 275). */
-    public val Italic: dev.keliver.calls.compose.ui.text.font.FontStyle get() = dev.keliver.calls.compose.ui.text.font.FontStyle(dev.keliver.calls.runtime.CallRecord(275))
-    /** `androidx.compose.ui.text.font.FontStyle.Companion#Normal`, recorded: the host makes the same call (lock tag 276). */
-    public val Normal: dev.keliver.calls.compose.ui.text.font.FontStyle get() = dev.keliver.calls.compose.ui.text.font.FontStyle(dev.keliver.calls.runtime.CallRecord(276))
+    /** `androidx.compose.ui.text.font.FontStyle.Companion#Italic`, recorded: the host makes the same call (lock tag 681). */
+    public val Italic: dev.keliver.calls.compose.ui.text.font.FontStyle get() = dev.keliver.calls.compose.ui.text.font.FontStyle(dev.keliver.calls.runtime.CallRecord(681))
+    /** `androidx.compose.ui.text.font.FontStyle.Companion#Normal`, recorded: the host makes the same call (lock tag 682). */
+    public val Normal: dev.keliver.calls.compose.ui.text.font.FontStyle get() = dev.keliver.calls.compose.ui.text.font.FontStyle(dev.keliver.calls.runtime.CallRecord(682))
   }
 }
 
@@ -69,20 +69,20 @@ public class FontSynthesis @dev.keliver.calls.runtime.InternalCallApi constructo
   @Deprecated("Keliver: `FontSynthesis.value` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val value: Nothing get() = error("call-recorded")
   public companion object {
-    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#All`, recorded: the host makes the same call (lock tag 277). */
-    public val All: dev.keliver.calls.compose.ui.text.font.FontSynthesis get() = dev.keliver.calls.compose.ui.text.font.FontSynthesis(dev.keliver.calls.runtime.CallRecord(277))
-    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#None`, recorded: the host makes the same call (lock tag 278). */
-    public val None: dev.keliver.calls.compose.ui.text.font.FontSynthesis get() = dev.keliver.calls.compose.ui.text.font.FontSynthesis(dev.keliver.calls.runtime.CallRecord(278))
-    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#Style`, recorded: the host makes the same call (lock tag 279). */
-    public val Style: dev.keliver.calls.compose.ui.text.font.FontSynthesis get() = dev.keliver.calls.compose.ui.text.font.FontSynthesis(dev.keliver.calls.runtime.CallRecord(279))
-    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#Weight`, recorded: the host makes the same call (lock tag 280). */
-    public val Weight: dev.keliver.calls.compose.ui.text.font.FontSynthesis get() = dev.keliver.calls.compose.ui.text.font.FontSynthesis(dev.keliver.calls.runtime.CallRecord(280))
-    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#valueOf(value:Int)`, recorded: the host makes the same call (lock tag 281). */
+    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#All`, recorded: the host makes the same call (lock tag 683). */
+    public val All: dev.keliver.calls.compose.ui.text.font.FontSynthesis get() = dev.keliver.calls.compose.ui.text.font.FontSynthesis(dev.keliver.calls.runtime.CallRecord(683))
+    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#None`, recorded: the host makes the same call (lock tag 684). */
+    public val None: dev.keliver.calls.compose.ui.text.font.FontSynthesis get() = dev.keliver.calls.compose.ui.text.font.FontSynthesis(dev.keliver.calls.runtime.CallRecord(684))
+    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#Style`, recorded: the host makes the same call (lock tag 685). */
+    public val Style: dev.keliver.calls.compose.ui.text.font.FontSynthesis get() = dev.keliver.calls.compose.ui.text.font.FontSynthesis(dev.keliver.calls.runtime.CallRecord(685))
+    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#Weight`, recorded: the host makes the same call (lock tag 686). */
+    public val Weight: dev.keliver.calls.compose.ui.text.font.FontSynthesis get() = dev.keliver.calls.compose.ui.text.font.FontSynthesis(dev.keliver.calls.runtime.CallRecord(686))
+    /** `androidx.compose.ui.text.font.FontSynthesis.Companion#valueOf(value:Int)`, recorded: the host makes the same call (lock tag 687). */
     public fun valueOf(
       value: kotlin.Int,
     ): dev.keliver.calls.compose.ui.text.font.FontSynthesis = dev.keliver.calls.compose.ui.text.font.FontSynthesis(
       dev.keliver.calls.runtime.CallRecord(
-        281,
+        687,
         kotlinx.serialization.json.buildJsonObject {
           put("value", kotlinx.serialization.json.JsonPrimitive(value))
         },
@@ -96,42 +96,42 @@ public class FontWeight @dev.keliver.calls.runtime.InternalCallApi constructor(c
   /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
   public val weight: kotlin.Int get() = (readValues("FontWeight.weight")["weight"] as kotlin.Int?)!!
   public companion object {
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#Black`, recorded: the host makes the same call (lock tag 283). */
-    public val Black: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(283))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#Bold`, recorded: the host makes the same call (lock tag 284). */
-    public val Bold: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(284))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#ExtraBold`, recorded: the host makes the same call (lock tag 285). */
-    public val ExtraBold: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(285))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#ExtraLight`, recorded: the host makes the same call (lock tag 286). */
-    public val ExtraLight: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(286))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#Light`, recorded: the host makes the same call (lock tag 287). */
-    public val Light: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(287))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#Medium`, recorded: the host makes the same call (lock tag 288). */
-    public val Medium: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(288))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#Normal`, recorded: the host makes the same call (lock tag 289). */
-    public val Normal: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(289))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#SemiBold`, recorded: the host makes the same call (lock tag 290). */
-    public val SemiBold: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(290))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#Thin`, recorded: the host makes the same call (lock tag 291). */
-    public val Thin: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(291))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#W100`, recorded: the host makes the same call (lock tag 292). */
-    public val W100: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(292))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#W200`, recorded: the host makes the same call (lock tag 293). */
-    public val W200: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(293))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#W300`, recorded: the host makes the same call (lock tag 294). */
-    public val W300: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(294))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#W400`, recorded: the host makes the same call (lock tag 295). */
-    public val W400: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(295))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#W500`, recorded: the host makes the same call (lock tag 296). */
-    public val W500: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(296))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#W600`, recorded: the host makes the same call (lock tag 297). */
-    public val W600: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(297))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#W700`, recorded: the host makes the same call (lock tag 298). */
-    public val W700: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(298))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#W800`, recorded: the host makes the same call (lock tag 299). */
-    public val W800: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(299))
-    /** `androidx.compose.ui.text.font.FontWeight.Companion#W900`, recorded: the host makes the same call (lock tag 300). */
-    public val W900: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(300))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#Black`, recorded: the host makes the same call (lock tag 689). */
+    public val Black: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(689))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#Bold`, recorded: the host makes the same call (lock tag 690). */
+    public val Bold: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(690))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#ExtraBold`, recorded: the host makes the same call (lock tag 691). */
+    public val ExtraBold: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(691))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#ExtraLight`, recorded: the host makes the same call (lock tag 692). */
+    public val ExtraLight: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(692))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#Light`, recorded: the host makes the same call (lock tag 693). */
+    public val Light: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(693))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#Medium`, recorded: the host makes the same call (lock tag 694). */
+    public val Medium: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(694))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#Normal`, recorded: the host makes the same call (lock tag 695). */
+    public val Normal: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(695))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#SemiBold`, recorded: the host makes the same call (lock tag 696). */
+    public val SemiBold: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(696))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#Thin`, recorded: the host makes the same call (lock tag 697). */
+    public val Thin: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(697))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#W100`, recorded: the host makes the same call (lock tag 698). */
+    public val W100: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(698))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#W200`, recorded: the host makes the same call (lock tag 699). */
+    public val W200: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(699))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#W300`, recorded: the host makes the same call (lock tag 700). */
+    public val W300: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(700))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#W400`, recorded: the host makes the same call (lock tag 701). */
+    public val W400: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(701))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#W500`, recorded: the host makes the same call (lock tag 702). */
+    public val W500: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(702))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#W600`, recorded: the host makes the same call (lock tag 703). */
+    public val W600: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(703))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#W700`, recorded: the host makes the same call (lock tag 704). */
+    public val W700: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(704))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#W800`, recorded: the host makes the same call (lock tag 705). */
+    public val W800: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(705))
+    /** `androidx.compose.ui.text.font.FontWeight.Companion#W900`, recorded: the host makes the same call (lock tag 706). */
+    public val W900: dev.keliver.calls.compose.ui.text.font.FontWeight get() = dev.keliver.calls.compose.ui.text.font.FontWeight(dev.keliver.calls.runtime.CallRecord(706))
   }
 }
 
@@ -147,7 +147,7 @@ public interface SystemFontFamily : dev.keliver.calls.runtime.CallRecorded, dev.
 @dev.keliver.calls.runtime.InternalCallApi
 internal class SystemFontFamilyCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), SystemFontFamily
 
-/** `androidx.compose.ui.text.font.Font(resId:Int,weight:FontWeight,style:FontStyle,loadingStrategy:FontLoadingStrategy)`, recorded: the host makes the same call (lock tag 262). */
+/** `androidx.compose.ui.text.font.Font(resId:Int,weight:FontWeight,style:FontStyle,loadingStrategy:FontLoadingStrategy)`, recorded: the host makes the same call (lock tag 669). */
 public fun Font(
   resId: kotlin.Int,
   weight: dev.keliver.calls.compose.ui.text.font.FontWeight? = null,
@@ -155,7 +155,7 @@ public fun Font(
   loadingStrategy: dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy? = null,
 ): dev.keliver.calls.compose.ui.text.font.Font = dev.keliver.calls.compose.ui.text.font.FontCall(
   dev.keliver.calls.runtime.CallRecord(
-    262,
+    669,
     kotlinx.serialization.json.buildJsonObject {
       put("resId", kotlinx.serialization.json.JsonPrimitive(resId))
       if (weight != null) put("weight", weight.call.toJson())
@@ -165,48 +165,36 @@ public fun Font(
   ),
 )
 
-/** `androidx.compose.ui.text.font.FontFamily(familyName:String)`, recorded: the host makes the same call (lock tag 263). */
-public fun FontFamily(
-  familyName: kotlin.String,
-): dev.keliver.calls.compose.ui.text.font.FontFamily = dev.keliver.calls.compose.ui.text.font.FontFamilyCall(
-  dev.keliver.calls.runtime.CallRecord(
-    263,
-    kotlinx.serialization.json.buildJsonObject {
-      put("familyName", kotlinx.serialization.json.JsonPrimitive(familyName))
-    },
-  ),
-)
-
-/** `androidx.compose.ui.text.font.FontFamily(fonts:Font...)`, recorded: the host makes the same call (lock tag 264). */
+/** `androidx.compose.ui.text.font.FontFamily(fonts:Font...)`, recorded: the host makes the same call (lock tag 670). */
 public fun FontFamily(
   vararg fonts: dev.keliver.calls.compose.ui.text.font.Font,
 ): dev.keliver.calls.compose.ui.text.font.FontFamily = dev.keliver.calls.compose.ui.text.font.FontFamilyCall(
   dev.keliver.calls.runtime.CallRecord(
-    264,
+    670,
     kotlinx.serialization.json.buildJsonObject {
       put("fonts", kotlinx.serialization.json.JsonArray(fonts.map { it.call.toJson() }))
     },
   ),
 )
 
-/** `androidx.compose.ui.text.font.FontFamily(fonts:List<Font>)`, recorded: the host makes the same call (lock tag 265). */
+/** `androidx.compose.ui.text.font.FontFamily(fonts:List<Font>)`, recorded: the host makes the same call (lock tag 671). */
 public fun FontFamily(
   fonts: kotlin.collections.List<dev.keliver.calls.compose.ui.text.font.Font>,
 ): dev.keliver.calls.compose.ui.text.font.FontFamily = dev.keliver.calls.compose.ui.text.font.FontFamilyCall(
   dev.keliver.calls.runtime.CallRecord(
-    265,
+    671,
     kotlinx.serialization.json.buildJsonObject {
       put("fonts", kotlinx.serialization.json.JsonArray(fonts.map { it.call.toJson() }))
     },
   ),
 )
 
-/** `androidx.compose.ui.text.font.FontStyle#<init>(value:Int)`, recorded: the host makes the same call (lock tag 274). */
+/** `androidx.compose.ui.text.font.FontStyle#<init>(value:Int)`, recorded: the host makes the same call (lock tag 680). */
 public fun FontStyle(
   value: kotlin.Int,
 ): dev.keliver.calls.compose.ui.text.font.FontStyle = dev.keliver.calls.compose.ui.text.font.FontStyle(
   dev.keliver.calls.runtime.CallRecord(
-    274,
+    680,
     kotlinx.serialization.json.buildJsonObject {
       put("value", kotlinx.serialization.json.JsonPrimitive(value))
     },
@@ -214,12 +202,12 @@ public fun FontStyle(
   fieldValues = buildMap<String, Any?> { put("value", value) },
 )
 
-/** `androidx.compose.ui.text.font.FontWeight#<init>(weight:Int)`, recorded: the host makes the same call (lock tag 282). */
+/** `androidx.compose.ui.text.font.FontWeight#<init>(weight:Int)`, recorded: the host makes the same call (lock tag 688). */
 public fun FontWeight(
   weight: kotlin.Int,
 ): dev.keliver.calls.compose.ui.text.font.FontWeight = dev.keliver.calls.compose.ui.text.font.FontWeight(
   dev.keliver.calls.runtime.CallRecord(
-    282,
+    688,
     kotlinx.serialization.json.buildJsonObject {
       put("weight", kotlinx.serialization.json.JsonPrimitive(weight))
     },
@@ -227,14 +215,14 @@ public fun FontWeight(
   fieldValues = buildMap<String, Any?> { put("weight", weight) },
 )
 
-/** `androidx.compose.ui.text.font.lerp(start:FontWeight,stop:FontWeight,fraction:Float)`, recorded: the host makes the same call (lock tag 301). */
+/** `androidx.compose.ui.text.font.lerp(start:FontWeight,stop:FontWeight,fraction:Float)`, recorded: the host makes the same call (lock tag 707). */
 public fun lerp(
   start: dev.keliver.calls.compose.ui.text.font.FontWeight,
   stop: dev.keliver.calls.compose.ui.text.font.FontWeight,
   fraction: kotlin.Float,
 ): dev.keliver.calls.compose.ui.text.font.FontWeight = dev.keliver.calls.compose.ui.text.font.FontWeight(
   dev.keliver.calls.runtime.CallRecord(
-    301,
+    707,
     kotlinx.serialization.json.buildJsonObject {
       put("start", start.call.toJson())
       put("stop", stop.call.toJson())

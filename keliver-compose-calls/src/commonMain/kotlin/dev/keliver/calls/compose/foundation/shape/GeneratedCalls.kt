@@ -8,46 +8,10 @@ import dev.keliver.calls.runtime.readValues
 
 /** Guest mirror of `androidx.compose.foundation.shape.AbsoluteCutCornerShape`: a recorded call the host replays (MS4-42, call records). */
 public class AbsoluteCutCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
-  /** `androidx.compose.foundation.shape.AbsoluteCutCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 2). */
-  public fun copy(
-    topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    topEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    bottomEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    bottomStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
-  ): dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape(
-    dev.keliver.calls.runtime.CallRecord(
-      2,
-      kotlinx.serialization.json.buildJsonObject {
-        put("topStart", topStart.call.toJson())
-        put("topEnd", topEnd.call.toJson())
-        put("bottomEnd", bottomEnd.call.toJson())
-        put("bottomStart", bottomStart.call.toJson())
-      },
-      on = call,
-    ),
-  )
 }
 
 /** Guest mirror of `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape`: a recorded call the host replays (MS4-42, call records). */
 public class AbsoluteRoundedCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
-  /** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 11). */
-  public fun copy(
-    topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    topEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    bottomEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    bottomStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
-  ): dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape(
-    dev.keliver.calls.runtime.CallRecord(
-      11,
-      kotlinx.serialization.json.buildJsonObject {
-        put("topStart", topStart.call.toJson())
-        put("topEnd", topEnd.call.toJson())
-        put("bottomEnd", bottomEnd.call.toJson())
-        put("bottomStart", bottomStart.call.toJson())
-      },
-      on = call,
-    ),
-  )
 }
 
 /** Guest mirror of `androidx.compose.foundation.shape.CornerBasedShape`: a recorded call the host replays (MS4-42, call records). */
@@ -60,19 +24,19 @@ public interface CornerBasedShape : dev.keliver.calls.runtime.CallRecorded, dev.
   public val bottomEnd: Nothing get() = error("call-recorded")
   @Deprecated("Keliver: `CornerBasedShape.bottomStart` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
   public val bottomStart: Nothing get() = error("call-recorded")
-  /** `androidx.compose.foundation.shape.CornerBasedShape#copy(all:CornerSize)` on a recorded value: the call carries the receiver (lock tag 20). */
+  /** `androidx.compose.foundation.shape.CornerBasedShape#copy(all:CornerSize)` on a recorded value: the call carries the receiver (lock tag 200). */
   public fun copy(
     all: dev.keliver.calls.compose.foundation.shape.CornerSize,
   ): dev.keliver.calls.compose.foundation.shape.CornerBasedShape = dev.keliver.calls.compose.foundation.shape.CornerBasedShapeCall(
     dev.keliver.calls.runtime.CallRecord(
-      20,
+      200,
       kotlinx.serialization.json.buildJsonObject {
         put("all", all.call.toJson())
       },
       on = call,
     ),
   )
-  /** `androidx.compose.foundation.shape.CornerBasedShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 21). */
+  /** `androidx.compose.foundation.shape.CornerBasedShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 201). */
   public fun copy(
     topStart: dev.keliver.calls.compose.foundation.shape.CornerSize? = null,
     topEnd: dev.keliver.calls.compose.foundation.shape.CornerSize? = null,
@@ -80,7 +44,7 @@ public interface CornerBasedShape : dev.keliver.calls.runtime.CallRecorded, dev.
     bottomStart: dev.keliver.calls.compose.foundation.shape.CornerSize? = null,
   ): dev.keliver.calls.compose.foundation.shape.CornerBasedShape = dev.keliver.calls.compose.foundation.shape.CornerBasedShapeCall(
     dev.keliver.calls.runtime.CallRecord(
-      21,
+      201,
       kotlinx.serialization.json.buildJsonObject {
         if (topStart != null) put("topStart", topStart.call.toJson())
         if (topEnd != null) put("topEnd", topEnd.call.toJson())
@@ -102,49 +66,13 @@ internal class CornerSizeCall(call: dev.keliver.calls.runtime.CallRecord, fieldV
 
 /** Guest mirror of `androidx.compose.foundation.shape.CutCornerShape`: a recorded call the host replays (MS4-42, call records). */
 public class CutCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
-  /** `androidx.compose.foundation.shape.CutCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 26). */
-  public fun copy(
-    topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    topEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    bottomEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    bottomStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
-  ): dev.keliver.calls.compose.foundation.shape.CutCornerShape = dev.keliver.calls.compose.foundation.shape.CutCornerShape(
-    dev.keliver.calls.runtime.CallRecord(
-      26,
-      kotlinx.serialization.json.buildJsonObject {
-        put("topStart", topStart.call.toJson())
-        put("topEnd", topEnd.call.toJson())
-        put("bottomEnd", bottomEnd.call.toJson())
-        put("bottomStart", bottomStart.call.toJson())
-      },
-      on = call,
-    ),
-  )
 }
 
 /** Guest mirror of `androidx.compose.foundation.shape.RoundedCornerShape`: a recorded call the host replays (MS4-42, call records). */
 public class RoundedCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
-  /** `androidx.compose.foundation.shape.RoundedCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 35). */
-  public fun copy(
-    topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    topEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    bottomEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
-    bottomStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
-  ): dev.keliver.calls.compose.foundation.shape.RoundedCornerShape = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(
-    dev.keliver.calls.runtime.CallRecord(
-      35,
-      kotlinx.serialization.json.buildJsonObject {
-        put("topStart", topStart.call.toJson())
-        put("topEnd", topEnd.call.toJson())
-        put("bottomEnd", bottomEnd.call.toJson())
-        put("bottomStart", bottomStart.call.toJson())
-      },
-      on = call,
-    ),
-  )
 }
 
-/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape#<init>(topLeft:CornerSize,topRight:CornerSize,bottomRight:CornerSize,bottomLeft:CornerSize)`, recorded: the host makes the same call (lock tag 1). */
+/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape#<init>(topLeft:CornerSize,topRight:CornerSize,bottomRight:CornerSize,bottomLeft:CornerSize)`, recorded: the host makes the same call (lock tag 183). */
 public fun AbsoluteCutCornerShape(
   topLeft: dev.keliver.calls.compose.foundation.shape.CornerSize,
   topRight: dev.keliver.calls.compose.foundation.shape.CornerSize,
@@ -152,7 +80,7 @@ public fun AbsoluteCutCornerShape(
   bottomLeft: dev.keliver.calls.compose.foundation.shape.CornerSize,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    1,
+    183,
     kotlinx.serialization.json.buildJsonObject {
       put("topLeft", topLeft.call.toJson())
       put("topRight", topRight.call.toJson())
@@ -162,55 +90,55 @@ public fun AbsoluteCutCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(corner:CornerSize)`, recorded: the host makes the same call (lock tag 3). */
+/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(corner:CornerSize)`, recorded: the host makes the same call (lock tag 184). */
 public fun AbsoluteCutCornerShape(
   corner: dev.keliver.calls.compose.foundation.shape.CornerSize,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    3,
+    184,
     kotlinx.serialization.json.buildJsonObject {
       put("corner", corner.call.toJson())
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(percent:Int)`, recorded: the host makes the same call (lock tag 4). */
+/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(percent:Int)`, recorded: the host makes the same call (lock tag 185). */
 public fun AbsoluteCutCornerShape(
   percent: kotlin.Int,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    4,
+    185,
     kotlinx.serialization.json.buildJsonObject {
       put("percent", kotlinx.serialization.json.JsonPrimitive(percent))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(size:Dp)`, recorded: the host makes the same call (lock tag 5). */
+/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(size:Dp)`, recorded: the host makes the same call (lock tag 186). */
 public fun AbsoluteCutCornerShape(
   size: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    5,
+    186,
     kotlinx.serialization.json.buildJsonObject {
       put("size", dev.keliver.compose.ui.unit.DpCodec.toJson(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(size:Float)`, recorded: the host makes the same call (lock tag 6). */
+/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(size:Float)`, recorded: the host makes the same call (lock tag 187). */
 public fun AbsoluteCutCornerShape(
   size: kotlin.Float,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    6,
+    187,
     kotlinx.serialization.json.buildJsonObject {
       put("size", kotlinx.serialization.json.JsonPrimitive(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(topLeft:Dp,topRight:Dp,bottomRight:Dp,bottomLeft:Dp)`, recorded: the host makes the same call (lock tag 7). */
+/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(topLeft:Dp,topRight:Dp,bottomRight:Dp,bottomLeft:Dp)`, recorded: the host makes the same call (lock tag 188). */
 public fun AbsoluteCutCornerShape(
   topLeft: dev.keliver.compose.ui.unit.Dp? = null,
   topRight: dev.keliver.compose.ui.unit.Dp? = null,
@@ -218,7 +146,7 @@ public fun AbsoluteCutCornerShape(
   bottomLeft: dev.keliver.compose.ui.unit.Dp? = null,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    7,
+    188,
     kotlinx.serialization.json.buildJsonObject {
       if (topLeft != null) put("topLeft", dev.keliver.compose.ui.unit.DpCodec.toJson(topLeft))
       if (topRight != null) put("topRight", dev.keliver.compose.ui.unit.DpCodec.toJson(topRight))
@@ -228,7 +156,7 @@ public fun AbsoluteCutCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(topLeft:Float,topRight:Float,bottomRight:Float,bottomLeft:Float)`, recorded: the host makes the same call (lock tag 8). */
+/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(topLeft:Float,topRight:Float,bottomRight:Float,bottomLeft:Float)`, recorded: the host makes the same call (lock tag 189). */
 public fun AbsoluteCutCornerShape(
   topLeft: kotlin.Float? = null,
   topRight: kotlin.Float? = null,
@@ -236,7 +164,7 @@ public fun AbsoluteCutCornerShape(
   bottomLeft: kotlin.Float? = null,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    8,
+    189,
     kotlinx.serialization.json.buildJsonObject {
       if (topLeft != null) put("topLeft", kotlinx.serialization.json.JsonPrimitive(topLeft))
       if (topRight != null) put("topRight", kotlinx.serialization.json.JsonPrimitive(topRight))
@@ -246,7 +174,7 @@ public fun AbsoluteCutCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(topLeftPercent:Int,topRightPercent:Int,bottomRightPercent:Int,bottomLeftPercent:Int)`, recorded: the host makes the same call (lock tag 9). */
+/** `androidx.compose.foundation.shape.AbsoluteCutCornerShape(topLeftPercent:Int,topRightPercent:Int,bottomRightPercent:Int,bottomLeftPercent:Int)`, recorded: the host makes the same call (lock tag 190). */
 public fun AbsoluteCutCornerShape(
   topLeftPercent: kotlin.Int? = null,
   topRightPercent: kotlin.Int? = null,
@@ -254,7 +182,7 @@ public fun AbsoluteCutCornerShape(
   bottomLeftPercent: kotlin.Int? = null,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteCutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    9,
+    190,
     kotlinx.serialization.json.buildJsonObject {
       if (topLeftPercent != null) put("topLeftPercent", kotlinx.serialization.json.JsonPrimitive(topLeftPercent))
       if (topRightPercent != null) put("topRightPercent", kotlinx.serialization.json.JsonPrimitive(topRightPercent))
@@ -264,7 +192,7 @@ public fun AbsoluteCutCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape#<init>(topLeft:CornerSize,topRight:CornerSize,bottomRight:CornerSize,bottomLeft:CornerSize)`, recorded: the host makes the same call (lock tag 10). */
+/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape#<init>(topLeft:CornerSize,topRight:CornerSize,bottomRight:CornerSize,bottomLeft:CornerSize)`, recorded: the host makes the same call (lock tag 191). */
 public fun AbsoluteRoundedCornerShape(
   topLeft: dev.keliver.calls.compose.foundation.shape.CornerSize,
   topRight: dev.keliver.calls.compose.foundation.shape.CornerSize,
@@ -272,7 +200,7 @@ public fun AbsoluteRoundedCornerShape(
   bottomLeft: dev.keliver.calls.compose.foundation.shape.CornerSize,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    10,
+    191,
     kotlinx.serialization.json.buildJsonObject {
       put("topLeft", topLeft.call.toJson())
       put("topRight", topRight.call.toJson())
@@ -282,55 +210,55 @@ public fun AbsoluteRoundedCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(corner:CornerSize)`, recorded: the host makes the same call (lock tag 12). */
+/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(corner:CornerSize)`, recorded: the host makes the same call (lock tag 192). */
 public fun AbsoluteRoundedCornerShape(
   corner: dev.keliver.calls.compose.foundation.shape.CornerSize,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    12,
+    192,
     kotlinx.serialization.json.buildJsonObject {
       put("corner", corner.call.toJson())
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(percent:Int)`, recorded: the host makes the same call (lock tag 13). */
+/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(percent:Int)`, recorded: the host makes the same call (lock tag 193). */
 public fun AbsoluteRoundedCornerShape(
   percent: kotlin.Int,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    13,
+    193,
     kotlinx.serialization.json.buildJsonObject {
       put("percent", kotlinx.serialization.json.JsonPrimitive(percent))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(size:Dp)`, recorded: the host makes the same call (lock tag 14). */
+/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(size:Dp)`, recorded: the host makes the same call (lock tag 194). */
 public fun AbsoluteRoundedCornerShape(
   size: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    14,
+    194,
     kotlinx.serialization.json.buildJsonObject {
       put("size", dev.keliver.compose.ui.unit.DpCodec.toJson(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(size:Float)`, recorded: the host makes the same call (lock tag 15). */
+/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(size:Float)`, recorded: the host makes the same call (lock tag 195). */
 public fun AbsoluteRoundedCornerShape(
   size: kotlin.Float,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    15,
+    195,
     kotlinx.serialization.json.buildJsonObject {
       put("size", kotlinx.serialization.json.JsonPrimitive(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(topLeft:Dp,topRight:Dp,bottomRight:Dp,bottomLeft:Dp)`, recorded: the host makes the same call (lock tag 16). */
+/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(topLeft:Dp,topRight:Dp,bottomRight:Dp,bottomLeft:Dp)`, recorded: the host makes the same call (lock tag 196). */
 public fun AbsoluteRoundedCornerShape(
   topLeft: dev.keliver.compose.ui.unit.Dp? = null,
   topRight: dev.keliver.compose.ui.unit.Dp? = null,
@@ -338,7 +266,7 @@ public fun AbsoluteRoundedCornerShape(
   bottomLeft: dev.keliver.compose.ui.unit.Dp? = null,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    16,
+    196,
     kotlinx.serialization.json.buildJsonObject {
       if (topLeft != null) put("topLeft", dev.keliver.compose.ui.unit.DpCodec.toJson(topLeft))
       if (topRight != null) put("topRight", dev.keliver.compose.ui.unit.DpCodec.toJson(topRight))
@@ -348,7 +276,7 @@ public fun AbsoluteRoundedCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(topLeft:Float,topRight:Float,bottomRight:Float,bottomLeft:Float)`, recorded: the host makes the same call (lock tag 17). */
+/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(topLeft:Float,topRight:Float,bottomRight:Float,bottomLeft:Float)`, recorded: the host makes the same call (lock tag 197). */
 public fun AbsoluteRoundedCornerShape(
   topLeft: kotlin.Float? = null,
   topRight: kotlin.Float? = null,
@@ -356,7 +284,7 @@ public fun AbsoluteRoundedCornerShape(
   bottomLeft: kotlin.Float? = null,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    17,
+    197,
     kotlinx.serialization.json.buildJsonObject {
       if (topLeft != null) put("topLeft", kotlinx.serialization.json.JsonPrimitive(topLeft))
       if (topRight != null) put("topRight", kotlinx.serialization.json.JsonPrimitive(topRight))
@@ -366,7 +294,7 @@ public fun AbsoluteRoundedCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(topLeftPercent:Int,topRightPercent:Int,bottomRightPercent:Int,bottomLeftPercent:Int)`, recorded: the host makes the same call (lock tag 18). */
+/** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(topLeftPercent:Int,topRightPercent:Int,bottomRightPercent:Int,bottomLeftPercent:Int)`, recorded: the host makes the same call (lock tag 198). */
 public fun AbsoluteRoundedCornerShape(
   topLeftPercent: kotlin.Int? = null,
   topRightPercent: kotlin.Int? = null,
@@ -374,7 +302,7 @@ public fun AbsoluteRoundedCornerShape(
   bottomLeftPercent: kotlin.Int? = null,
 ): dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape = dev.keliver.calls.compose.foundation.shape.AbsoluteRoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    18,
+    198,
     kotlinx.serialization.json.buildJsonObject {
       if (topLeftPercent != null) put("topLeftPercent", kotlinx.serialization.json.JsonPrimitive(topLeftPercent))
       if (topRightPercent != null) put("topRightPercent", kotlinx.serialization.json.JsonPrimitive(topRightPercent))
@@ -384,46 +312,46 @@ public fun AbsoluteRoundedCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.CircleShape`, recorded: the host makes the same call (lock tag 19). */
-public val CircleShape: dev.keliver.calls.compose.foundation.shape.RoundedCornerShape get() = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(dev.keliver.calls.runtime.CallRecord(19))
+/** `androidx.compose.foundation.shape.CircleShape`, recorded: the host makes the same call (lock tag 199). */
+public val CircleShape: dev.keliver.calls.compose.foundation.shape.RoundedCornerShape get() = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(dev.keliver.calls.runtime.CallRecord(199))
 
-/** `androidx.compose.foundation.shape.CornerSize(percent:Int)`, recorded: the host makes the same call (lock tag 22). */
+/** `androidx.compose.foundation.shape.CornerSize(percent:Int)`, recorded: the host makes the same call (lock tag 202). */
 public fun CornerSize(
   percent: kotlin.Int,
 ): dev.keliver.calls.compose.foundation.shape.CornerSize = dev.keliver.calls.compose.foundation.shape.CornerSizeCall(
   dev.keliver.calls.runtime.CallRecord(
-    22,
+    202,
     kotlinx.serialization.json.buildJsonObject {
       put("percent", kotlinx.serialization.json.JsonPrimitive(percent))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.CornerSize(size:Dp)`, recorded: the host makes the same call (lock tag 23). */
+/** `androidx.compose.foundation.shape.CornerSize(size:Dp)`, recorded: the host makes the same call (lock tag 203). */
 public fun CornerSize(
   size: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.calls.compose.foundation.shape.CornerSize = dev.keliver.calls.compose.foundation.shape.CornerSizeCall(
   dev.keliver.calls.runtime.CallRecord(
-    23,
+    203,
     kotlinx.serialization.json.buildJsonObject {
       put("size", dev.keliver.compose.ui.unit.DpCodec.toJson(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.CornerSize(size:Float)`, recorded: the host makes the same call (lock tag 24). */
+/** `androidx.compose.foundation.shape.CornerSize(size:Float)`, recorded: the host makes the same call (lock tag 204). */
 public fun CornerSize(
   size: kotlin.Float,
 ): dev.keliver.calls.compose.foundation.shape.CornerSize = dev.keliver.calls.compose.foundation.shape.CornerSizeCall(
   dev.keliver.calls.runtime.CallRecord(
-    24,
+    204,
     kotlinx.serialization.json.buildJsonObject {
       put("size", kotlinx.serialization.json.JsonPrimitive(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.CutCornerShape#<init>(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)`, recorded: the host makes the same call (lock tag 25). */
+/** `androidx.compose.foundation.shape.CutCornerShape#<init>(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)`, recorded: the host makes the same call (lock tag 205). */
 public fun CutCornerShape(
   topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
   topEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
@@ -431,7 +359,7 @@ public fun CutCornerShape(
   bottomStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
 ): dev.keliver.calls.compose.foundation.shape.CutCornerShape = dev.keliver.calls.compose.foundation.shape.CutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    25,
+    205,
     kotlinx.serialization.json.buildJsonObject {
       put("topStart", topStart.call.toJson())
       put("topEnd", topEnd.call.toJson())
@@ -441,55 +369,55 @@ public fun CutCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.CutCornerShape(corner:CornerSize)`, recorded: the host makes the same call (lock tag 27). */
+/** `androidx.compose.foundation.shape.CutCornerShape(corner:CornerSize)`, recorded: the host makes the same call (lock tag 206). */
 public fun CutCornerShape(
   corner: dev.keliver.calls.compose.foundation.shape.CornerSize,
 ): dev.keliver.calls.compose.foundation.shape.CutCornerShape = dev.keliver.calls.compose.foundation.shape.CutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    27,
+    206,
     kotlinx.serialization.json.buildJsonObject {
       put("corner", corner.call.toJson())
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.CutCornerShape(percent:Int)`, recorded: the host makes the same call (lock tag 28). */
+/** `androidx.compose.foundation.shape.CutCornerShape(percent:Int)`, recorded: the host makes the same call (lock tag 207). */
 public fun CutCornerShape(
   percent: kotlin.Int,
 ): dev.keliver.calls.compose.foundation.shape.CutCornerShape = dev.keliver.calls.compose.foundation.shape.CutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    28,
+    207,
     kotlinx.serialization.json.buildJsonObject {
       put("percent", kotlinx.serialization.json.JsonPrimitive(percent))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.CutCornerShape(size:Dp)`, recorded: the host makes the same call (lock tag 29). */
+/** `androidx.compose.foundation.shape.CutCornerShape(size:Dp)`, recorded: the host makes the same call (lock tag 208). */
 public fun CutCornerShape(
   size: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.calls.compose.foundation.shape.CutCornerShape = dev.keliver.calls.compose.foundation.shape.CutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    29,
+    208,
     kotlinx.serialization.json.buildJsonObject {
       put("size", dev.keliver.compose.ui.unit.DpCodec.toJson(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.CutCornerShape(size:Float)`, recorded: the host makes the same call (lock tag 30). */
+/** `androidx.compose.foundation.shape.CutCornerShape(size:Float)`, recorded: the host makes the same call (lock tag 209). */
 public fun CutCornerShape(
   size: kotlin.Float,
 ): dev.keliver.calls.compose.foundation.shape.CutCornerShape = dev.keliver.calls.compose.foundation.shape.CutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    30,
+    209,
     kotlinx.serialization.json.buildJsonObject {
       put("size", kotlinx.serialization.json.JsonPrimitive(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.CutCornerShape(topStart:Dp,topEnd:Dp,bottomEnd:Dp,bottomStart:Dp)`, recorded: the host makes the same call (lock tag 31). */
+/** `androidx.compose.foundation.shape.CutCornerShape(topStart:Dp,topEnd:Dp,bottomEnd:Dp,bottomStart:Dp)`, recorded: the host makes the same call (lock tag 210). */
 public fun CutCornerShape(
   topStart: dev.keliver.compose.ui.unit.Dp? = null,
   topEnd: dev.keliver.compose.ui.unit.Dp? = null,
@@ -497,7 +425,7 @@ public fun CutCornerShape(
   bottomStart: dev.keliver.compose.ui.unit.Dp? = null,
 ): dev.keliver.calls.compose.foundation.shape.CutCornerShape = dev.keliver.calls.compose.foundation.shape.CutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    31,
+    210,
     kotlinx.serialization.json.buildJsonObject {
       if (topStart != null) put("topStart", dev.keliver.compose.ui.unit.DpCodec.toJson(topStart))
       if (topEnd != null) put("topEnd", dev.keliver.compose.ui.unit.DpCodec.toJson(topEnd))
@@ -507,7 +435,7 @@ public fun CutCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.CutCornerShape(topStart:Float,topEnd:Float,bottomEnd:Float,bottomStart:Float)`, recorded: the host makes the same call (lock tag 32). */
+/** `androidx.compose.foundation.shape.CutCornerShape(topStart:Float,topEnd:Float,bottomEnd:Float,bottomStart:Float)`, recorded: the host makes the same call (lock tag 211). */
 public fun CutCornerShape(
   topStart: kotlin.Float? = null,
   topEnd: kotlin.Float? = null,
@@ -515,7 +443,7 @@ public fun CutCornerShape(
   bottomStart: kotlin.Float? = null,
 ): dev.keliver.calls.compose.foundation.shape.CutCornerShape = dev.keliver.calls.compose.foundation.shape.CutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    32,
+    211,
     kotlinx.serialization.json.buildJsonObject {
       if (topStart != null) put("topStart", kotlinx.serialization.json.JsonPrimitive(topStart))
       if (topEnd != null) put("topEnd", kotlinx.serialization.json.JsonPrimitive(topEnd))
@@ -525,7 +453,7 @@ public fun CutCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.CutCornerShape(topStartPercent:Int,topEndPercent:Int,bottomEndPercent:Int,bottomStartPercent:Int)`, recorded: the host makes the same call (lock tag 33). */
+/** `androidx.compose.foundation.shape.CutCornerShape(topStartPercent:Int,topEndPercent:Int,bottomEndPercent:Int,bottomStartPercent:Int)`, recorded: the host makes the same call (lock tag 212). */
 public fun CutCornerShape(
   topStartPercent: kotlin.Int? = null,
   topEndPercent: kotlin.Int? = null,
@@ -533,7 +461,7 @@ public fun CutCornerShape(
   bottomStartPercent: kotlin.Int? = null,
 ): dev.keliver.calls.compose.foundation.shape.CutCornerShape = dev.keliver.calls.compose.foundation.shape.CutCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    33,
+    212,
     kotlinx.serialization.json.buildJsonObject {
       if (topStartPercent != null) put("topStartPercent", kotlinx.serialization.json.JsonPrimitive(topStartPercent))
       if (topEndPercent != null) put("topEndPercent", kotlinx.serialization.json.JsonPrimitive(topEndPercent))
@@ -543,7 +471,7 @@ public fun CutCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.RoundedCornerShape#<init>(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)`, recorded: the host makes the same call (lock tag 34). */
+/** `androidx.compose.foundation.shape.RoundedCornerShape#<init>(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)`, recorded: the host makes the same call (lock tag 213). */
 public fun RoundedCornerShape(
   topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
   topEnd: dev.keliver.calls.compose.foundation.shape.CornerSize,
@@ -551,7 +479,7 @@ public fun RoundedCornerShape(
   bottomStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
 ): dev.keliver.calls.compose.foundation.shape.RoundedCornerShape = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    34,
+    213,
     kotlinx.serialization.json.buildJsonObject {
       put("topStart", topStart.call.toJson())
       put("topEnd", topEnd.call.toJson())
@@ -561,55 +489,55 @@ public fun RoundedCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.RoundedCornerShape(corner:CornerSize)`, recorded: the host makes the same call (lock tag 36). */
+/** `androidx.compose.foundation.shape.RoundedCornerShape(corner:CornerSize)`, recorded: the host makes the same call (lock tag 214). */
 public fun RoundedCornerShape(
   corner: dev.keliver.calls.compose.foundation.shape.CornerSize,
 ): dev.keliver.calls.compose.foundation.shape.RoundedCornerShape = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    36,
+    214,
     kotlinx.serialization.json.buildJsonObject {
       put("corner", corner.call.toJson())
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.RoundedCornerShape(percent:Int)`, recorded: the host makes the same call (lock tag 37). */
+/** `androidx.compose.foundation.shape.RoundedCornerShape(percent:Int)`, recorded: the host makes the same call (lock tag 215). */
 public fun RoundedCornerShape(
   percent: kotlin.Int,
 ): dev.keliver.calls.compose.foundation.shape.RoundedCornerShape = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    37,
+    215,
     kotlinx.serialization.json.buildJsonObject {
       put("percent", kotlinx.serialization.json.JsonPrimitive(percent))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.RoundedCornerShape(size:Dp)`, recorded: the host makes the same call (lock tag 38). */
+/** `androidx.compose.foundation.shape.RoundedCornerShape(size:Dp)`, recorded: the host makes the same call (lock tag 216). */
 public fun RoundedCornerShape(
   size: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.calls.compose.foundation.shape.RoundedCornerShape = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    38,
+    216,
     kotlinx.serialization.json.buildJsonObject {
       put("size", dev.keliver.compose.ui.unit.DpCodec.toJson(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.RoundedCornerShape(size:Float)`, recorded: the host makes the same call (lock tag 39). */
+/** `androidx.compose.foundation.shape.RoundedCornerShape(size:Float)`, recorded: the host makes the same call (lock tag 217). */
 public fun RoundedCornerShape(
   size: kotlin.Float,
 ): dev.keliver.calls.compose.foundation.shape.RoundedCornerShape = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    39,
+    217,
     kotlinx.serialization.json.buildJsonObject {
       put("size", kotlinx.serialization.json.JsonPrimitive(size))
     },
   ),
 )
 
-/** `androidx.compose.foundation.shape.RoundedCornerShape(topStart:Dp,topEnd:Dp,bottomEnd:Dp,bottomStart:Dp)`, recorded: the host makes the same call (lock tag 40). */
+/** `androidx.compose.foundation.shape.RoundedCornerShape(topStart:Dp,topEnd:Dp,bottomEnd:Dp,bottomStart:Dp)`, recorded: the host makes the same call (lock tag 218). */
 public fun RoundedCornerShape(
   topStart: dev.keliver.compose.ui.unit.Dp? = null,
   topEnd: dev.keliver.compose.ui.unit.Dp? = null,
@@ -617,7 +545,7 @@ public fun RoundedCornerShape(
   bottomStart: dev.keliver.compose.ui.unit.Dp? = null,
 ): dev.keliver.calls.compose.foundation.shape.RoundedCornerShape = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    40,
+    218,
     kotlinx.serialization.json.buildJsonObject {
       if (topStart != null) put("topStart", dev.keliver.compose.ui.unit.DpCodec.toJson(topStart))
       if (topEnd != null) put("topEnd", dev.keliver.compose.ui.unit.DpCodec.toJson(topEnd))
@@ -627,7 +555,7 @@ public fun RoundedCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.RoundedCornerShape(topStart:Float,topEnd:Float,bottomEnd:Float,bottomStart:Float)`, recorded: the host makes the same call (lock tag 41). */
+/** `androidx.compose.foundation.shape.RoundedCornerShape(topStart:Float,topEnd:Float,bottomEnd:Float,bottomStart:Float)`, recorded: the host makes the same call (lock tag 219). */
 public fun RoundedCornerShape(
   topStart: kotlin.Float? = null,
   topEnd: kotlin.Float? = null,
@@ -635,7 +563,7 @@ public fun RoundedCornerShape(
   bottomStart: kotlin.Float? = null,
 ): dev.keliver.calls.compose.foundation.shape.RoundedCornerShape = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    41,
+    219,
     kotlinx.serialization.json.buildJsonObject {
       if (topStart != null) put("topStart", kotlinx.serialization.json.JsonPrimitive(topStart))
       if (topEnd != null) put("topEnd", kotlinx.serialization.json.JsonPrimitive(topEnd))
@@ -645,7 +573,7 @@ public fun RoundedCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.RoundedCornerShape(topStartPercent:Int,topEndPercent:Int,bottomEndPercent:Int,bottomStartPercent:Int)`, recorded: the host makes the same call (lock tag 42). */
+/** `androidx.compose.foundation.shape.RoundedCornerShape(topStartPercent:Int,topEndPercent:Int,bottomEndPercent:Int,bottomStartPercent:Int)`, recorded: the host makes the same call (lock tag 220). */
 public fun RoundedCornerShape(
   topStartPercent: kotlin.Int? = null,
   topEndPercent: kotlin.Int? = null,
@@ -653,7 +581,7 @@ public fun RoundedCornerShape(
   bottomStartPercent: kotlin.Int? = null,
 ): dev.keliver.calls.compose.foundation.shape.RoundedCornerShape = dev.keliver.calls.compose.foundation.shape.RoundedCornerShape(
   dev.keliver.calls.runtime.CallRecord(
-    42,
+    220,
     kotlinx.serialization.json.buildJsonObject {
       if (topStartPercent != null) put("topStartPercent", kotlinx.serialization.json.JsonPrimitive(topStartPercent))
       if (topEndPercent != null) put("topEndPercent", kotlinx.serialization.json.JsonPrimitive(topEndPercent))
@@ -663,5 +591,5 @@ public fun RoundedCornerShape(
   ),
 )
 
-/** `androidx.compose.foundation.shape.ZeroCornerSize`, recorded: the host makes the same call (lock tag 43). */
-public val ZeroCornerSize: dev.keliver.calls.compose.foundation.shape.CornerSize get() = dev.keliver.calls.compose.foundation.shape.CornerSizeCall(dev.keliver.calls.runtime.CallRecord(43))
+/** `androidx.compose.foundation.shape.ZeroCornerSize`, recorded: the host makes the same call (lock tag 221). */
+public val ZeroCornerSize: dev.keliver.calls.compose.foundation.shape.CornerSize get() = dev.keliver.calls.compose.foundation.shape.CornerSizeCall(dev.keliver.calls.runtime.CallRecord(221))
