@@ -48,6 +48,7 @@ internal fun ProtocolSchemaSet.generateFileSpecs(type: ProtocolCodegenType): Lis
 
       Host -> {
         add(generateHostProtocol(this@generateFileSpecs))
+        if (declaresFrameRules()) add(generateFrameRules(this@generateFileSpecs))
         for (dependency in all) {
           generateProtocolModifierImpls(schema, dependency)?.let { add(it) }
           for (widget in dependency.widgets) {

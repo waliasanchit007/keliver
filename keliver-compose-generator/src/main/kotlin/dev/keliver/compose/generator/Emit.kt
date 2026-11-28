@@ -119,6 +119,9 @@ class Emitter(
 
   /** The schema class a visible overload's stub sends: its own, or a hidden predecessor's with the same wire. */
   private val aliases = sentAs(generated)
+
+  /** NF5 A1: the frame-rule annotations of the schema (its own emitter, FrameRules.kt). */
+  private val frameRules = FrameRuleEmitter(config, generated)
   private fun sent(p: Plan.Generated): String = (aliases[p] ?: p).entry.name
   private val schemaPkg = config.schemaPackage
   private val composePkg = "$schemaPkg.compose"
@@ -137,7 +140,9 @@ class Emitter(
       append(header(config.group))
       append("@file:Suppress(\"ktlint\")\n\npackage $schemaPkg\n\n")
       append("import dev.keliver.schema.Children\nimport dev.keliver.schema.Modifier\nimport dev.keliver.schema.Property\n")
-      append("import dev.keliver.schema.Schema\nimport dev.keliver.schema.Schema.Dependency\nimport dev.keliver.schema.Widget\n\n")
+      append("import dev.keliver.schema.Schema\nimport dev.keliver.schema.Schema.Dependency\nimport dev.keliver.schema.Widget\n")
+      append(frameRules.imports())
+      append("\n")
       config.input?.let { append("// Read from: $it.\n") }
       append("/** Group `${config.group}` (lock level in keliver-compose-generator/${config.group}.lock.json). */\n")
       append("@Schema(\n  members = [\n")
@@ -148,6 +153,7 @@ class Emitter(
       for (s in scopes) append("/** The schema's marker for `$s`. */\npublic object Gen${s.substringAfterLast('.')}\n\n")
       for (w in widgets) {
         append("/** `${w.decl.pkg}.${w.decl.name}`${w.decl.kdoc?.let { ": " + it.replace("*/", "* /") } ?: ""} */\n")
+        append(frameRules.memberAnnotations(w))
         append("@Widget(${w.entry.tag})\npublic data class ${w.entry.name}(\n")
         for (c in w.wire) {
           val tag = w.entry.params.getValue(c.param.name)
@@ -159,12 +165,12 @@ class Emitter(
               val n = c.param.name
               val p = w.entry.params
               append("  @Children($tag) val $n: () -> Unit,\n")
-              append("  @Property(${p.getValue("$n.before")}) val ${n}Before: kotlin.Int,\n")
-              append("  @Property(${p.getValue("$n.after")}) val ${n}After: kotlin.Int,\n")
+              append("  @Property(${p.getValue("$n.before")}) ${frameRules.bookkeepingAnnotation()}val ${n}Before: kotlin.Int,\n")
+              append("  @Property(${p.getValue("$n.after")}) ${frameRules.bookkeepingAnnotation()}val ${n}After: kotlin.Int,\n")
               append("  @Property(${p.getValue("$n.viewport")}) val ${n}Viewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?,\n")
             }
             ParamKind.EVENT -> append("  @Property($tag) val ${c.param.name}: ((${t.functionParams.joinToString(", ") { it.fq }}) -> Unit)?,\n")
-            else -> append("  @Property($tag) val ${c.param.name}: ${TypeMap.wireType(t, t.nullable || c.defaultCase == DefaultCase.EXPRESSION)},\n")
+            else -> append("  @Property($tag) ${frameRules.valueAnnotation(w, c)}val ${c.param.name}: ${TypeMap.wireType(t, t.nullable || c.defaultCase == DefaultCase.EXPRESSION)},\n")
           }
         }
         append("  @Property($MODIFIER_EVENT_TAG) val modifierEvent: ((kotlin.Int) -> Unit)? = null,\n)\n\n")
@@ -173,11 +179,14 @@ class Emitter(
         val scope = m.decl.owner?.let { ", Gen$it::class" } ?: ""
         append("/** `${m.decl.pkg}.${m.decl.owner?.let { "$it." } ?: ""}${m.decl.name}`${m.decl.kdoc?.let { ": " + it.replace("*/", "* /") } ?: ""} */\n")
         val props = modifierProps(m)
+        append(frameRules.memberAnnotations(m))
         if (props.isEmpty()) {
           append("@Modifier(${m.entry.tag}$scope)\npublic object ${m.entry.name}\n\n")
         } else {
           append("@Modifier(${m.entry.tag}$scope)\npublic data class ${m.entry.name}(\n")
-          props.forEach { (name, type, default) -> append("  val $name: $type${default?.let { " = $it" } ?: ""},\n") }
+          props.forEach { (name, type, default) ->
+            append("  ${frameRules.modifierAnnotation(m, name)}val $name: $type${default?.let { " = $it" } ?: ""},\n")
+          }
           append(")\n\n")
         }
       }

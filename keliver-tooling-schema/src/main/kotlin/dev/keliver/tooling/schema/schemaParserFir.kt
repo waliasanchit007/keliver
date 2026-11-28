@@ -380,6 +380,7 @@ private fun FirContext.parseWidget(
   require(tag in 1 until MAX_MEMBER_TAG) {
     "@Widget $memberType tag must be in range [1, $MAX_MEMBER_TAG): $tag"
   }
+  val replayable = firClass.annotations.hasReplayable(firSession)
 
   val traits = if (firClass.classKind == OBJECT) {
     emptyList()
@@ -395,6 +396,11 @@ private fun FirContext.parseWidget(
       val deprecation = findDeprecationAnnotation(property.annotations)
         ?.toDeprecation { "$memberType.$name" }
       val documentation = parameter.source?.findAndParseKDoc()
+      val frameRule = property.annotations.findFrameRule(firSession, "$memberType#$name")
+      require(frameRule == null || (propertyAnnotation != null && !type.isBasicFunctionType(firSession))) {
+        "@$frameRule $memberType#$name: frame-rule annotations go on a value @Property only, not on an " +
+          "event or @Children"
+      }
 
       if (propertyAnnotation != null) {
         if (type.isBasicFunctionType(firSession)) {
@@ -433,13 +439,18 @@ private fun FirContext.parseWidget(
             deprecation = deprecation,
           )
         } else {
+          val containsString = (replayable || frameRule != null) && firSession.containsString(type)
+          val fqType = type.toFqType()
+          checkFrameRule(frameRule, type, fqType.toString(), containsString, "$memberType#$name")
           ParsedProtocolProperty(
             tag = propertyAnnotation.tag,
             name = name,
             documentation = documentation,
-            type = type.toFqType(),
+            type = fqType,
             defaultExpression = defaultExpression,
             deprecation = deprecation,
+            frameRule = frameRule,
+            containsString = containsString,
           )
         }
       } else if (childrenAnnotation != null) {
@@ -559,6 +570,8 @@ private fun FirContext.parseWidget(
     deprecation = deprecation,
     traits = traits,
     internalComposable = annotation.internalComposable,
+    replayable = replayable,
+    scrolls = firClass.annotations.hasScrolls(firSession),
   )
 }
 
@@ -571,6 +584,7 @@ private fun FirContext.parseModifier(
   require(tag in 1 until MAX_MEMBER_TAG || isSpecialModifier(tag, memberType)) {
     "@Modifier $memberType tag must be in range [1, $MAX_MEMBER_TAG): $tag"
   }
+  val replayable = firClass.annotations.hasReplayable(firSession)
 
   val properties = if (firClass.classKind == OBJECT) {
     emptyList()
@@ -616,6 +630,10 @@ private fun FirContext.parseModifier(
         ?.annotations.orEmpty()
         .any { it.fqName(firSession) == FqNames.Serializable }
 
+      val frameRule = property.annotations.findFrameRule(firSession, "$memberType#$name")
+      val containsString = (replayable || frameRule != null) && firSession.containsString(resolvedType)
+      checkFrameRule(frameRule, resolvedType, parameterType.toString(), containsString, "$memberType#$name")
+
       ParsedProtocolModifierProperty(
         name = name,
         documentation = documentation,
@@ -623,6 +641,8 @@ private fun FirContext.parseModifier(
         isSerializable = isSerializable,
         defaultExpression = defaultExpression,
         deprecation = deprecation,
+        frameRule = frameRule,
+        containsString = containsString,
       )
     }
   } else {
@@ -642,6 +662,8 @@ private fun FirContext.parseModifier(
     documentation = documentation,
     deprecation = deprecation,
     properties = properties,
+    replayable = replayable,
+    scrolls = firClass.annotations.hasScrolls(firSession),
   )
 }
 

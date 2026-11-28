@@ -68,6 +68,16 @@ public final class dev/keliver/tooling/schema/FqType$Variance : java/lang/Enum {
 	public static fun values ()[Ldev/keliver/tooling/schema/FqType$Variance;
 }
 
+public final class dev/keliver/tooling/schema/FramePropertyRule : java/lang/Enum {
+	public static final field BlocksFrameWhenTrue Ldev/keliver/tooling/schema/FramePropertyRule;
+	public static final field NeverCached Ldev/keliver/tooling/schema/FramePropertyRule;
+	public static final field NotData Ldev/keliver/tooling/schema/FramePropertyRule;
+	public static final field StyleToken Ldev/keliver/tooling/schema/FramePropertyRule;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/tooling/schema/FramePropertyRule;
+	public static fun values ()[Ldev/keliver/tooling/schema/FramePropertyRule;
+}
+
 public final class dev/keliver/tooling/schema/Main {
 	public static final fun main ([Ljava/lang/String;)V
 }
@@ -76,14 +86,18 @@ public abstract interface class dev/keliver/tooling/schema/Modifier {
 	public abstract fun getDeprecation ()Ldev/keliver/tooling/schema/Deprecation;
 	public abstract fun getDocumentation ()Ljava/lang/String;
 	public abstract fun getProperties ()Ljava/util/List;
+	public fun getReplayable ()Z
 	public abstract fun getScopes ()Ljava/util/List;
+	public fun getScrolls ()Z
 	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
 }
 
 public abstract interface class dev/keliver/tooling/schema/Modifier$Property {
+	public fun getContainsString ()Z
 	public abstract fun getDefaultExpression ()Ljava/lang/String;
 	public abstract fun getDeprecation ()Ldev/keliver/tooling/schema/Deprecation;
 	public abstract fun getDocumentation ()Ljava/lang/String;
+	public fun getFrameRule ()Ldev/keliver/tooling/schema/FramePropertyRule;
 	public abstract fun getName ()Ljava/lang/String;
 	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
 	public abstract fun isSerializable ()Z
@@ -157,6 +171,8 @@ public abstract interface class dev/keliver/tooling/schema/Widget {
 	public abstract fun getDeprecation ()Ldev/keliver/tooling/schema/Deprecation;
 	public abstract fun getDocumentation ()Ljava/lang/String;
 	public abstract fun getInternalComposable ()Z
+	public fun getReplayable ()Z
+	public fun getScrolls ()Z
 	public abstract fun getTraits ()Ljava/util/List;
 	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
 }
@@ -176,6 +192,8 @@ public abstract interface class dev/keliver/tooling/schema/Widget$Event$Paramete
 }
 
 public abstract interface class dev/keliver/tooling/schema/Widget$Property : dev/keliver/tooling/schema/Widget$Trait {
+	public fun getContainsString ()Z
+	public fun getFrameRule ()Ldev/keliver/tooling/schema/FramePropertyRule;
 	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
 }
 
