@@ -5,7 +5,7 @@ vendored QuickJS 2021-03-27 replaced by Bellard's **QuickJS 2026-06-04** (SHA-25
 `b376e839…70ad2a`), which brings BigInt, so Kotlin's `Long` can be compiled as a JS BigInt
 (`-Xes-long-as-bigint`). Why, and what it measured: `docs/GUEST_PROFILE.md`, "The engine, measured"
 and "NF2: the Zipline fork, step 1". Step 4 builds it for Maven Central as
-`dev.keliver.zipline:<upstream artifact name>:1.28.0-keliver.1` ("Publishing the fork" below). **Published
+`dev.keliver.zipline:<upstream artifact name>:<RELEASE_VERSION>` ("Publishing the fork" below). **Published
 2026-11-24:** `dev.keliver.zipline:*:1.28.0-keliver.1` (`zipline-fork.yml` run 45176623004).
 **The next release, `1.28.0-keliver.2`** (approved by the owner 2026-11-28, not yet published), is the
 same fork with `libquickjs.so` stripped: `-Wl,--strip-all` in the CMakeLists patch removes the
