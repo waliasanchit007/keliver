@@ -22,7 +22,6 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
-import assertk.assertions.isNull
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.leaks.LeakDetector
@@ -31,6 +30,7 @@ import dev.keliver.protocol.ChildrenChange
 import dev.keliver.protocol.ChildrenTag
 import dev.keliver.protocol.Create
 import dev.keliver.protocol.FrameCacheTags
+import dev.keliver.protocol.FrameMarks
 import dev.keliver.protocol.Id
 import dev.keliver.protocol.ModifierChange
 import dev.keliver.protocol.ModifierElement
@@ -103,15 +103,6 @@ class FrameMarksTest {
 
     assertThat(mismatches.events).isEmpty()
     assertThat(appliedToWidget).containsExactly("Known7")
-    val marks = adapter.frameMarks(Id(1))
-    assertThat(marks).isNotNull()
-    assertThat(marks!!.cached).isEqualTo(true)
-    assertThat(marks.notCached).isEqualTo(true)
-    val frame = marks.cachedFrame!!
-    assertThat(frame.content).isEqualTo("shell")
-    assertThat(frame.maxAgeMillis).isEqualTo(43_200_000L)
-    assertThat(frame.ready).isEqualTo(true)
-    assertThat(frame.paneTitle).isEqualTo("Orders")
   }
 
   @Test fun anUnassignedTagInTheRangeIsConsumedToo() {
@@ -120,7 +111,6 @@ class FrameMarksTest {
 
     assertThat(mismatches.events).isEmpty()
     assertThat(appliedToWidget).isEmpty()
-    assertThat(adapter.frameMarks(Id(1))).isNull()
   }
 
   @Test fun anUnknownTagOutsideTheRangeStillReachesTheMismatchHandler() {
@@ -140,24 +130,6 @@ class FrameMarksTest {
     )
 
     assertThat(mismatches.events).isEmpty()
-    assertThat(adapter.frameMarks(Id(1))).isNull()
-  }
-
-  @Test fun theNextModifierChangeReplacesTheMarks() {
-    createRootChild(1)
-    send(ModifierChange(Id(1), listOf(cachedFrame)))
-    assertThat(adapter.frameMarks(Id(1))).isNotNull()
-
-    send(ModifierChange(Id(1), listOf(ModifierElement(ModifierTag(7)))))
-    assertThat(adapter.frameMarks(Id(1))).isNull()
-  }
-
-  @Test fun marksGoWithTheirNode() {
-    createRootChild(1)
-    send(ModifierChange(Id(1), listOf(cachedFrame)))
-    send(ChildrenChange.Remove(Id.Root, ChildrenTag.Root, 0, false))
-
-    assertThat(adapter.frameMarks(Id(1))).isNull()
   }
 
   @Test fun withoutMarkersNothingChanges() {
@@ -165,8 +137,14 @@ class FrameMarksTest {
     send(ModifierChange(Id(1), listOf(ModifierElement(ModifierTag(7)))))
 
     assertThat(appliedToWidget).containsExactly("Known7")
-    assertThat(adapter.frameMarks(Id(1))).isNull()
     assertThat(mismatches.events).isEmpty()
+  }
+
+  @Test fun theReaderSeesWhatTheHostDrops() {
+    // The recorder reads the raw elements (FrameMarks.read in keliver-protocol), not the adapter.
+    val marks = FrameMarks.read(listOf(ModifierElement(ModifierTag(7)), cachedFrame))
+    assertThat(marks).isNotNull()
+    assertThat(marks!!.cachedFrame!!.paneTitle).isEqualTo("Orders")
   }
 }
 

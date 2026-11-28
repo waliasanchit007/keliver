@@ -19,6 +19,8 @@ import app.cash.zipline.asDynamicFunction
 import app.cash.zipline.sourceType
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
+import dev.keliver.compose.FrameCacheMarker
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.ChildrenTag
@@ -27,6 +29,7 @@ import dev.keliver.protocol.Id
 import dev.keliver.protocol.PropertyTag
 import dev.keliver.protocol.RedwoodVersion
 import dev.keliver.protocol.WidgetTag
+import dev.keliver.protocol.guest.FrameCacheMarkerEncoding
 import dev.keliver.protocol.guest.GuestProtocolAdapter
 import dev.keliver.protocol.guest.ProtocolMismatchHandler
 import dev.keliver.protocol.guest.ProtocolWidget
@@ -50,6 +53,22 @@ internal actual fun GuestProtocolAdapter(
   widgetSystemFactory = widgetSystemFactory,
   mismatchHandler = mismatchHandler,
 )
+
+/**
+ * A marker as a modifier element in the form this adapter writes: `[tag]`, or `[tag, {…}]` with the
+ * fields as a dynamic object whose numbers are JavaScript numbers.
+ */
+@OptIn(ExperimentalKeliverHostFeaturesApi::class, RedwoodCodegenApi::class)
+internal fun frameCacheMarkerElement(marker: FrameCacheMarker): dynamic {
+  val tag = marker.tag
+  val fields = FrameCacheMarkerEncoding.plainFields(marker)
+  if (fields.isEmpty()) return js("""[tag]""")
+  val value = js("{}")
+  for ((name, field) in fields) {
+    value[name] = field
+  }
+  return js("""[tag,value]""")
+}
 
 @OptIn(ExperimentalSerializationApi::class, RedwoodCodegenApi::class)
 internal class FastGuestProtocolAdapter(
@@ -157,6 +176,13 @@ internal class FastGuestProtocolAdapter(
     val elements = js("[]")
 
     value.forEach { element ->
+      // The cached-frame markers are framework elements: the generated function below knows schema
+      // modifiers only and throws for anything else.
+      val marker = FrameCacheMarkerEncoding.markerOrNull(element)
+      if (marker != null) {
+        elements.push(frameCacheMarkerElement(marker))
+        return@forEach
+      }
       val (tag, serializer) = widgetSystemFactory.modifierTagAndSerializationStrategy(element)
       when {
         serializer != null -> {

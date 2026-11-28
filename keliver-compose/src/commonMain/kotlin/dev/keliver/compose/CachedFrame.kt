@@ -20,7 +20,9 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import dev.keliver.Modifier
+import dev.keliver.RedwoodCodegenApi
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 
 /*
  * The guest API of NF5 (A), the cached first frame (docs/SHOW_BEFORE_COMPUTE.md 2.2). A2 covers the
@@ -50,6 +52,17 @@ public class FrameCachePolicy(
   public val content: FrameContent,
   public val maxAge: Duration,
 ) {
+  init {
+    require(maxAge.isFinite()) { "FrameCachePolicy.maxAge must be finite, not Duration.INFINITE" }
+    require(maxAge.isPositive()) { "FrameCachePolicy.maxAge must be positive, was $maxAge" }
+    require(maxAge <= MAX_AGE) { "FrameCachePolicy.maxAge must be at most $MAX_AGE, was $maxAge" }
+  }
+
+  public companion object {
+    /** The longest a stored frame may be kept: a year. The protocol carries the age as a JavaScript number. */
+    public val MAX_AGE: Duration = 365.days
+  }
+
   override fun equals(other: Any?): Boolean =
     other is FrameCachePolicy && content == other.content && maxAge == other.maxAge
 
@@ -61,41 +74,38 @@ public class FrameCachePolicy(
 /**
  * A marker modifier element the guest protocol adapter sends in the reserved range of
  * `dev.keliver.protocol.FrameCacheTags`. [fields] holds `String`, `Long`, `Boolean` and `null`
- * values only.
+ * values only. Only this library creates one (the constructor is internal).
  *
- * @suppress For the guest protocol adapter only.
+ * @suppress For the guest protocol adapters only.
  */
 @ExperimentalKeliverHostFeaturesApi
-public interface FrameCacheMarker : Modifier.UnscopedElement {
-  public val tag: Int
-  public val fields: Map<String, Any?>
+public abstract class FrameCacheMarker internal constructor() : Modifier.UnscopedElement {
+  public abstract val tag: Int
+  public abstract val fields: Map<String, Any?>
 }
 
 /**
- * Marks the screen that may be shown from storage. The host stores nothing and draws nothing for a
- * screen without it. [content] receives the marker as a [Modifier]: put it on the screen's root
- * widget. On a host without `keliver.cachedFrame@1` the modifier is the empty [Modifier], so nothing
- * is emitted.
+ * Marks this node as the screen that may be shown from storage. The host stores nothing and draws
+ * nothing for a screen without it. Put it on the screen's root widget, and on nothing else: a host
+ * records a frame only when exactly one node carries it and that node is the root's direct child.
+ * Forgetting it simply means the screen does not opt in. On a host without `keliver.cachedFrame@1`
+ * it returns this modifier unchanged, so nothing is emitted.
  *
  * @param ready the guest's "first meaningful" signal; the host records and swaps when it goes true.
  * @param paneTitle announced when the live screen replaces the stored frame; stored, so not data.
  */
 @ExperimentalKeliverHostFeaturesApi
 @Composable
-public fun CachedFrame(
+public fun Modifier.cachedFrame(
   policy: FrameCachePolicy,
   ready: Boolean,
   paneTitle: String,
-  content: @Composable (rootModifier: Modifier) -> Unit,
-) {
-  val enabled = KeliverHostFeatures.CACHED_FRAME_1 in LocalHostFeatures.current
-  val marker: Modifier = if (enabled) {
-    CachedFrameMarker(policy, ready, paneTitle)
+): Modifier =
+  if (KeliverHostFeatures.CACHED_FRAME_1 in LocalHostFeatures.current) {
+    then(CachedFrameMarker(policy, ready, paneTitle))
   } else {
-    Modifier
+    this
   }
-  content(marker)
-}
 
 /** Keeps this node's text and URL values in a [FrameContent.Shell] frame. */
 @ExperimentalKeliverHostFeaturesApi
@@ -122,7 +132,7 @@ internal class CachedFrameMarker(
   private val policy: FrameCachePolicy,
   private val ready: Boolean,
   private val paneTitle: String,
-) : FrameCacheMarker {
+) : FrameCacheMarker() {
   override val tag: Int get() = CACHED_FRAME_TAG
   override val fields: Map<String, Any?>
     get() = linkedMapOf(
@@ -141,14 +151,14 @@ internal class CachedFrameMarker(
 }
 
 @OptIn(ExperimentalKeliverHostFeaturesApi::class)
-private object CachedMarker : FrameCacheMarker {
+private object CachedMarker : FrameCacheMarker() {
   override val tag: Int get() = CACHED_TAG
   override val fields: Map<String, Any?> get() = emptyMap()
   override fun toString(): String = "Cached"
 }
 
 @OptIn(ExperimentalKeliverHostFeaturesApi::class)
-private object NotCachedMarker : FrameCacheMarker {
+private object NotCachedMarker : FrameCacheMarker() {
   override val tag: Int get() = NOT_CACHED_TAG
   override val fields: Map<String, Any?> get() = emptyMap()
   override fun toString(): String = "NotCached"
@@ -164,8 +174,9 @@ public interface FrameScopeSink {
   public fun variantChanged(id: String?)
 }
 
-/** The sink [FrameScope] sends to, or `null`. */
+/** The sink [FrameScope] sends to, or `null`. Provided by the treehouse guest only. */
 @ExperimentalKeliverHostFeaturesApi
+@RedwoodCodegenApi
 public val LocalFrameScopeSink: ProvidableCompositionLocal<FrameScopeSink?> =
   staticCompositionLocalOf { null }
 
@@ -188,9 +199,13 @@ public class FrameScope internal constructor(private val sink: FrameScopeSink?) 
 
 /** The [FrameScope] of this composition: inert on a host without `keliver.frameScope@1`. */
 @ExperimentalKeliverHostFeaturesApi
+@OptIn(RedwoodCodegenApi::class)
 @Composable
 public fun rememberFrameScope(): FrameScope {
-  val enabled = KeliverHostFeatures.FRAME_SCOPE_1 in LocalHostFeatures.current
+  // frameScope@1 requires cachedFrame@1: a host declaring it alone is treated as not declaring it.
+  val features = LocalHostFeatures.current
+  val enabled = KeliverHostFeatures.FRAME_SCOPE_1 in features &&
+    KeliverHostFeatures.CACHED_FRAME_1 in features
   val sink = LocalFrameScopeSink.current
   return remember(enabled, sink) { FrameScope(if (enabled) sink else null) }
 }

@@ -18,6 +18,7 @@ package dev.keliver.compose.gatea.profile
 
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
 import dev.keliver.compose.gatea.modifier.GenClickable1
 import dev.keliver.compose.gatea.modifier.GenClickable2
 import dev.keliver.compose.wire.JsonCodec
@@ -29,6 +30,7 @@ import dev.keliver.protocol.Id
 import dev.keliver.protocol.PropertyTag
 import dev.keliver.protocol.RedwoodVersion
 import dev.keliver.protocol.WidgetTag
+import dev.keliver.protocol.guest.FrameCacheMarkerEncoding
 import dev.keliver.protocol.guest.GuestProtocolAdapter
 import dev.keliver.protocol.guest.ProtocolMismatchHandler
 import dev.keliver.protocol.guest.ProtocolWidget
@@ -93,7 +95,7 @@ internal enum class Encoding {
  *  - it counts and times the recording calls ([stats]) and remembers which widgets carry a
  *    clickable modifier, so the driver can click them through [sendEvent] as a host would.
  */
-@OptIn(ExperimentalSerializationApi::class, RedwoodCodegenApi::class)
+@OptIn(ExperimentalSerializationApi::class, RedwoodCodegenApi::class, ExperimentalKeliverHostFeaturesApi::class)
 internal class ProfileAdapter(
   override val json: Json = Json.Default,
   hostVersion: RedwoodVersion,
@@ -229,6 +231,22 @@ internal class ProfileAdapter(
 
     value.forEach { element ->
       stats.modifierElements++
+      // A cached-frame marker is not a schema element: the generated function throws for it.
+      val marker = FrameCacheMarkerEncoding.markerOrNull(element)
+      if (marker != null) {
+        if (encoding != Encoding.NONE) {
+          val fields = FrameCacheMarkerEncoding.plainFields(marker)
+          val markerTag = marker.tag
+          if (fields.isEmpty()) {
+            elements.push(js("""[markerTag]"""))
+          } else {
+            val markerValue = js("{}")
+            for ((name, field) in fields) markerValue[name] = field
+            elements.push(js("""[markerTag,markerValue]"""))
+          }
+        }
+        return@forEach
+      }
       val (tag, serializer) = widgetSystemFactory.modifierTagAndSerializationStrategy(element)
       // Not in the real recorder: two interface checks per element, so the driver can click. It
       // replaced a class-name check (`element::class.simpleName`); the tables moved by no more than

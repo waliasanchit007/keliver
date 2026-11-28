@@ -28,7 +28,6 @@ import assertk.assertions.doesNotContain
 import assertk.assertions.isEqualTo
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
-import dev.keliver.compose.CachedFrame
 import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
 import dev.keliver.compose.FrameCachePolicy
 import dev.keliver.compose.FrameContent
@@ -37,6 +36,7 @@ import dev.keliver.compose.KeliverHostFeatures
 import dev.keliver.compose.LocalFrameScopeSink
 import dev.keliver.compose.LocalHostFeatures
 import dev.keliver.compose.cached
+import dev.keliver.compose.cachedFrame
 import dev.keliver.compose.notCached
 import dev.keliver.compose.rememberFrameScope
 import dev.keliver.protocol.Change
@@ -47,6 +47,8 @@ import dev.keliver.protocol.RedwoodVersion
 import dev.keliver.widget.WidgetSystem
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.ListSerializer
@@ -90,15 +92,13 @@ class FrameCacheMarkersTest {
     val roots = mutableListOf<Modifier>()
     compose(features) {
       if (withCachedFrame) {
-        CachedFrame(
+        roots += Plain.cachedFrame(
           policy = FrameCachePolicy(FrameContent.Shell, 12.hours),
           ready = true,
           paneTitle = "Orders",
-        ) { root ->
-          roots += Plain.then(root)
-          roots += Plain.cached()
-          roots += Plain.notCached()
-        }
+        )
+        roots += Plain.cached()
+        roots += Plain.notCached()
       } else {
         roots += Plain
         roots += Plain
@@ -157,7 +157,11 @@ class FrameCacheMarkersTest {
       }
     }
 
-    for (features in listOf(emptySet(), setOf(KeliverHostFeatures.CACHED_FRAME_1))) {
+    // frameScope@1 alone is "not declared": it requires cachedFrame@1 (KeliverHostFeatures.requirements).
+    val none = emptySet<String>()
+    val cachedFrameOnly = setOf(KeliverHostFeatures.CACHED_FRAME_1)
+    val frameScopeOnly = setOf(KeliverHostFeatures.FRAME_SCOPE_1)
+    for (features in listOf(none, cachedFrameOnly, frameScopeOnly)) {
       compose(features) {
         CompositionLocalProvider(LocalFrameScopeSink provides sink) {
           val scope = rememberFrameScope()
@@ -177,6 +181,14 @@ class FrameCacheMarkersTest {
     }
     assertThat(calls.toList()).isEqualTo(listOf("session:a", "variant:null"))
     assertThat(calls).doesNotContain("variant:b")
+  }
+
+  @Test fun aPolicyNeedsAFinitePositiveBoundedAge() {
+    for (bad in listOf(Duration.INFINITE, Duration.ZERO, (-1).hours, FrameCachePolicy.MAX_AGE + 1.hours)) {
+      val failure = assertFailsWith<IllegalArgumentException> { FrameCachePolicy(FrameContent.Whole, bad) }
+      assertThat(failure.message!!).contains("maxAge")
+    }
+    FrameCachePolicy(FrameContent.Whole, FrameCachePolicy.MAX_AGE)
   }
 
   /** The composition has no widgets. */

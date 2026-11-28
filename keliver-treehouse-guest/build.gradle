@@ -6,6 +6,8 @@ redwoodBuild {
 }
 
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+// FrameCacheMarkersJsTest composes with the guest's @Composable marker modifiers.
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply plugin: 'app.cash.zipline'
 
 kotlin {

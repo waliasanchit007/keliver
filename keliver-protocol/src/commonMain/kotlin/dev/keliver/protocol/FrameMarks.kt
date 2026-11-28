@@ -13,40 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.keliver.protocol.host
+package dev.keliver.protocol
 
-import dev.keliver.protocol.FrameCacheTags
-import dev.keliver.protocol.ModifierElement
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.longOrNull
 
 /**
- * What the guest's cached-frame marker modifiers said about one node (`FrameCacheTags`), read by
- * [HostProtocolAdapter] before widget dispatch and kept per node for the recorder (NF5 A3).
+ * What the guest's cached-frame marker modifiers (`FrameCacheTags`) said about one node. It lives in
+ * keliver-protocol so the recorder (NF5 A3's `ChangeFolder` in keliver-treehouse-host) can read the
+ * raw [ModifierChange] elements itself: the host adapter drops the reserved tags before widget
+ * dispatch and keeps nothing.
  *
  * A marker that cannot be read (a newer guest's, or malformed) is dropped and the node is simply
  * unmarked: a frame is then never recorded, which is the safe side (I1).
  */
-internal class FrameMarks(
-  /** The `CachedFrame` marker on this node, if any. */
-  val cachedFrame: CachedFrameMark?,
+public class FrameMarks(
+  /** The `cachedFrame` marker on this node, if any. */
+  public val cachedFrame: CachedFrameMark?,
   /** `Modifier.cached()` is on this node. */
-  val cached: Boolean,
+  public val cached: Boolean,
   /** `Modifier.notCached()` is on this node. */
-  val notCached: Boolean,
+  public val notCached: Boolean,
 ) {
   override fun toString(): String =
     "FrameMarks(cachedFrame=$cachedFrame, cached=$cached, notCached=$notCached)"
 
-  companion object {
-    /** Reads [elements], which must all be in [FrameCacheTags.range]; null when none is understood. */
-    fun read(elements: List<ModifierElement>): FrameMarks? {
+  public companion object {
+    /** Reads the reserved elements among [elements] (others are ignored); null when none is understood. */
+    public fun read(elements: List<ModifierElement>): FrameMarks? {
       var cachedFrame: CachedFrameMark? = null
       var cached = false
       var notCached = false
       for (element in elements) {
+        if (!FrameCacheTags.isReserved(element.tag.value)) continue
         when (element.tag.value) {
           FrameCacheTags.CACHED_FRAME -> cachedFrame = CachedFrameMark.read(element.value) ?: cachedFrame
           FrameCacheTags.CACHED -> cached = true
@@ -60,18 +62,18 @@ internal class FrameMarks(
   }
 }
 
-internal class CachedFrameMark(
+public class CachedFrameMark(
   /** `"shell"` or `"whole"`. */
-  val content: String,
-  val maxAgeMillis: Long,
-  val ready: Boolean,
-  val paneTitle: String,
+  public val content: String,
+  public val maxAgeMillis: Long,
+  public val ready: Boolean,
+  public val paneTitle: String,
 ) {
   override fun toString(): String =
     "CachedFrameMark(content=$content, maxAgeMillis=$maxAgeMillis, ready=$ready, paneTitle=$paneTitle)"
 
-  companion object {
-    fun read(value: kotlinx.serialization.json.JsonElement): CachedFrameMark? {
+  public companion object {
+    public fun read(value: JsonElement): CachedFrameMark? {
       val obj = value as? JsonObject ?: return null
       val content = (obj["content"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
       if (content != "shell" && content != "whole") return null
