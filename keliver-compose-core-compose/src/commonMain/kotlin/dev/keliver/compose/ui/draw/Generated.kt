@@ -61,3 +61,66 @@ public fun dev.keliver.compose.ui.Modifier.scale(
   @Suppress("NAME_SHADOWING") val scale = dev.keliver.compose.internal.untag(scale)
   return then(animated_scale).then(GenScale1Impl(scale = scale))
 }
+@Deprecated("Keliver: `CacheDrawModifierNode` (function in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun CacheDrawModifierNode(onBuildDrawCache: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `blur` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.blur(radiusX: Any?, radiusY: Any?, edgeTreatment: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `blur` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.blur(radius: Any?, edgeTreatment: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `clipToBounds` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.clipToBounds(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `drawBehind` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.drawBehind(onDraw: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `drawWithCache` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.drawWithCache(onBuildDrawCache: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `drawWithContent` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.drawWithContent(onDraw: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `dropShadow` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.dropShadow(shape: Any?, shadow: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `innerShadow` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.innerShadow(shape: Any?, shadow: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `paint` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.paint(painter: Any?, sizeToIntrinsics: Any? = null, alignment: Any? = null, contentScale: Any? = null, alpha: Any? = null, colorFilter: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `scale` (modifier in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.scale(scaleX: Any?, scaleY: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BlurredEdgeTreatment` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class BlurredEdgeTreatment private constructor()
+
+@Deprecated("Keliver: `BuildDrawCacheParams` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface BuildDrawCacheParams
+
+@Deprecated("Keliver: `CacheDrawModifierNode` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface CacheDrawModifierNode
+
+@Deprecated("Keliver: `CacheDrawScope` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class CacheDrawScope private constructor()
+
+@Deprecated("Keliver: `DrawCacheModifier` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface DrawCacheModifier
+
+@Deprecated("Keliver: `DrawModifier` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface DrawModifier
+
+@Deprecated("Keliver: `DrawResult` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DrawResult private constructor()
+
+@Deprecated("Keliver: `DropShadowScope` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface DropShadowScope
+
+@Deprecated("Keliver: `InnerShadowScope` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface InnerShadowScope
+
+@Deprecated("Keliver: `ShadowScope` (class in `androidx.compose.ui.draw`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface ShadowScope
+

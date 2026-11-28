@@ -525,3 +525,882 @@ public class FabPosition private constructor()
 /** Placeholder: Compose's `TopAppBarScrollBehavior` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class TopAppBarScrollBehavior private constructor()
 
+@Deprecated("Keliver: `AlertDialog` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun AlertDialog(onDismissRequest: Any?, modifier: Any? = null, properties: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `AlertDialog` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun AlertDialog(onDismissRequest: Any?, confirmButton: Any?, modifier: Any? = null, dismissButton: Any? = null, icon: Any? = null, title: Any? = null, text: Any? = null, shape: Any? = null, containerColor: Any? = null, iconContentColor: Any? = null, titleContentColor: Any? = null, textContentColor: Any? = null, tonalElevation: Any? = null, properties: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `AppBarColumn` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun AppBarColumn(overflowIndicator: Any?, modifier: Any? = null, maxItemCount: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `AppBarRow` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun AppBarRow(overflowIndicator: Any?, modifier: Any? = null, maxItemCount: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `AssistChip` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun AssistChip(onClick: Any?, label: Any?, modifier: Any? = null, enabled: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Badge` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Badge(modifier: Any? = null, containerColor: Any? = null, contentColor: Any? = null, content: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BadgedBox` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BadgedBox(badge: Any?, modifier: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BasicAlertDialog` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BasicAlertDialog(onDismissRequest: Any?, modifier: Any? = null, properties: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BottomAppBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BottomAppBar(actions: Any?, modifier: Any? = null, floatingActionButton: Any? = null, containerColor: Any? = null, contentColor: Any? = null, tonalElevation: Any? = null, contentPadding: Any? = null, windowInsets: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BottomAppBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BottomAppBar(actions: Any?, modifier: Any? = null, floatingActionButton: Any? = null, containerColor: Any? = null, contentColor: Any? = null, tonalElevation: Any? = null, contentPadding: Any? = null, windowInsets: Any? = null, scrollBehavior: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BottomAppBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BottomAppBar(modifier: Any? = null, containerColor: Any? = null, contentColor: Any? = null, tonalElevation: Any? = null, contentPadding: Any? = null, windowInsets: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BottomAppBarState` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BottomAppBarState(initialHeightOffsetLimit: Any?, initialHeightOffset: Any?, initialContentOffset: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BottomSheetScaffold` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BottomSheetScaffold(sheetContent: Any?, modifier: Any? = null, scaffoldState: Any? = null, sheetPeekHeight: Any? = null, sheetMaxWidth: Any? = null, sheetShape: Any? = null, sheetContainerColor: Any? = null, sheetContentColor: Any? = null, sheetTonalElevation: Any? = null, sheetShadowElevation: Any? = null, sheetDragHandle: Any? = null, sheetSwipeEnabled: Any? = null, topBar: Any? = null, snackbarHost: Any? = null, containerColor: Any? = null, contentColor: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `CenterAlignedTopAppBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun CenterAlignedTopAppBar(title: Any?, modifier: Any? = null, navigationIcon: Any? = null, actions: Any? = null, expandedHeight: Any? = null, windowInsets: Any? = null, colors: Any? = null, scrollBehavior: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Checkbox` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Checkbox(checked: Any?, onCheckedChange: Any?, modifier: Any? = null, enabled: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Checkbox` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Checkbox(checked: Any?, onCheckedChange: Any?, checkmarkStroke: Any?, outlineStroke: Any?, modifier: Any? = null, enabled: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `CircularProgressIndicator` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun CircularProgressIndicator(progress: Any?, modifier: Any? = null, color: Any? = null, strokeWidth: Any? = null, trackColor: Any? = null, strokeCap: Any? = null, gapSize: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `CircularProgressIndicator` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun CircularProgressIndicator(modifier: Any? = null, color: Any? = null, strokeWidth: Any? = null, trackColor: Any? = null, strokeCap: Any? = null, gapSize: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DatePicker` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DatePicker(state: Any?, modifier: Any? = null, dateFormatter: Any? = null, colors: Any? = null, title: Any? = null, headline: Any? = null, showModeToggle: Any? = null, focusRequester: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DatePickerDialog` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DatePickerDialog(onDismissRequest: Any?, confirmButton: Any?, modifier: Any? = null, dismissButton: Any? = null, shape: Any? = null, tonalElevation: Any? = null, colors: Any? = null, properties: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DatePickerState` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DatePickerState(locale: Any?, initialSelectedDateMillis: Any? = null, initialDisplayedMonthMillis: Any? = null, yearRange: Any? = null, initialDisplayMode: Any? = null, selectableDates: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DateRangePicker` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DateRangePicker(state: Any?, modifier: Any? = null, dateFormatter: Any? = null, colors: Any? = null, title: Any? = null, headline: Any? = null, showModeToggle: Any? = null, focusRequester: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DateRangePickerState` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DateRangePickerState(locale: Any?, initialSelectedStartDate: Any?, initialSelectedEndDate: Any?, initialDisplayedMonth: Any? = null, yearRange: Any? = null, initialDisplayMode: Any? = null, selectableDates: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DismissibleDrawerSheet` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DismissibleDrawerSheet(modifier: Any? = null, drawerShape: Any? = null, drawerContainerColor: Any? = null, drawerContentColor: Any? = null, drawerTonalElevation: Any? = null, windowInsets: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DismissibleDrawerSheet` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DismissibleDrawerSheet(drawerState: Any?, modifier: Any? = null, drawerShape: Any? = null, drawerContainerColor: Any? = null, drawerContentColor: Any? = null, drawerTonalElevation: Any? = null, windowInsets: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DismissibleNavigationDrawer` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DismissibleNavigationDrawer(drawerContent: Any?, modifier: Any? = null, drawerState: Any? = null, gesturesEnabled: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Divider` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Divider(modifier: Any? = null, thickness: Any? = null, color: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DockedSearchBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DockedSearchBar(inputField: Any?, expanded: Any?, onExpandedChange: Any?, modifier: Any? = null, shape: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DockedSearchBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DockedSearchBar(query: Any?, onQueryChange: Any?, onSearch: Any?, active: Any?, onActiveChange: Any?, modifier: Any? = null, enabled: Any? = null, placeholder: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, shape: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DropdownMenu` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DropdownMenu(expanded: Any?, onDismissRequest: Any?, modifier: Any? = null, offset: Any? = null, scrollState: Any? = null, properties: Any? = null, shape: Any? = null, containerColor: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, border: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DropdownMenuItem` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun DropdownMenuItem(text: Any?, onClick: Any?, modifier: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, enabled: Any? = null, colors: Any? = null, contentPadding: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ElevatedAssistChip` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ElevatedAssistChip(onClick: Any?, label: Any?, modifier: Any? = null, enabled: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ElevatedButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ElevatedButton(onClick: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, contentPadding: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ElevatedCard` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ElevatedCard(modifier: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ElevatedCard` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ElevatedCard(onClick: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ElevatedFilterChip` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ElevatedFilterChip(selected: Any?, onClick: Any?, label: Any?, modifier: Any? = null, enabled: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ElevatedSuggestionChip` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ElevatedSuggestionChip(onClick: Any?, label: Any?, modifier: Any? = null, enabled: Any? = null, icon: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ExpandedDockedSearchBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ExpandedDockedSearchBar(state: Any?, inputField: Any?, modifier: Any? = null, shape: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, properties: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ExpandedFullScreenSearchBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ExpandedFullScreenSearchBar(state: Any?, inputField: Any?, modifier: Any? = null, collapsedShape: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, windowInsets: Any? = null, properties: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ExposedDropdownMenuBox` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ExposedDropdownMenuBox(expanded: Any?, onExpandedChange: Any?, modifier: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ExtendedFloatingActionButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ExtendedFloatingActionButton(onClick: Any?, modifier: Any? = null, shape: Any? = null, containerColor: Any? = null, contentColor: Any? = null, elevation: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ExtendedFloatingActionButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ExtendedFloatingActionButton(text: Any?, icon: Any?, onClick: Any?, modifier: Any? = null, expanded: Any? = null, shape: Any? = null, containerColor: Any? = null, contentColor: Any? = null, elevation: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FilledIconButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun FilledIconButton(onClick: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FilledIconToggleButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun FilledIconToggleButton(checked: Any?, onCheckedChange: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FilledTonalButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun FilledTonalButton(onClick: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, contentPadding: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FilledTonalIconButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun FilledTonalIconButton(onClick: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FilledTonalIconToggleButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun FilledTonalIconToggleButton(checked: Any?, onCheckedChange: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FilterChip` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun FilterChip(selected: Any?, onClick: Any?, label: Any?, modifier: Any? = null, enabled: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FloatingActionButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun FloatingActionButton(onClick: Any?, modifier: Any? = null, shape: Any? = null, containerColor: Any? = null, contentColor: Any? = null, elevation: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Icon` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Icon(bitmap: Any?, contentDescription: Any?, modifier: Any? = null, tint: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `IconToggleButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun IconToggleButton(checked: Any?, onCheckedChange: Any?, modifier: Any? = null, enabled: Any? = null, colors: Any? = null, interactionSource: Any? = null, shape: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `InputChip` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun InputChip(selected: Any?, onClick: Any?, label: Any?, modifier: Any? = null, enabled: Any? = null, leadingIcon: Any? = null, avatar: Any? = null, trailingIcon: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Label` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Label(label: Any?, modifier: Any? = null, interactionSource: Any? = null, isPersistent: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LargeFloatingActionButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun LargeFloatingActionButton(onClick: Any?, modifier: Any? = null, shape: Any? = null, containerColor: Any? = null, contentColor: Any? = null, elevation: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LargeTopAppBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun LargeTopAppBar(title: Any?, modifier: Any? = null, navigationIcon: Any? = null, actions: Any? = null, collapsedHeight: Any? = null, expandedHeight: Any? = null, windowInsets: Any? = null, colors: Any? = null, scrollBehavior: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LeadingIconTab` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun LeadingIconTab(selected: Any?, onClick: Any?, text: Any?, icon: Any?, modifier: Any? = null, enabled: Any? = null, selectedContentColor: Any? = null, unselectedContentColor: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LinearProgressIndicator` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun LinearProgressIndicator(progress: Any?, modifier: Any? = null, color: Any? = null, trackColor: Any? = null, strokeCap: Any? = null, gapSize: Any? = null, drawStopIndicator: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LinearProgressIndicator` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun LinearProgressIndicator(modifier: Any? = null, color: Any? = null, trackColor: Any? = null, strokeCap: Any? = null, gapSize: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ListItem` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ListItem(headlineContent: Any?, modifier: Any? = null, overlineContent: Any? = null, supportingContent: Any? = null, leadingContent: Any? = null, trailingContent: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `MaterialTheme` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun MaterialTheme(colorScheme: Any?, shapes: Any? = null, typography: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `MediumTopAppBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun MediumTopAppBar(title: Any?, modifier: Any? = null, navigationIcon: Any? = null, actions: Any? = null, collapsedHeight: Any? = null, expandedHeight: Any? = null, windowInsets: Any? = null, colors: Any? = null, scrollBehavior: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ModalBottomSheet` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ModalBottomSheet(onDismissRequest: Any?, modifier: Any? = null, sheetState: Any? = null, sheetMaxWidth: Any? = null, sheetGesturesEnabled: Any? = null, shape: Any? = null, containerColor: Any? = null, contentColor: Any? = null, tonalElevation: Any? = null, scrimColor: Any? = null, dragHandle: Any? = null, contentWindowInsets: Any? = null, properties: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ModalDrawerSheet` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ModalDrawerSheet(modifier: Any? = null, drawerShape: Any? = null, drawerContainerColor: Any? = null, drawerContentColor: Any? = null, drawerTonalElevation: Any? = null, windowInsets: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ModalDrawerSheet` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ModalDrawerSheet(drawerState: Any?, modifier: Any? = null, drawerShape: Any? = null, drawerContainerColor: Any? = null, drawerContentColor: Any? = null, drawerTonalElevation: Any? = null, windowInsets: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ModalNavigationDrawer` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ModalNavigationDrawer(drawerContent: Any?, modifier: Any? = null, drawerState: Any? = null, gesturesEnabled: Any? = null, scrimColor: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ModalWideNavigationRail` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ModalWideNavigationRail(modifier: Any? = null, state: Any? = null, hideOnCollapse: Any? = null, collapsedShape: Any? = null, expandedShape: Any? = null, colors: Any? = null, header: Any? = null, expandedHeaderTopPadding: Any? = null, windowInsets: Any? = null, arrangement: Any? = null, expandedProperties: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `MultiChoiceSegmentedButtonRow` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun MultiChoiceSegmentedButtonRow(modifier: Any? = null, space: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `NavigationBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun NavigationBar(modifier: Any? = null, containerColor: Any? = null, contentColor: Any? = null, tonalElevation: Any? = null, windowInsets: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `NavigationBarItem` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.foundation.layout.RowScope.NavigationBarItem(selected: Any?, onClick: Any?, icon: Any?, modifier: Any? = null, enabled: Any? = null, label: Any? = null, alwaysShowLabel: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `NavigationDrawerItem` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun NavigationDrawerItem(label: Any?, selected: Any?, onClick: Any?, modifier: Any? = null, icon: Any? = null, badge: Any? = null, shape: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `NavigationRail` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun NavigationRail(modifier: Any? = null, containerColor: Any? = null, contentColor: Any? = null, header: Any? = null, windowInsets: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `NavigationRailItem` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun NavigationRailItem(selected: Any?, onClick: Any?, icon: Any?, modifier: Any? = null, enabled: Any? = null, label: Any? = null, alwaysShowLabel: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `OutlinedCard` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun OutlinedCard(modifier: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `OutlinedCard` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun OutlinedCard(onClick: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `OutlinedIconButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun OutlinedIconButton(onClick: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, border: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `OutlinedIconToggleButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun OutlinedIconToggleButton(checked: Any?, onCheckedChange: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, colors: Any? = null, border: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun OutlinedSecureTextField(state: Any?, modifier: Any? = null, enabled: Any? = null, textStyle: Any? = null, labelPosition: Any? = null, label: Any? = null, placeholder: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, prefix: Any? = null, suffix: Any? = null, supportingText: Any? = null, isError: Any? = null, inputTransformation: Any? = null, textObfuscationMode: Any? = null, textObfuscationCharacter: Any? = null, keyboardOptions: Any? = null, onKeyboardAction: Any? = null, onTextLayout: Any? = null, shape: Any? = null, colors: Any? = null, contentPadding: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun OutlinedTextField(state: Any?, modifier: Any? = null, enabled: Any? = null, readOnly: Any? = null, textStyle: Any? = null, labelPosition: Any? = null, label: Any? = null, placeholder: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, prefix: Any? = null, suffix: Any? = null, supportingText: Any? = null, isError: Any? = null, inputTransformation: Any? = null, outputTransformation: Any? = null, keyboardOptions: Any? = null, onKeyboardAction: Any? = null, lineLimits: Any? = null, onTextLayout: Any? = null, scrollState: Any? = null, shape: Any? = null, colors: Any? = null, contentPadding: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `OutlinedTextField` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun OutlinedTextField(value: Any?, onValueChange: Any?, modifier: Any? = null, enabled: Any? = null, readOnly: Any? = null, textStyle: Any? = null, label: Any? = null, placeholder: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, prefix: Any? = null, suffix: Any? = null, supportingText: Any? = null, isError: Any? = null, visualTransformation: Any? = null, keyboardOptions: Any? = null, keyboardActions: Any? = null, singleLine: Any? = null, maxLines: Any? = null, minLines: Any? = null, interactionSource: Any? = null, shape: Any? = null, colors: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PermanentDrawerSheet` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun PermanentDrawerSheet(modifier: Any? = null, drawerShape: Any? = null, drawerContainerColor: Any? = null, drawerContentColor: Any? = null, drawerTonalElevation: Any? = null, windowInsets: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PermanentNavigationDrawer` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun PermanentNavigationDrawer(drawerContent: Any?, modifier: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PlainTooltip` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.PlainTooltip(modifier: Any? = null, caretShape: Any? = null, maxWidth: Any? = null, shape: Any? = null, contentColor: Any? = null, containerColor: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PrimaryScrollableTabRow` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun PrimaryScrollableTabRow(selectedTabIndex: Any?, modifier: Any? = null, scrollState: Any? = null, containerColor: Any? = null, contentColor: Any? = null, edgePadding: Any? = null, indicator: Any? = null, divider: Any? = null, minTabWidth: Any? = null, tabs: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PrimaryTabRow` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun PrimaryTabRow(selectedTabIndex: Any?, modifier: Any? = null, containerColor: Any? = null, contentColor: Any? = null, indicator: Any? = null, divider: Any? = null, tabs: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ProvideTextStyle` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ProvideTextStyle(value: Any?, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `RadioButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun RadioButton(selected: Any?, onClick: Any?, modifier: Any? = null, enabled: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `RangeSlider` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun RangeSlider(value: Any?, onValueChange: Any?, modifier: Any? = null, enabled: Any? = null, valueRange: Any? = null, steps: Any? = null, onValueChangeFinished: Any? = null, colors: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `RangeSlider` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun RangeSlider(value: Any?, onValueChange: Any?, modifier: Any? = null, enabled: Any? = null, valueRange: Any? = null, onValueChangeFinished: Any? = null, colors: Any? = null, startInteractionSource: Any? = null, endInteractionSource: Any? = null, startThumb: Any? = null, endThumb: Any? = null, track: Any? = null, steps: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `RangeSlider` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun RangeSlider(state: Any?, modifier: Any? = null, enabled: Any? = null, colors: Any? = null, startInteractionSource: Any? = null, endInteractionSource: Any? = null, startThumb: Any? = null, endThumb: Any? = null, track: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `RichTooltip` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.RichTooltip(modifier: Any? = null, title: Any? = null, action: Any? = null, caretShape: Any? = null, maxWidth: Any? = null, shape: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, text: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ScrollableTabRow` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ScrollableTabRow(selectedTabIndex: Any?, modifier: Any? = null, containerColor: Any? = null, contentColor: Any? = null, edgePadding: Any? = null, indicator: Any? = null, divider: Any? = null, tabs: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SearchBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SearchBar(state: Any?, inputField: Any?, modifier: Any? = null, shape: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SearchBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SearchBar(inputField: Any?, expanded: Any?, onExpandedChange: Any?, modifier: Any? = null, shape: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, windowInsets: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SearchBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SearchBar(query: Any?, onQueryChange: Any?, onSearch: Any?, active: Any?, onActiveChange: Any?, modifier: Any? = null, enabled: Any? = null, placeholder: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, shape: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, windowInsets: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SecondaryScrollableTabRow` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SecondaryScrollableTabRow(selectedTabIndex: Any?, modifier: Any? = null, scrollState: Any? = null, containerColor: Any? = null, contentColor: Any? = null, edgePadding: Any? = null, indicator: Any? = null, divider: Any? = null, minTabWidth: Any? = null, tabs: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SecondaryTabRow` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SecondaryTabRow(selectedTabIndex: Any?, modifier: Any? = null, containerColor: Any? = null, contentColor: Any? = null, indicator: Any? = null, divider: Any? = null, tabs: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun SecureTextField(state: Any?, modifier: Any? = null, enabled: Any? = null, textStyle: Any? = null, labelPosition: Any? = null, label: Any? = null, placeholder: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, prefix: Any? = null, suffix: Any? = null, supportingText: Any? = null, isError: Any? = null, inputTransformation: Any? = null, textObfuscationMode: Any? = null, textObfuscationCharacter: Any? = null, keyboardOptions: Any? = null, onKeyboardAction: Any? = null, onTextLayout: Any? = null, shape: Any? = null, colors: Any? = null, contentPadding: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SegmentedButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.SegmentedButton(checked: Any?, onCheckedChange: Any?, shape: Any?, modifier: Any? = null, enabled: Any? = null, colors: Any? = null, border: Any? = null, contentPadding: Any? = null, interactionSource: Any? = null, icon: Any? = null, label: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ShortNavigationBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ShortNavigationBar(modifier: Any? = null, containerColor: Any? = null, contentColor: Any? = null, windowInsets: Any? = null, arrangement: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ShortNavigationBarItem` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ShortNavigationBarItem(selected: Any?, onClick: Any?, icon: Any?, label: Any?, modifier: Any? = null, enabled: Any? = null, iconPosition: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SingleChoiceSegmentedButtonRow` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SingleChoiceSegmentedButtonRow(modifier: Any? = null, space: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Slider` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Slider(value: Any?, onValueChange: Any?, modifier: Any? = null, enabled: Any? = null, valueRange: Any? = null, steps: Any? = null, onValueChangeFinished: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Slider` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Slider(value: Any?, onValueChange: Any?, modifier: Any? = null, enabled: Any? = null, onValueChangeFinished: Any? = null, colors: Any? = null, interactionSource: Any? = null, steps: Any? = null, thumb: Any? = null, track: Any? = null, valueRange: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Slider` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Slider(state: Any?, modifier: Any? = null, enabled: Any? = null, colors: Any? = null, interactionSource: Any? = null, thumb: Any? = null, track: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SmallFloatingActionButton` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SmallFloatingActionButton(onClick: Any?, modifier: Any? = null, shape: Any? = null, containerColor: Any? = null, contentColor: Any? = null, elevation: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Snackbar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Snackbar(modifier: Any? = null, action: Any? = null, dismissAction: Any? = null, actionOnNewLine: Any? = null, shape: Any? = null, containerColor: Any? = null, contentColor: Any? = null, actionContentColor: Any? = null, dismissActionContentColor: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Snackbar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Snackbar(snackbarData: Any?, modifier: Any? = null, actionOnNewLine: Any? = null, shape: Any? = null, containerColor: Any? = null, contentColor: Any? = null, actionColor: Any? = null, actionContentColor: Any? = null, dismissActionContentColor: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SnackbarHost` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SnackbarHost(hostState: Any?, modifier: Any? = null, snackbar: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SuggestionChip` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SuggestionChip(onClick: Any?, label: Any?, modifier: Any? = null, enabled: Any? = null, icon: Any? = null, shape: Any? = null, colors: Any? = null, elevation: Any? = null, border: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Surface` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Surface(selected: Any?, onClick: Any?, modifier: Any? = null, enabled: Any? = null, shape: Any? = null, color: Any? = null, contentColor: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, border: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SwipeToDismissBox` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SwipeToDismissBox(state: Any?, backgroundContent: Any?, modifier: Any? = null, enableDismissFromStartToEnd: Any? = null, enableDismissFromEndToStart: Any? = null, gesturesEnabled: Any? = null, onDismiss: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Switch` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Switch(checked: Any?, onCheckedChange: Any?, modifier: Any? = null, thumbContent: Any? = null, enabled: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Tab` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Tab(selected: Any?, onClick: Any?, modifier: Any? = null, enabled: Any? = null, text: Any? = null, icon: Any? = null, selectedContentColor: Any? = null, unselectedContentColor: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Tab` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Tab(selected: Any?, onClick: Any?, modifier: Any? = null, enabled: Any? = null, selectedContentColor: Any? = null, unselectedContentColor: Any? = null, interactionSource: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TabRow` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TabRow(selectedTabIndex: Any?, modifier: Any? = null, containerColor: Any? = null, contentColor: Any? = null, indicator: Any? = null, divider: Any? = null, tabs: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Text` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Text(text: Any?, modifier: Any? = null, color: Any? = null, autoSize: Any? = null, fontSize: Any? = null, fontStyle: Any? = null, fontWeight: Any? = null, fontFamily: Any? = null, letterSpacing: Any? = null, textDecoration: Any? = null, textAlign: Any? = null, lineHeight: Any? = null, overflow: Any? = null, softWrap: Any? = null, maxLines: Any? = null, minLines: Any? = null, inlineContent: Any? = null, onTextLayout: Any? = null, style: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun TextField(state: Any?, modifier: Any? = null, enabled: Any? = null, readOnly: Any? = null, textStyle: Any? = null, labelPosition: Any? = null, label: Any? = null, placeholder: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, prefix: Any? = null, suffix: Any? = null, supportingText: Any? = null, isError: Any? = null, inputTransformation: Any? = null, outputTransformation: Any? = null, keyboardOptions: Any? = null, onKeyboardAction: Any? = null, lineLimits: Any? = null, onTextLayout: Any? = null, scrollState: Any? = null, shape: Any? = null, colors: Any? = null, contentPadding: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TextField` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TextField(value: Any?, onValueChange: Any?, modifier: Any? = null, enabled: Any? = null, readOnly: Any? = null, textStyle: Any? = null, label: Any? = null, placeholder: Any? = null, leadingIcon: Any? = null, trailingIcon: Any? = null, prefix: Any? = null, suffix: Any? = null, supportingText: Any? = null, isError: Any? = null, visualTransformation: Any? = null, keyboardOptions: Any? = null, keyboardActions: Any? = null, singleLine: Any? = null, maxLines: Any? = null, minLines: Any? = null, interactionSource: Any? = null, shape: Any? = null, colors: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TimeInput` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TimeInput(state: Any?, modifier: Any? = null, colors: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TimePicker` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TimePicker(state: Any?, modifier: Any? = null, colors: Any? = null, layoutType: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TimePickerDialog` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TimePickerDialog(onDismissRequest: Any?, confirmButton: Any?, title: Any?, modifier: Any? = null, properties: Any? = null, modeToggleButton: Any? = null, dismissButton: Any? = null, shape: Any? = null, containerColor: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TimePickerState` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TimePickerState(initialHour: Any?, initialMinute: Any?, is24Hour: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TooltipBox` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TooltipBox(positionProvider: Any?, tooltip: Any?, state: Any?, modifier: Any? = null, onDismissRequest: Any? = null, focusable: Any? = null, enableUserInput: Any? = null, hasAction: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TooltipState` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TooltipState(initialIsVisible: Any? = null, isPersistent: Any? = null, mutatorMutex: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TopSearchBar` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TopSearchBar(state: Any?, inputField: Any?, modifier: Any? = null, shape: Any? = null, colors: Any? = null, tonalElevation: Any? = null, shadowElevation: Any? = null, windowInsets: Any? = null, scrollBehavior: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TriStateCheckbox` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TriStateCheckbox(state: Any?, onClick: Any?, modifier: Any? = null, enabled: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TriStateCheckbox` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TriStateCheckbox(state: Any?, onClick: Any?, checkmarkStroke: Any?, outlineStroke: Any?, modifier: Any? = null, enabled: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `VerticalDivider` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun VerticalDivider(modifier: Any? = null, thickness: Any? = null, color: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `VerticalDragHandle` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun VerticalDragHandle(modifier: Any? = null, sizes: Any? = null, colors: Any? = null, shapes: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `WideNavigationRail` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun WideNavigationRail(modifier: Any? = null, state: Any? = null, shape: Any? = null, colors: Any? = null, header: Any? = null, windowInsets: Any? = null, arrangement: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `WideNavigationRailItem` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun WideNavigationRailItem(selected: Any?, onClick: Any?, icon: Any?, label: Any?, railExpanded: Any?, modifier: Any? = null, enabled: Any? = null, iconPosition: Any? = null, colors: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `contentColorFor` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.contentColorFor(backgroundColor: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `contentColorFor` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun contentColorFor(backgroundColor: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `darkColorScheme` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun darkColorScheme(primary: Any? = null, onPrimary: Any? = null, primaryContainer: Any? = null, onPrimaryContainer: Any? = null, inversePrimary: Any? = null, secondary: Any? = null, onSecondary: Any? = null, secondaryContainer: Any? = null, onSecondaryContainer: Any? = null, tertiary: Any? = null, onTertiary: Any? = null, tertiaryContainer: Any? = null, onTertiaryContainer: Any? = null, background: Any? = null, onBackground: Any? = null, surface: Any? = null, onSurface: Any? = null, surfaceVariant: Any? = null, onSurfaceVariant: Any? = null, surfaceTint: Any? = null, inverseSurface: Any? = null, inverseOnSurface: Any? = null, error: Any? = null, onError: Any? = null, errorContainer: Any? = null, onErrorContainer: Any? = null, outline: Any? = null, outlineVariant: Any? = null, scrim: Any? = null, surfaceBright: Any? = null, surfaceContainer: Any? = null, surfaceContainerHigh: Any? = null, surfaceContainerHighest: Any? = null, surfaceContainerLow: Any? = null, surfaceContainerLowest: Any? = null, surfaceDim: Any? = null, primaryFixed: Any? = null, primaryFixedDim: Any? = null, onPrimaryFixed: Any? = null, onPrimaryFixedVariant: Any? = null, secondaryFixed: Any? = null, secondaryFixedDim: Any? = null, onSecondaryFixed: Any? = null, onSecondaryFixedVariant: Any? = null, tertiaryFixed: Any? = null, tertiaryFixedDim: Any? = null, onTertiaryFixed: Any? = null, onTertiaryFixedVariant: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `getDisplayedMonth` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.getDisplayedMonth(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `getSelectedDate` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.getSelectedDate(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `getSelectedEndDate` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.getSelectedEndDate(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `getSelectedStartDate` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.getSelectedStartDate(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `lightColorScheme` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun lightColorScheme(primary: Any? = null, onPrimary: Any? = null, primaryContainer: Any? = null, onPrimaryContainer: Any? = null, inversePrimary: Any? = null, secondary: Any? = null, onSecondary: Any? = null, secondaryContainer: Any? = null, onSecondaryContainer: Any? = null, tertiary: Any? = null, onTertiary: Any? = null, tertiaryContainer: Any? = null, onTertiaryContainer: Any? = null, background: Any? = null, onBackground: Any? = null, surface: Any? = null, onSurface: Any? = null, surfaceVariant: Any? = null, onSurfaceVariant: Any? = null, surfaceTint: Any? = null, inverseSurface: Any? = null, inverseOnSurface: Any? = null, error: Any? = null, onError: Any? = null, errorContainer: Any? = null, onErrorContainer: Any? = null, outline: Any? = null, outlineVariant: Any? = null, scrim: Any? = null, surfaceBright: Any? = null, surfaceContainer: Any? = null, surfaceContainerHigh: Any? = null, surfaceContainerHighest: Any? = null, surfaceContainerLow: Any? = null, surfaceContainerLowest: Any? = null, surfaceDim: Any? = null, primaryFixed: Any? = null, primaryFixedDim: Any? = null, onPrimaryFixed: Any? = null, onPrimaryFixedVariant: Any? = null, secondaryFixed: Any? = null, secondaryFixedDim: Any? = null, onSecondaryFixed: Any? = null, onSecondaryFixedVariant: Any? = null, tertiaryFixed: Any? = null, tertiaryFixedDim: Any? = null, onTertiaryFixed: Any? = null, onTertiaryFixedVariant: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `minimumInteractiveComponentSize` (modifier in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.minimumInteractiveComponentSize(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberBottomAppBarState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberBottomAppBarState(initialHeightOffsetLimit: Any? = null, initialHeightOffset: Any? = null, initialContentOffset: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberBottomSheetScaffoldState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberBottomSheetScaffoldState(bottomSheetState: Any? = null, snackbarHostState: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberDatePickerState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberDatePickerState(initialSelectedDateMillis: Any? = null, initialDisplayedMonthMillis: Any? = null, yearRange: Any? = null, initialDisplayMode: Any? = null, selectableDates: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberDateRangePickerState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberDateRangePickerState(initialSelectedStartDate: Any?, initialSelectedEndDate: Any?, initialDisplayedMonth: Any? = null, yearRange: Any? = null, initialDisplayMode: Any? = null, selectableDates: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberDrawerState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberDrawerState(initialValue: Any?, confirmStateChange: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberModalBottomSheetState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberModalBottomSheetState(skipPartiallyExpanded: Any? = null, confirmValueChange: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberRangeSliderState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberRangeSliderState(activeRangeStart: Any? = null, activeRangeEnd: Any? = null, steps: Any? = null, onValueChangeFinished: Any? = null, valueRange: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberSearchBarState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberSearchBarState(initialValue: Any? = null, animationSpecForExpand: Any? = null, animationSpecForCollapse: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberSliderState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberSliderState(value: Any? = null, steps: Any? = null, onValueChangeFinished: Any? = null, valueRange: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberStandardBottomSheetState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberStandardBottomSheetState(initialValue: Any? = null, confirmValueChange: Any? = null, skipHiddenState: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberSwipeToDismissBoxState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberSwipeToDismissBoxState(initialValue: Any? = null, positionalThreshold: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberSwipeToDismissBoxState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberSwipeToDismissBoxState(initialValue: Any? = null, confirmValueChange: Any? = null, positionalThreshold: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberTimePickerState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberTimePickerState(initialHour: Any? = null, initialMinute: Any? = null, is24Hour: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberTooltipState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberTooltipState(initialIsVisible: Any? = null, isPersistent: Any? = null, mutatorMutex: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberTopAppBarState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberTopAppBarState(initialHeightOffsetLimit: Any? = null, initialHeightOffset: Any? = null, initialContentOffset: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberWideNavigationRailState` (composable function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberWideNavigationRailState(initialValue: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ripple` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ripple(bounded: Any? = null, radius: Any? = null, color: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `setDisplayedMonth` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.setDisplayedMonth(yearMonth: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `setSelectedDate` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.setSelectedDate(date: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `setSelection` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.setSelection(startDate: Any?, endDate: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `surfaceColorAtElevation` (function in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.surfaceColorAtElevation(elevation: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalAbsoluteTonalElevation` (property in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalAbsoluteTonalElevation: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalMinimumInteractiveComponentEnforcement` (property in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalMinimumInteractiveComponentEnforcement: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalMinimumInteractiveComponentSize` (property in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalMinimumInteractiveComponentSize: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalRippleConfiguration` (property in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalRippleConfiguration: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalTonalElevationEnabled` (property in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalTonalElevationEnabled: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isPm` (property in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isPm: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `AlertDialogDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object AlertDialogDefaults
+
+@Deprecated("Keliver: `AppBarColumnScope` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface AppBarColumnScope
+
+@Deprecated("Keliver: `AppBarMenuState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class AppBarMenuState private constructor()
+
+@Deprecated("Keliver: `AppBarRowScope` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface AppBarRowScope
+
+@Deprecated("Keliver: `AppBarScope` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface AppBarScope
+
+@Deprecated("Keliver: `AssistChipDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object AssistChipDefaults
+
+@Deprecated("Keliver: `BadgeDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object BadgeDefaults
+
+@Deprecated("Keliver: `BottomAppBarDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object BottomAppBarDefaults
+
+@Deprecated("Keliver: `BottomAppBarScrollBehavior` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface BottomAppBarScrollBehavior
+
+@Deprecated("Keliver: `BottomAppBarState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface BottomAppBarState
+
+@Deprecated("Keliver: `BottomSheetDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object BottomSheetDefaults
+
+@Deprecated("Keliver: `BottomSheetScaffoldState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class BottomSheetScaffoldState private constructor()
+
+@Deprecated("Keliver: `CheckboxColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class CheckboxColors private constructor()
+
+@Deprecated("Keliver: `CheckboxDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object CheckboxDefaults
+
+@Deprecated("Keliver: `ChipBorder` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ChipBorder private constructor()
+
+@Deprecated("Keliver: `ChipColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ChipColors private constructor()
+
+@Deprecated("Keliver: `ChipElevation` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ChipElevation private constructor()
+
+@Deprecated("Keliver: `DatePickerColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DatePickerColors private constructor()
+
+@Deprecated("Keliver: `DatePickerDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object DatePickerDefaults
+
+@Deprecated("Keliver: `DatePickerFormatter` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface DatePickerFormatter
+
+@Deprecated("Keliver: `DatePickerState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface DatePickerState
+
+@Deprecated("Keliver: `DateRangePickerDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object DateRangePickerDefaults
+
+@Deprecated("Keliver: `DateRangePickerState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface DateRangePickerState
+
+@Deprecated("Keliver: `DefaultTooltipCaretShape` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DefaultTooltipCaretShape private constructor()
+
+@Deprecated("Keliver: `DisplayMode` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DisplayMode private constructor()
+
+@Deprecated("Keliver: `DragHandleColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DragHandleColors private constructor()
+
+@Deprecated("Keliver: `DragHandleShapes` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DragHandleShapes private constructor()
+
+@Deprecated("Keliver: `DragHandleSizes` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DragHandleSizes private constructor()
+
+@Deprecated("Keliver: `DrawerDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object DrawerDefaults
+
+@Deprecated("Keliver: `DrawerState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DrawerState private constructor()
+
+@Deprecated("Keliver: `DrawerValue` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DrawerValue private constructor()
+
+@Deprecated("Keliver: `ExposedDropdownMenuAnchorType` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ExposedDropdownMenuAnchorType private constructor()
+
+@Deprecated("Keliver: `ExposedDropdownMenuBoxScope` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ExposedDropdownMenuBoxScope private constructor()
+
+@Deprecated("Keliver: `ExposedDropdownMenuDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object ExposedDropdownMenuDefaults
+
+@Deprecated("Keliver: `FilterChipDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object FilterChipDefaults
+
+@Deprecated("Keliver: `FloatingActionButtonDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object FloatingActionButtonDefaults
+
+@Deprecated("Keliver: `FloatingActionButtonElevation` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class FloatingActionButtonElevation private constructor()
+
+@Deprecated("Keliver: `IconToggleButtonColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class IconToggleButtonColors private constructor()
+
+@Deprecated("Keliver: `InputChipDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object InputChipDefaults
+
+@Deprecated("Keliver: `ListItemColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ListItemColors private constructor()
+
+@Deprecated("Keliver: `ListItemDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object ListItemDefaults
+
+@Deprecated("Keliver: `MenuDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object MenuDefaults
+
+@Deprecated("Keliver: `MenuItemColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class MenuItemColors private constructor()
+
+@Deprecated("Keliver: `ModalBottomSheetDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object ModalBottomSheetDefaults
+
+@Deprecated("Keliver: `ModalBottomSheetProperties` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ModalBottomSheetProperties private constructor()
+
+@Deprecated("Keliver: `ModalWideNavigationRailProperties` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ModalWideNavigationRailProperties private constructor()
+
+@Deprecated("Keliver: `MultiChoiceSegmentedButtonRowScope` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface MultiChoiceSegmentedButtonRowScope
+
+@Deprecated("Keliver: `NavigationBarDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object NavigationBarDefaults
+
+@Deprecated("Keliver: `NavigationBarItemColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class NavigationBarItemColors private constructor()
+
+@Deprecated("Keliver: `NavigationBarItemDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object NavigationBarItemDefaults
+
+@Deprecated("Keliver: `NavigationDrawerItemColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface NavigationDrawerItemColors
+
+@Deprecated("Keliver: `NavigationDrawerItemDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object NavigationDrawerItemDefaults
+
+@Deprecated("Keliver: `NavigationItemColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class NavigationItemColors private constructor()
+
+@Deprecated("Keliver: `NavigationItemIconPosition` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class NavigationItemIconPosition private constructor()
+
+@Deprecated("Keliver: `NavigationRailDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object NavigationRailDefaults
+
+@Deprecated("Keliver: `NavigationRailItemColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class NavigationRailItemColors private constructor()
+
+@Deprecated("Keliver: `NavigationRailItemDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object NavigationRailItemDefaults
+
+@Deprecated("Keliver: `OutlinedTextFieldDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object OutlinedTextFieldDefaults
+
+@Deprecated("Keliver: `ProgressIndicatorDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object ProgressIndicatorDefaults
+
+@Deprecated("Keliver: `RadioButtonColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class RadioButtonColors private constructor()
+
+@Deprecated("Keliver: `RadioButtonDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object RadioButtonDefaults
+
+@Deprecated("Keliver: `RangeSliderState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class RangeSliderState private constructor()
+
+@Deprecated("Keliver: `RichTooltipColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class RichTooltipColors private constructor()
+
+@Deprecated("Keliver: `RippleConfiguration` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class RippleConfiguration private constructor()
+
+@Deprecated("Keliver: `RippleDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object RippleDefaults
+
+@Deprecated("Keliver: `ScaffoldDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object ScaffoldDefaults
+
+@Deprecated("Keliver: `SearchBarColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SearchBarColors private constructor()
+
+@Deprecated("Keliver: `SearchBarDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object SearchBarDefaults
+
+@Deprecated("Keliver: `SearchBarScrollBehavior` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface SearchBarScrollBehavior
+
+@Deprecated("Keliver: `SearchBarState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SearchBarState private constructor()
+
+@Deprecated("Keliver: `SearchBarValue` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SearchBarValue private constructor()
+
+@Deprecated("Keliver: `SegmentedButtonColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SegmentedButtonColors private constructor()
+
+@Deprecated("Keliver: `SegmentedButtonDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object SegmentedButtonDefaults
+
+@Deprecated("Keliver: `SelectableChipColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SelectableChipColors private constructor()
+
+@Deprecated("Keliver: `SelectableChipElevation` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SelectableChipElevation private constructor()
+
+@Deprecated("Keliver: `SelectableDates` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface SelectableDates
+
+@Deprecated("Keliver: `ShapeDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object ShapeDefaults
+
+@Deprecated("Keliver: `SheetState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SheetState private constructor()
+
+@Deprecated("Keliver: `SheetValue` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SheetValue private constructor()
+
+@Deprecated("Keliver: `ShortNavigationBarArrangement` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ShortNavigationBarArrangement private constructor()
+
+@Deprecated("Keliver: `ShortNavigationBarDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object ShortNavigationBarDefaults
+
+@Deprecated("Keliver: `ShortNavigationBarItemDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object ShortNavigationBarItemDefaults
+
+@Deprecated("Keliver: `SingleChoiceSegmentedButtonRowScope` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface SingleChoiceSegmentedButtonRowScope
+
+@Deprecated("Keliver: `SliderColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SliderColors private constructor()
+
+@Deprecated("Keliver: `SliderDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object SliderDefaults
+
+@Deprecated("Keliver: `SliderPositions` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SliderPositions private constructor()
+
+@Deprecated("Keliver: `SliderState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SliderState private constructor()
+
+@Deprecated("Keliver: `SnackbarData` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface SnackbarData
+
+@Deprecated("Keliver: `SnackbarDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object SnackbarDefaults
+
+@Deprecated("Keliver: `SnackbarDuration` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SnackbarDuration private constructor()
+
+@Deprecated("Keliver: `SnackbarHostState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SnackbarHostState private constructor()
+
+@Deprecated("Keliver: `SnackbarResult` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SnackbarResult private constructor()
+
+@Deprecated("Keliver: `SnackbarVisuals` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface SnackbarVisuals
+
+@Deprecated("Keliver: `SuggestionChipDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object SuggestionChipDefaults
+
+@Deprecated("Keliver: `SwipeToDismissBoxDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object SwipeToDismissBoxDefaults
+
+@Deprecated("Keliver: `SwipeToDismissBoxState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SwipeToDismissBoxState private constructor()
+
+@Deprecated("Keliver: `SwipeToDismissBoxValue` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SwipeToDismissBoxValue private constructor()
+
+@Deprecated("Keliver: `SwitchColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SwitchColors private constructor()
+
+@Deprecated("Keliver: `SwitchDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object SwitchDefaults
+
+@Deprecated("Keliver: `TabIndicatorScope` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface TabIndicatorScope
+
+@Deprecated("Keliver: `TabPosition` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TabPosition private constructor()
+
+@Deprecated("Keliver: `TabRowDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object TabRowDefaults
+
+@Deprecated("Keliver: `TextFieldColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TextFieldColors private constructor()
+
+@Deprecated("Keliver: `TextFieldDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object TextFieldDefaults
+
+@Deprecated("Keliver: `TextFieldLabelPosition` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TextFieldLabelPosition private constructor()
+
+@Deprecated("Keliver: `TextFieldLabelScope` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface TextFieldLabelScope
+
+@Deprecated("Keliver: `TimePickerColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TimePickerColors private constructor()
+
+@Deprecated("Keliver: `TimePickerDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object TimePickerDefaults
+
+@Deprecated("Keliver: `TimePickerDialogDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object TimePickerDialogDefaults
+
+@Deprecated("Keliver: `TimePickerDisplayMode` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TimePickerDisplayMode private constructor()
+
+@Deprecated("Keliver: `TimePickerLayoutType` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TimePickerLayoutType private constructor()
+
+@Deprecated("Keliver: `TimePickerSelectionMode` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TimePickerSelectionMode private constructor()
+
+@Deprecated("Keliver: `TimePickerState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface TimePickerState
+
+@Deprecated("Keliver: `TooltipAnchorPosition` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TooltipAnchorPosition private constructor()
+
+@Deprecated("Keliver: `TooltipDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object TooltipDefaults
+
+@Deprecated("Keliver: `TooltipScope` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface TooltipScope
+
+@Deprecated("Keliver: `TooltipState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface TooltipState
+
+@Deprecated("Keliver: `TopAppBarState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TopAppBarState private constructor()
+
+@Deprecated("Keliver: `VerticalDragHandleDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object VerticalDragHandleDefaults
+
+@Deprecated("Keliver: `WideNavigationRailColors` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class WideNavigationRailColors private constructor()
+
+@Deprecated("Keliver: `WideNavigationRailDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object WideNavigationRailDefaults
+
+@Deprecated("Keliver: `WideNavigationRailItemDefaults` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object WideNavigationRailItemDefaults
+
+@Deprecated("Keliver: `WideNavigationRailState` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface WideNavigationRailState
+
+@Deprecated("Keliver: `WideNavigationRailValue` (class in `androidx.compose.material3`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class WideNavigationRailValue private constructor()
+

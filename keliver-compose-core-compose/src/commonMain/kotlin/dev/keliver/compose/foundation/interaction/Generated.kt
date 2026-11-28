@@ -8,3 +8,33 @@ package dev.keliver.compose.foundation.interaction
 /** Placeholder: Compose's `MutableInteractionSource` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class MutableInteractionSource private constructor()
 
+@Deprecated("Keliver: `collectIsDraggedAsState` (composable function in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.collectIsDraggedAsState(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `collectIsFocusedAsState` (composable function in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.collectIsFocusedAsState(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `collectIsHoveredAsState` (composable function in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.collectIsHoveredAsState(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `collectIsPressedAsState` (composable function in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.collectIsPressedAsState(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DragInteraction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface DragInteraction
+
+@Deprecated("Keliver: `FocusInteraction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface FocusInteraction
+
+@Deprecated("Keliver: `HoverInteraction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface HoverInteraction
+
+@Deprecated("Keliver: `Interaction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface Interaction
+
+@Deprecated("Keliver: `InteractionSource` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface InteractionSource
+
+@Deprecated("Keliver: `PressInteraction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface PressInteraction
+

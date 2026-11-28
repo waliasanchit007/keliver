@@ -76,7 +76,15 @@ class ErrorStubs(
   private val scopes: List<String>,
 ) {
   /** One stub's text and the class of its message, for the counts. */
-  class Stub(val pkg: String, val name: String, val text: String, val kind: String, val message: String)
+  class Stub(
+    val pkg: String,
+    val name: String,
+    val text: String,
+    val kind: String,
+    val message: String,
+    /** A function stub's signature as Kotlin tells overloads apart (receiver, name, arity), so two that collide keep one. */
+    val erased: String? = null,
+  )
 
   private val messages: List<StubMessage> = config.stubMessages
   private val matchers = messages.map { m -> m to m.match.map(::globToRegex) }
@@ -91,8 +99,7 @@ class ErrorStubs(
 
   private fun messageFor(pkg: String, name: String, category: String, typeNames: Set<String>): Pair<String, String> {
     curated("$pkg.$name", typeNames)?.let { return "Keliver: ${it.message}" to it.kind }
-    return "Keliver: `$name` ($category) is public in Compose's `$pkg`, but this version of Keliver's generated API does not include it. " +
-      "Use a generated alternative, an app component or a bridge ($DESIGN §11)." to "generic"
+    return "Keliver: `$name` ($category in `$pkg`) is not in the generated API. Use a generated alternative, an app component or a bridge ($DESIGN §11)." to "generic"
   }
 
   /** `(pkg, name, receiver simple name or owner, parameter names)` of everything the group already stubs or generates. */
@@ -145,9 +152,9 @@ class ErrorStubs(
     else -> "function"
   }
 
-  private fun paramList(f: KmFunction): String = f.valueParameters.joinToString(", ") { p ->
+  private fun paramList(f: KmFunction, requireFirst: Boolean): String = f.valueParameters.withIndex().joinToString(", ") { (i, p) ->
     val vararg = if (p.varargElementType != null) "vararg " else ""
-    val default = if (p.declaresDefaultValue) " = null" else ""
+    val default = if (p.declaresDefaultValue && p.varargElementType == null && !(requireFirst && i == 0)) " = null" else ""
     "$vararg${id(p.name)}: Any?$default"
   }
 
@@ -158,18 +165,29 @@ class ErrorStubs(
     val params = f.valueParameters.map { it.name }
     val receiverSimple = owner ?: classNameOf(f.receiverParameterType)?.substringAfterLast('.')
     if (sig(pkg, receiverSimple, f.name, params) in handled) return null
+    // A name the guest already has (generated, hand-written, a class): a stub that a call with no arguments, or only
+    // defaulted ones, could pick is ambiguous with the real one, so its first parameter is required, and a stub with
+    // no parameters would be the real one's twin.
+    val nameTaken = f.name in existing[mirrorPackage(pkg)].orEmpty() || "$pkg|${f.name}" in handledNames
+    if (nameTaken && f.valueParameters.isEmpty()) return null
     val (msg, kind) = messageFor(pkg, f.name, category(f, receiverSimple), typeNames(f))
     val receiver = receiverText(f.receiverParameterType)?.let { "$it." } ?: ""
     val ret = returnText(f)
-    val body = "throw UnsupportedOperationException(${kotlinString(msg)})"
-    val text = render(msg, "public fun $receiver${id(f.name)}(${paramList(f)}): $ret = $body")
-    return Stub(mirrorPackage(pkg), f.name, text, kind, msg)
+    val text = render(msg, "public fun $receiver${id(f.name)}(${paramList(f, requireFirst = nameTaken)}): $ret = ${body()}")
+    // Two overloads that differ only in parameter names have one signature in Kotlin: the first stays.
+    // The receiver is a parameter on the JVM, so it is part of the signature, as an `Any?` one is `Object`.
+    val erased = f.name + "(" + (listOfNotNull(receiver.removeSuffix(".").ifEmpty { null }) + f.valueParameters.map { if (it.varargElementType != null) "vararg" else "Any?" }).joinToString(",") + ")"
+    return Stub(mirrorPackage(pkg), f.name, text, kind, msg, erased)
   }
+
+  private fun body() = "throw UnsupportedOperationException()"
+
+  private val handledNames: Set<String> = plans.map { "${it.decl.pkg}|${it.decl.name}" }.toSet()
 
   private fun propertyStub(p: KmProperty, pkg: String, member: Boolean): Stub? {
     val (msg, kind) = messageFor(pkg, p.name, "property", buildSet { classNameOf(p.receiverParameterType)?.let(::add); collect(p.returnType, this) })
     val receiver = receiverText(p.receiverParameterType)?.let { "$it." } ?: ""
-    val text = render(msg, "public val $receiver${id(p.name)}: Any?\n  get() = throw UnsupportedOperationException(${kotlinString(msg)})")
+    val text = render(msg, "public val $receiver${id(p.name)}: Any?\n  get() = ${body()}")
     return Stub(mirrorPackage(pkg), p.name, text, kind, msg)
   }
 
@@ -194,7 +212,7 @@ class ErrorStubs(
     val out = mutableListOf<Stub>()
     val seen = mutableSetOf<String>()
     fun add(s: Stub?) {
-      if (s != null && seen.add(s.pkg + "|" + s.text)) out += s
+      if (s != null && seen.add(s.pkg + "|" + (s.erased ?: s.text))) out += s
     }
     for (pkg in config.includePackages.sorted()) {
       val mirror = mirrorPackage(pkg)
@@ -208,8 +226,9 @@ class ErrorStubs(
         add(propertyStub(p, pkg, member = false))
       }
       val classes = index.classes.filter { (fq, c) ->
-        packageOf(fq) == pkg && '.' !in fq.removePrefix("$pkg.") && isPublic(c.visibility) &&
-          c.kind != ClassKind.COMPANION_OBJECT && c.kind != ClassKind.ENUM_ENTRY && !fq.contains('$')
+        // The package is what precedes the class's last '/', exactly (`packageOf` guesses from letter case).
+        c.name.substringBeforeLast('/', "") == pkg.replace('.', '/') && '.' !in c.name.substringAfterLast('/') && isPublic(c.visibility) &&
+          c.kind != ClassKind.COMPANION_OBJECT && c.kind != ClassKind.ENUM_ENTRY && !fq.contains('$') && fq.removePrefix("$pkg.").first().isUpperCase()
       }
       for ((fq, c) in classes.toSortedMap()) {
         val simple = fq.removePrefix("$pkg.")
@@ -221,12 +240,11 @@ class ErrorStubs(
       val pkg = e.name.substringBeforeLast('.')
       val name = e.name.substringAfterLast('.')
       val msg = "Keliver: ${e.message}"
-      val body = "throw UnsupportedOperationException(${kotlinString(msg)})"
       val decl = if (e.kind == "val") {
-        render(msg, "public val ${id(name)}: Any?\n  get() = $body")
+        render(msg, "public val ${id(name)}: Any?\n  get() = ${body()}")
       } else {
         val params = e.params.mapIndexed { i, p -> "${id(p)}: Any?" + if (i > 0 || e.params.size == 1) " = null" else "" }
-        render(msg, "public fun ${id(name)}(${params.joinToString(", ")}): Nothing = $body")
+        render(msg, "public fun ${id(name)}(${params.joinToString(", ")}): Nothing = ${body()}")
       }
       add(Stub(mirrorPackage(pkg), name, decl, "curated", msg))
     }
@@ -245,7 +263,7 @@ class ErrorStubs(
       functionStub(f, pkg, simple, member = true)?.let { out += it }
     }
     for (p in c.properties.filter { isPublic(it.visibility) }.sortedBy { it.name }) propertyStub(p, pkg, member = true)?.let { out += it }
-    return out
+    return out.distinctBy { it.erased ?: it.text }
   }
 }
 

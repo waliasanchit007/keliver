@@ -193,3 +193,229 @@ public class Indication private constructor()
 /** Placeholder: Compose's `OverscrollEffect` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class OverscrollEffect private constructor()
 
+@Deprecated("Keliver: `BasicTooltipBox` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BasicTooltipBox(positionProvider: Any?, tooltip: Any?, state: Any?, modifier: Any? = null, focusable: Any? = null, enableUserInput: Any? = null, propagateMinConstraints: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BasicTooltipState` (function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BasicTooltipState(initialIsVisible: Any? = null, isPersistent: Any? = null, mutatorMutex: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BorderStroke` (function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BorderStroke(width: Any?, color: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BoxWithTooltip` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun BoxWithTooltip(tooltip: Any?, modifier: Any? = null, contentAlignment: Any? = null, propagateMinConstraints: Any? = null, delay: Any? = null, tooltipPlacement: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Canvas` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Canvas(modifier: Any?, onDraw: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Canvas` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Canvas(modifier: Any?, contentDescription: Any?, onDraw: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ContextMenuArea` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ContextMenuArea(items: Any?, state: Any? = null, enabled: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ContextMenuDataProvider` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ContextMenuDataProvider(items: Any?, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `HorizontalScrollbar` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun HorizontalScrollbar(adapter: Any?, modifier: Any? = null, reverseLayout: Any? = null, style: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `Image` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Image(bitmap: Any?, contentDescription: Any?, modifier: Any? = null, alignment: Any? = null, contentScale: Any? = null, alpha: Any? = null, colorFilter: Any? = null, filterQuality: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `MarqueeSpacing` (function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun MarqueeSpacing(spacing: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `OldScrollbarAdapter` (function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun OldScrollbarAdapter(scrollState: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ScrollbarAdapter` (function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ScrollbarAdapter(scrollState: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TooltipArea` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TooltipArea(tooltip: Any?, modifier: Any? = null, delayMillis: Any? = null, tooltipPlacement: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `VerticalScrollbar` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun VerticalScrollbar(adapter: Any?, modifier: Any? = null, reverseLayout: Any? = null, style: Any? = null, interactionSource: Any? = null): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `basicMarquee` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.basicMarquee(iterations: Any? = null, animationMode: Any? = null, repeatDelayMillis: Any? = null, initialDelayMillis: Any? = null, spacing: Any? = null, velocity: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `checkScrollableContainerConstraints` (function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun checkScrollableContainerConstraints(constraints: Any?, orientation: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `clipScrollableContainer` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.clipScrollableContainer(orientation: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `combinedClickable` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.combinedClickable(enabled: Any? = null, onClickLabel: Any? = null, role: Any? = null, onLongClickLabel: Any? = null, onLongClick: Any? = null, onDoubleClick: Any? = null, hapticFeedbackEnabled: Any? = null, interactionSource: Any? = null, onClick: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `combinedClickable` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.combinedClickable(interactionSource: Any?, indication: Any?, enabled: Any? = null, onClickLabel: Any? = null, role: Any? = null, onLongClickLabel: Any? = null, onLongClick: Any? = null, onDoubleClick: Any? = null, hapticFeedbackEnabled: Any? = null, onClick: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `contextMenuOpenDetector` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.contextMenuOpenDetector(key: Any? = null, enabled: Any? = null, onOpen: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `defaultScrollbarStyle` (function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun defaultScrollbarStyle(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `focusGroup` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.focusGroup(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `focusable` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.focusable(enabled: Any? = null, interactionSource: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `hoverable` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.hoverable(interactionSource: Any?, enabled: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: a custom Indication runs per frame on the host. Leave it out: the theme's ripple applies.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.indication(interactionSource: Any?, indication: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isSystemInDarkTheme` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun isSystemInDarkTheme(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `onClick` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onClick(enabled: Any? = null, matcher: Any? = null, keyboardModifiers: Any? = null, onDoubleClick: Any? = null, onLongClick: Any? = null, onClick: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `onClick` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onClick(enabled: Any? = null, interactionSource: Any?, matcher: Any? = null, keyboardModifiers: Any? = null, onDoubleClick: Any? = null, onLongClick: Any? = null, onClick: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onFocusedBoundsChanged(onPositioned: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `overscroll` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.overscroll(overscrollEffect: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `progressSemantics` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.progressSemantics(value: Any?, valueRange: Any? = null, steps: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `progressSemantics` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.progressSemantics(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberBasicTooltipState` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberBasicTooltipState(initialIsVisible: Any? = null, isPersistent: Any? = null, mutatorMutex: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberOldScrollbarAdapter` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberOldScrollbarAdapter(scrollState: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberOverscrollEffect` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberOverscrollEffect(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberScrollState` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberScrollState(initial: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberScrollbarAdapter` (composable function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun rememberScrollbarAdapter(scrollState: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `scrollableArea` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.scrollableArea(state: Any?, orientation: Any?, enabled: Any? = null, reverseScrolling: Any? = null, flingBehavior: Any? = null, interactionSource: Any? = null, bringIntoViewSpec: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `scrollableArea` (modifier in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.scrollableArea(state: Any?, orientation: Any?, overscrollEffect: Any?, enabled: Any? = null, reverseScrolling: Any? = null, flingBehavior: Any? = null, interactionSource: Any? = null, bringIntoViewSpec: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `withoutEventHandling` (function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.withoutEventHandling(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `withoutVisualEffect` (function in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.withoutVisualEffect(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `DarkDefaultContextMenuRepresentation` (property in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val DarkDefaultContextMenuRepresentation: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LightDefaultContextMenuRepresentation` (property in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LightDefaultContextMenuRepresentation: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalContextMenuData` (property in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalContextMenuData: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalContextMenuRepresentation` (property in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalContextMenuRepresentation: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalIndication` (property in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalIndication: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalOverscrollFactory` (property in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalOverscrollFactory: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalScrollbarStyle` (property in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalScrollbarStyle: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BasicTooltipDefaults` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object BasicTooltipDefaults
+
+@Deprecated("Keliver: `BasicTooltipState` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface BasicTooltipState
+
+@Deprecated("Keliver: `ComposeFoundationFlags` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object ComposeFoundationFlags
+
+@Deprecated("Keliver: `ContextMenuData` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ContextMenuData private constructor()
+
+@Deprecated("Keliver: `ContextMenuItem` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ContextMenuItem private constructor()
+
+@Deprecated("Keliver: `ContextMenuRepresentation` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface ContextMenuRepresentation
+
+@Deprecated("Keliver: `ContextMenuState` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ContextMenuState private constructor()
+
+@Deprecated("Keliver: `DefaultContextMenuRepresentation` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class DefaultContextMenuRepresentation private constructor()
+
+@Deprecated("Keliver: `ExperimentalFoundationApi` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public annotation class ExperimentalFoundationApi
+
+@Deprecated("Keliver: `IndicationInstance` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface IndicationInstance
+
+@Deprecated("Keliver: a custom Indication runs per frame on the host. Leave it out: the theme's ripple applies.", level = DeprecationLevel.ERROR)
+public interface IndicationNodeFactory
+
+@Deprecated("Keliver: `InternalFoundationApi` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public annotation class InternalFoundationApi
+
+@Deprecated("Keliver: `JPopupContextMenuRepresentation` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class JPopupContextMenuRepresentation private constructor()
+
+@Deprecated("Keliver: `MarqueeAnimationMode` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class MarqueeAnimationMode private constructor()
+
+@Deprecated("Keliver: `MarqueeDefaults` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public object MarqueeDefaults
+
+@Deprecated("Keliver: `MarqueeSpacing` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface MarqueeSpacing
+
+@Deprecated("Keliver: `MutatePriority` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class MutatePriority private constructor()
+
+@Deprecated("Keliver: `MutatorMutex` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class MutatorMutex private constructor()
+
+@Deprecated("Keliver: `OverscrollFactory` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface OverscrollFactory
+
+@Deprecated("Keliver: `PointerMatcher` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface PointerMatcher
+
+@Deprecated("Keliver: `ScrollIndicatorState` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface ScrollIndicatorState
+
+@Deprecated("Keliver: `ScrollbarAdapter` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface ScrollbarAdapter
+
+@Deprecated("Keliver: `ScrollbarStyle` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ScrollbarStyle private constructor()
+
+@Deprecated("Keliver: `TooltipPlacement` (class in `androidx.compose.foundation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface TooltipPlacement
+

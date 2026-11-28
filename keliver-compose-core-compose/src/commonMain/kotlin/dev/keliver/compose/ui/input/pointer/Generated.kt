@@ -14,3 +14,231 @@ public fun dev.keliver.compose.ui.Modifier.pointerInput(
 /** Placeholder: Compose's `PointerInputScope` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class PointerInputScope private constructor()
 
+@Deprecated("Keliver: `PointerButtons` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun PointerButtons(isPrimaryPressed: Any? = null, isSecondaryPressed: Any? = null, isTertiaryPressed: Any? = null, isBackPressed: Any? = null, isForwardPressed: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PointerIcon` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun PointerIcon(cursor: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PointerKeyboardModifiers` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun PointerKeyboardModifiers(isCtrlPressed: Any? = null, isMetaPressed: Any? = null, isAltPressed: Any? = null, isShiftPressed: Any? = null, isAltGraphPressed: Any? = null, isSymPressed: Any? = null, isFunctionPressed: Any? = null, isCapsLockOn: Any? = null, isScrollLockOn: Any? = null, isNumLockOn: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
+public fun SuspendingPointerInputModifierNode(pointerInputEventHandler: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `anyChangeConsumed` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.anyChangeConsumed(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `changedToDown` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.changedToDown(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `changedToDownIgnoreConsumed` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.changedToDownIgnoreConsumed(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `changedToUp` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.changedToUp(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `changedToUpIgnoreConsumed` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.changedToUpIgnoreConsumed(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `consumeAllChanges` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.consumeAllChanges(): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `consumeDownChange` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.consumeDownChange(): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `consumePositionChange` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.consumePositionChange(): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `indexOfFirstPressed` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.indexOfFirstPressed(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `indexOfLastPressed` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.indexOfLastPressed(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isOutOfBounds` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.isOutOfBounds(size: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isOutOfBounds` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.isOutOfBounds(size: Any?, extendedTouchPadding: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isPressed` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.isPressed(buttonIndex: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onPointerEvent(eventType: Any?, pass: Any? = null, onEvent: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `pointerHoverIcon` (modifier in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.pointerHoverIcon(icon: Any?, overrideDescendants: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: raw pointer handlers run per event on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.pointerInput(block: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: raw pointer handlers run per event on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.pointerInput(key1: Any?, key2: Any?, block: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: raw pointer handlers run per event on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.pointerInput(vararg keys: Any?, block: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `pointerMoveFilter` (modifier in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.pointerMoveFilter(onMove: Any? = null, onExit: Any? = null, onEnter: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `positionChange` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.positionChange(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `positionChangeConsumed` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.positionChangeConsumed(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `positionChangeIgnoreConsumed` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.positionChangeIgnoreConsumed(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `positionChanged` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.positionChanged(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `positionChangedIgnoreConsumed` (function in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.positionChangedIgnoreConsumed(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `stylusHoverIcon` (modifier in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.stylusHoverIcon(icon: Any?, overrideDescendants: Any? = null, touchBoundsExpansion: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `areAnyPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.areAnyPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isAltGraphPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isAltGraphPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isAltPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isAltPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isBack` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isBack: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isBackPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isBackPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isCapsLockOn` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isCapsLockOn: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isCtrlPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isCtrlPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isForward` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isForward: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isForwardPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isForwardPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isFunctionPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isFunctionPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isMetaPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isMetaPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isNumLockOn` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isNumLockOn: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isPrimary` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isPrimary: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isPrimaryPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isPrimaryPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isScrollLockOn` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isScrollLockOn: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isSecondary` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isSecondary: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isSecondaryPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isSecondaryPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isShiftPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isShiftPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isSymPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isSymPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isTertiary` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isTertiary: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isTertiaryPressed` (property in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isTertiaryPressed: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `AwaitPointerEventScope` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface AwaitPointerEventScope
+
+@Deprecated("Keliver: `ConsumedData` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ConsumedData private constructor()
+
+@Deprecated("Keliver: `HistoricalChange` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class HistoricalChange private constructor()
+
+@Deprecated("Keliver: `PointerButton` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerButton private constructor()
+
+@Deprecated("Keliver: `PointerButtons` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerButtons private constructor()
+
+@Deprecated("Keliver: `PointerEvent` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerEvent private constructor()
+
+@Deprecated("Keliver: `PointerEventPass` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerEventPass private constructor()
+
+@Deprecated("Keliver: `PointerEventTimeoutCancellationException` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerEventTimeoutCancellationException private constructor()
+
+@Deprecated("Keliver: `PointerEventType` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerEventType private constructor()
+
+@Deprecated("Keliver: `PointerIcon` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface PointerIcon
+
+@Deprecated("Keliver: `PointerId` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerId private constructor()
+
+@Deprecated("Keliver: `PointerInputChange` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerInputChange private constructor()
+
+@Deprecated("Keliver: `PointerInputEventHandler` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface PointerInputEventHandler
+
+@Deprecated("Keliver: `PointerInputFilter` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerInputFilter private constructor()
+
+@Deprecated("Keliver: `PointerInputModifier` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface PointerInputModifier
+
+@Deprecated("Keliver: `PointerKeyboardModifiers` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerKeyboardModifiers private constructor()
+
+@Deprecated("Keliver: `PointerType` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class PointerType private constructor()
+
+@Deprecated("Keliver: `SuspendingPointerInputModifierNode` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface SuspendingPointerInputModifierNode
+
+@Deprecated("Keliver: `TestPointerInputEventData` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TestPointerInputEventData private constructor()
+

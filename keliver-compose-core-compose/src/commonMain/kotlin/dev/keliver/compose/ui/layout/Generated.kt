@@ -16,3 +16,283 @@ public fun Layout(
 /** Placeholder: Compose's `MeasurePolicy` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class MeasurePolicy private constructor()
 
+@Deprecated("Keliver: custom measuring and placing run per frame on the host. Use Row, Column or Box with weight and align, FlowRow, or an app component.", level = DeprecationLevel.ERROR)
+public fun Layout(modifier: Any?, measurePolicy: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: custom measuring and placing run per frame on the host. Use Row, Column or Box with weight and align, FlowRow, or an app component.", level = DeprecationLevel.ERROR)
+public fun Layout(contents: Any?, modifier: Any? = null, measurePolicy: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LookaheadScope` (composable function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun LookaheadScope(content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: custom layouts measure and place per frame on the host and can never run in the guest. Use Row, Column or Box with weight and align, FlowRow, or an app component.", level = DeprecationLevel.ERROR)
+public fun MultiMeasureLayout(modifier: Any? = null, content: Any?, measurePolicy: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `RectRulers` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun RectRulers(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ScaleFactor` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun ScaleFactor(scaleX: Any?, scaleY: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: custom measuring and placing run per frame on the host. Use Row, Column or Box with weight and align, FlowRow, or an app component.", level = DeprecationLevel.ERROR)
+public fun SubcomposeLayout(modifier: Any? = null, measurePolicy: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: custom measuring and placing run per frame on the host. Use Row, Column or Box with weight and align, FlowRow, or an app component.", level = DeprecationLevel.ERROR)
+public fun SubcomposeLayout(state: Any?, modifier: Any? = null, measurePolicy: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `SubcomposeSlotReusePolicy` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun SubcomposeSlotReusePolicy(maxSlotsToRetainForReuse: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `TestModifierUpdaterLayout` (composable function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun TestModifierUpdaterLayout(onAttached: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: custom layouts measure and place per frame on the host and can never run in the guest. Use Row, Column or Box with weight and align, FlowRow, or an app component.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.approachLayout(isMeasurementApproachInProgress: Any?, isPlacementApproachInProgress: Any? = null, approachMeasure: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.boundsInParent(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.boundsInRoot(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.boundsInWindow(clipBounds: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `div` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.div(scaleFactor: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.findRootCoordinates(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `getDisplayCutoutBounds` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.getDisplayCutoutBounds(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `innermostOf` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.innermostOf(vararg rulers: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: Modifier.layout measures per frame on the host. Use Modifier.padding, size or offset, Row/Column/Box with weight and align, or an app component.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.layout(measure: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `layoutBounds` (modifier in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.layoutBounds(holder: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `layoutId` (modifier in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.layoutId(layoutId: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `lerp` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun lerp(start: Any?, stop: Any?, fraction: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.lookaheadScopeCoordinates(sourceCoordinates: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `onFirstVisible` (modifier in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onFirstVisible(minDurationMs: Any? = null, minFractionVisible: Any? = null, viewportBounds: Any? = null, callback: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onGloballyPositioned(onGloballyPositioned: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `onLayoutRectChanged` (modifier in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onLayoutRectChanged(throttleMillis: Any? = null, debounceMillis: Any? = null, callback: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onPlaced(onPlaced: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `onSizeChanged` (modifier in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onSizeChanged(onSizeChanged: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `onVisibilityChanged` (modifier in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun dev.keliver.compose.ui.Modifier.onVisibilityChanged(minDurationMs: Any? = null, minFractionVisible: Any? = null, viewportBounds: Any? = null, callback: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+public fun onVisibilityChangedNode(minDurationMs: Any? = null, minFractionVisible: Any? = null, viewportBounds: Any? = null, callback: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `outermostOf` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.outermostOf(vararg rulers: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.positionInParent(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.positionInRoot(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.positionInWindow(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.positionOnScreen(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.registerOnGlobalLayoutListener(throttleMillis: Any?, debounceMillis: Any?, callback: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+public fun Any?.registerOnLayoutRectChanged(throttleMillis: Any?, debounceMillis: Any?, callback: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `takeOrElse` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.takeOrElse(block: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `times` (function in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public fun Any?.times(scaleFactor: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FirstBaseline` (property in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val FirstBaseline: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LastBaseline` (property in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LastBaseline: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LocalPinnableContainer` (property in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val LocalPinnableContainer: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ModifierLocalBeyondBoundsLayout` (property in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val ModifierLocalBeyondBoundsLayout: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isSpecified` (property in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isSpecified: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `isUnspecified` (property in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public val Any?.isUnspecified: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: custom layouts measure and place per frame on the host and can never run in the guest. Use Row, Column or Box with weight and align, FlowRow, or an app component.", level = DeprecationLevel.ERROR)
+public val Any?.layoutId: Any?
+  get() = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `AlignmentLine` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class AlignmentLine private constructor()
+
+@Deprecated("Keliver: `ApproachIntrinsicMeasureScope` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface ApproachIntrinsicMeasureScope
+
+@Deprecated("Keliver: `ApproachLayoutModifierNode` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface ApproachLayoutModifierNode
+
+@Deprecated("Keliver: `ApproachMeasureScope` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface ApproachMeasureScope
+
+@Deprecated("Keliver: `BeyondBoundsLayout` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface BeyondBoundsLayout
+
+@Deprecated("Keliver: `BeyondBoundsLayoutProviderModifierNode` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface BeyondBoundsLayoutProviderModifierNode
+
+@Deprecated("Keliver: `FixedScale` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class FixedScale private constructor()
+
+@Deprecated("Keliver: `HorizontalAlignmentLine` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class HorizontalAlignmentLine private constructor()
+
+@Deprecated("Keliver: `HorizontalRuler` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class HorizontalRuler private constructor()
+
+@Deprecated("Keliver: `IntrinsicMeasurable` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface IntrinsicMeasurable
+
+@Deprecated("Keliver: `IntrinsicMeasureScope` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface IntrinsicMeasureScope
+
+@Deprecated("Keliver: `LayoutBoundsHolder` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class LayoutBoundsHolder private constructor()
+
+@Deprecated("Keliver: `LayoutCoordinates` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface LayoutCoordinates
+
+@Deprecated("Keliver: `LayoutIdParentData` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface LayoutIdParentData
+
+@Deprecated("Keliver: `LayoutInfo` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface LayoutInfo
+
+@Deprecated("Keliver: `LayoutModifier` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface LayoutModifier
+
+@Deprecated("Keliver: `LookaheadScope` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface LookaheadScope
+
+@Deprecated("Keliver: `Measurable` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface Measurable
+
+@Deprecated("Keliver: `MeasureResult` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface MeasureResult
+
+@Deprecated("Keliver: `MeasureScope` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface MeasureScope
+
+@Deprecated("Keliver: `MeasureScopeMarker` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public annotation class MeasureScopeMarker
+
+@Deprecated("Keliver: `Measured` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface Measured
+
+@Deprecated("Keliver: `ModifierInfo` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ModifierInfo private constructor()
+
+@Deprecated("Keliver: `MultiContentMeasurePolicy` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface MultiContentMeasurePolicy
+
+@Deprecated("Keliver: `OnGloballyPositionedModifier` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface OnGloballyPositionedModifier
+
+@Deprecated("Keliver: `OnPlacedModifier` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface OnPlacedModifier
+
+@Deprecated("Keliver: `OnRemeasuredModifier` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface OnRemeasuredModifier
+
+@Deprecated("Keliver: `ParentDataModifier` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface ParentDataModifier
+
+@Deprecated("Keliver: `PinnableContainer` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface PinnableContainer
+
+@Deprecated("Keliver: `Placeable` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class Placeable private constructor()
+
+@Deprecated("Keliver: `PlacementScopeMarker` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public annotation class PlacementScopeMarker
+
+@Deprecated("Keliver: `RectRulers` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface RectRulers
+
+@Deprecated("Keliver: `Remeasurement` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface Remeasurement
+
+@Deprecated("Keliver: `RemeasurementModifier` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface RemeasurementModifier
+
+@Deprecated("Keliver: `Ruler` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class Ruler private constructor()
+
+@Deprecated("Keliver: `RulerScope` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface RulerScope
+
+@Deprecated("Keliver: `ScaleFactor` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class ScaleFactor private constructor()
+
+@Deprecated("Keliver: `SubcomposeLayoutState` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class SubcomposeLayoutState private constructor()
+
+@Deprecated("Keliver: `SubcomposeMeasureScope` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface SubcomposeMeasureScope
+
+@Deprecated("Keliver: `SubcomposeSlotReusePolicy` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface SubcomposeSlotReusePolicy
+
+@Deprecated("Keliver: `TestModifierUpdater` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class TestModifierUpdater private constructor()
+
+@Deprecated("Keliver: `VerticalAlignmentLine` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class VerticalAlignmentLine private constructor()
+
+@Deprecated("Keliver: `VerticalRuler` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public class VerticalRuler private constructor()
+
+@Deprecated("Keliver: `WindowInsetsAnimation` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface WindowInsetsAnimation
+
+@Deprecated("Keliver: `WindowInsetsRulers` (class in `androidx.compose.ui.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+public interface WindowInsetsRulers
+
