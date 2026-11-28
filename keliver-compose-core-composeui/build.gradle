@@ -84,6 +84,8 @@ kotlin {
         // RetainedHostBackTest, PressSignalTest: keliver-nav's retained stack on the host container
         // (keliver-nav has jvm and js targets only, so not in sameSourceTest).
         implementation projects.keliverNav
+        // RemoteStubMessageTest compiles guest snippets that must fail with the stubs' messages.
+        implementation libs.kotlin.compilerEmbeddable
       }
     }
   }

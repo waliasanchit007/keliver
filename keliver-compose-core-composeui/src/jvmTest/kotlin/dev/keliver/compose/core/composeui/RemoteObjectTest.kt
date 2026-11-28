@@ -45,7 +45,6 @@ import dev.keliver.compose.material3.TimeInput
 import dev.keliver.compose.material3.TimePickerState as GuestTimePickerState
 import dev.keliver.compose.material3.rememberTimePickerState as guestRememberTimePickerState
 import dev.keliver.compose.remote.RemoteCommandException
-import dev.keliver.compose.remote.RemoteObject
 import dev.keliver.compose.remote.RemoteObjectWire
 import dev.keliver.compose.remote.RemoteReport
 import kotlin.test.AfterTest
