@@ -17,7 +17,8 @@
 #   8. W8, a signing-key rotation (ci/w8/android-rotation.sh): K1-K8
 # On the local-maven route (prepare.sh's; ci/local-maven/route.sh) the libraries are this
 # checkout's: 1 and D3 are skipped (the generic development host is on the 0.4 line), 3 also
-# checks that the host logged this checkout's keliver-treehouse-host version, and 4-8 are skipped.
+# checks that the host logged this checkout's keliver-treehouse-host version, then MS4-04's
+# schema-mismatch report runs (ci/ms4-04/android-mismatch.sh: S1-S4), and 4-8 are skipped.
 #
 #   ci/device.sh <work-dir> <evidence-dir> [serial]
 #
@@ -394,8 +395,11 @@ grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/log
 drive title Stockroom P7; fold "P7: Stockroom offline" $?
 
 # local-maven: prepare.sh built only the production host; the rows after P7 stay on the other two
-# routes for now (prepare.results lists them).
+# routes for now (prepare.results lists them). MS4-04's S1-S4 need this checkout's libraries (the
+# 0.5 line's schema-mismatch reports), so they run on this route only.
 if [ "$LIBRARIES" = local-maven ]; then
+  # shellcheck source=ms4-04/android-mismatch.sh
+  . "$HERE/ms4-04/android-mismatch.sh"
   skip "W3, W2, W5, WS6, M0, W8 and A1: not on the local-maven route yet (prepare.sh built none of their hosts); the repo-scaffold job runs them"
   echo "device: passed $pass, failed $fail"
   [ "$fail" -eq 0 ]; exit $?
