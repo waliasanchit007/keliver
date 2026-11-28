@@ -5,8 +5,17 @@ vendored QuickJS 2021-03-27 replaced by Bellard's **QuickJS 2026-06-04** (SHA-25
 `b376e839…70ad2a`), which brings BigInt, so Kotlin's `Long` can be compiled as a JS BigInt
 (`-Xes-long-as-bigint`). Why, and what it measured: `docs/GUEST_PROFILE.md`, "The engine, measured"
 and "NF2: the Zipline fork, step 1". Step 4 builds it for Maven Central as
-`dev.keliver.zipline:<upstream artifact name>:1.28.0-keliver.1` ("Publishing the fork" below). **Published
+`dev.keliver.zipline:<upstream artifact name>:<RELEASE_VERSION>` ("Publishing the fork" below). **Published
 2026-11-24:** `dev.keliver.zipline:*:1.28.0-keliver.1` (`zipline-fork.yml` run 45176623004).
+**The next release, `1.28.0-keliver.2`** (approved by the owner 2026-11-28, not yet published), is the
+same fork with `libquickjs.so` stripped: `-Wl,--strip-all` in the CMakeLists patch removes the
+`.debug_*` sections and the static `.symtab`/`.strtab` that AGP's `-g` left in the AAR (1.1–1.6 MB
+per ABI, 1.6 MB on arm64-v8a; the library is 49–63% smaller). `apply.sh android` fails if any ABI
+regresses. The trade-off: with `--strip-all` at link time no unstripped `libquickjs.so` exists, so
+an engine crash cannot be symbolized from the AAR. Recovery: rebuild at the tag without the flag
+and symbolize by address (lld puts the non-allocated sections last, so code addresses do not
+change; the build-id differs).
+Patch count unchanged (2). Keliver's own dependency stays on `.1` until `.2` is on Maven Central.
 
 ## Licences
 
@@ -138,7 +147,9 @@ one Android app share the path, which Android's packaging would refuse) and `MET
     (`QuickJs2026Test.evaluateLeavesOutFunctionSource`, step 3: run on the JVM and the iOS
     simulator; it is in Android's device tests too, which step 3 did not run).
   - Build files: `dtoa.c` (new in QuickJS 2025-04) in `build.zig`; `-fwrapv` in `build.zig`, the
-    Android `CMakeLists.txt` and cklib's flags (QuickJS 2026's Makefile builds with it).
+    Android `CMakeLists.txt` and cklib's flags (QuickJS 2026's Makefile builds with it); and
+    `-Wl,--strip-all` in the Android `CMakeLists.txt` (`libquickjs.so` ships without debug
+    information, `.1` did not).
   - `QuickJs2026Test` (host tests, JVM and iOS): the version, the compiler accepting BigInt, the
     general `asUintN` and its behaviour at the size limit, the other backported BigInt fixes
     (`bigIntUpstreamFixes`), the success paths of the functions whose error paths were patched
@@ -181,7 +192,7 @@ curl, clang, make and Node):
 | `check-bigint` | runs `../bigint-ops.js` in Node and in the four `qjs` builds: the patched ones must match Node on every line and exit 0, the unpatched ones must not match. Then `size-guards.js` in all five (the four and `run-js`) under a 64 MiB memory limit, each case in its own process: each must print the case's `size-guards.expected` lines (out of memory; on this 64-bit host from the limit, so the unpatched ones too), and the patched ones must exit 0 |
 | `qjs32host` | Linux x86-64 with gcc-multilib (the workflow's `host32` job): builds `qjs` for a 32-bit host with QuickJS's own `CONFIG_M32` (`gcc -m32 -msse2 -mfpmath=sse`: a 4-byte `size_t`, NaN-boxed values, 32-bit limbs), the patched engine and the unpatched release; every file is compiled with `-include size32.h`, a static assert that `size_t` is 4 bytes, the compile line is checked for it, a test program prints `sizeof(size_t)`, and both executables must be ELF 32-bit |
 | `check-bigint32` | after `qjs32host`: `../bigint-ops.js` in Node and both builds (the patched one must match on every line and exit 0, the unpatched one must not match), then `size-guards.js` under the 64 MiB limit, each case (`toReversed`, `toSorted`, `toSpliced`, `with`) in its own process: on each, the patched build must print the case's `size-guards.expected` lines and exit 0 (on a 32-bit host only the guard gives that), the unpatched one must not (a crash or a timeout counts as not), so the control proves every line, not only the first |
-| `android` | step 2: builds the Android AAR (`:zipline-android-ndk:assembleRelease`: Zipline's CMake and release flags, plus `-fwrapv`) for `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` with an installed NDK (`KELIVER_NDK_VERSION`, default 28.0.12674087), and checks each ABI's `libquickjs.so` is in it, its `quickjs.c` was built with those flags (`-Os -fomit-frame-pointer -g0 -DNDEBUG -fvisibility=hidden -fstrict-aliasing -fwrapv`), and (with the NDK's `llvm-readelf -lW`) every LOAD segment is aligned for 16 KB pages (0x4000; required of `arm64-v8a` and `x86_64`); prints each size against 1.28.0's AAR from Maven Central (checked against its `.sha1`) |
+| `android` | step 2: builds the Android AAR (`:zipline-android-ndk:assembleRelease`: Zipline's CMake and release flags, plus `-fwrapv` and `-Wl,--strip-all`) for `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` with an installed NDK (`KELIVER_NDK_VERSION`, default 28.0.12674087), and checks each ABI's `libquickjs.so` is in it, its `quickjs.c` was built with those flags (`-Os -fomit-frame-pointer -g0 -DNDEBUG -fvisibility=hidden -fstrict-aliasing -fwrapv`), and (with the NDK's `llvm-readelf -lW`) every LOAD segment is aligned for 16 KB pages (0x4000; required of `arm64-v8a` and `x86_64`), it carries no `.debug_*`, `.symtab` or `.strtab` section, and its `.dynsym` lists `Java_app_cash_zipline_` JNI exports (`llvm-readelf --dyn-syms`); prints each size against 1.28.0's AAR from Maven Central (checked against its `.sha1`) |
 | `qjs-android` | step 2, after `android`: builds `android/run-js.c` (a minimal runner with `print`, that reports `JS_NAN_BOXING` and the limb size) on the fork's engine and on the unpatched release, per ABI, with the NDK and the AAR's own compile line for `quickjs.c` (its target and every flag; executable instead of shared) |
 | `check-bigint-device [serial]` | step 2: runs `../bigint-ops.js` over adb on every ABI the device supports, both builds; both must start (the runner's header), the patched one must match Node and exit 0, the unpatched one must not match. The device directory is deleted on any exit. On a 32-bit ABI this is the check for NaN-boxed values (`JS_NAN_BOXING`), which no Mac build can exercise. Then `size-guards.js` (`run-js --memory-limit`), each case in its own process: the patched build must print the case's `size-guards.expected` lines on every ABI and exit 0; on a 32-bit ABI, where only the size guard gives those lines, the unpatched one must not, on any case (BACKPORTS.md, "Where they run") |
 | `ios` | step 3 (a Mac with Xcode): builds the iOS targets with Zipline's own build, `iosArm64` and `iosSimulatorArm64`: cklib's QuickJS bitcode (rerun, and checked: one clang call per target, `-target arm64-apple-ios15.0` and `…-simulator`, with Zipline's cklib flags, `-fwrapv` and `dtoa.c`; cklib's own `-O3 -Wall -Wextra -Werror`), the patched `nativeMain` and `quickjs.def` through cinterop, and both test executables (the phone's is linked, not run) |
@@ -190,7 +201,7 @@ curl, clang, make and Node):
 | `results [test task...]` | sums the JUnit XML a test run left (`zipline/build/test-results/<task>`, default `jvmTest`): classes, run, passed, skipped, failed, and the failed tests' names; fails if any failed |
 | `jni-all` | step 4: the JVM's JNI library for every host upstream ships (Linux, macOS and Windows; arm64 and x86-64: six libraries) with zig 0.16.0, as upstream's release workflow builds them (`zipline/build.zig`, which the patch gives `dtoa.c` and `-fwrapv`). Uses a `zig` of that version on `PATH`, else downloads the pinned tarball into `<work>/tools` and checks its SHA-256. Replaces what `jni` built; each library must carry QuickJS's version string |
 | `jni-from <tested repo>` | step 4, instead of `jni-all` (the workflow's `publish` job): the six JNI libraries from the `zipline-jvm` jar in a directory `release` wrote (the `fork` job's, whose libraries `jvm-matrix` ran on every host), into the source tree, not rebuilt |
-| `release <repo> [--central <tested repo>]` | step 4, after `engine` and `jni-all` (or `jni-from`), on a Mac with Xcode: every publication of every Zipline module as `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1`, to an empty directory, without the build cache, then `check-release.py` (below) and a listing with sizes. The POMs point at `ZIPLINE_FORK_SOURCE_REF` (the release tag; default `main`). With `--central` (the CI workflow only, by hand), the directory is signed and checked with its signatures, its native libraries must be byte for byte the tested directory's (`publish-checks.py natives`), then `publishToMavenCentral` from the same, up-to-date build, in review mode, with `-PziplineForkUploadOnly`: a signing task that would run again fails that build before anything is uploaded. The bundle vanniktech's plugin uploaded (`<zipline>/build/publish/*.zip`) is kept as `<work>/central-bundle.zip`; if that invocation fails, it says whether a bundle was written (the upload was attempted). Refuses a Zipline checkout that uses a vanniktech plugin other than `VANNIKTECH_VERSION` ("What the upload relies on") |
+| `release <repo> [--central <tested repo>]` | step 4, after `engine` and `jni-all` (or `jni-from`), on a Mac with Xcode: every publication of every Zipline module as `dev.keliver.zipline:<upstream name>:<RELEASE_VERSION>` (`1.28.0-keliver.2` now), to an empty directory, without the build cache, then `check-release.py` (below) and a listing with sizes. The POMs point at `ZIPLINE_FORK_SOURCE_REF` (the release tag; default `main`). With `--central` (the CI workflow only, by hand), the directory is signed and checked with its signatures, its native libraries must be byte for byte the tested directory's (`publish-checks.py natives`), then `publishToMavenCentral` from the same, up-to-date build, in review mode, with `-PziplineForkUploadOnly`: a signing task that would run again fails that build before anything is uploaded. The bundle vanniktech's plugin uploaded (`<zipline>/build/publish/*.zip`) is kept as `<work>/central-bundle.zip`; if that invocation fails, it says whether a bundle was written (the upload was attempted). Refuses a Zipline checkout that uses a vanniktech plugin other than `VANNIKTECH_VERSION` ("What the upload relies on") |
 | `check-release <repo> [signed]` | `check-release.py` again on a directory `release` wrote |
 | `check-natives <tested repo> <repo>` | `publish-checks.py natives`: every native library (JNI libraries in `zipline-jvm`, `libquickjs.so` in the AAR, QuickJS bitcode in the klibs) identical by sha256 in two directories `release` wrote (built in the same work directory: the linuxX64 bitcode records it) |
 | `sha1-manifest <repo> <out>` | after `release --central`, `publish-checks.py sha1`: fails unless `<work>/central-bundle.zip` (what Central received) and the checked directory `<repo>` hold the same files byte for byte (sha1), `maven-metadata.xml` aside (the plugin leaves it out of the bundle and Central writes its own; a second invocation also rewrites its timestamp), each file matching its `.sha1` in the bundle; writes the bundle's files' sha1s (signatures included, checksum files not listed) to `<out>`, and the spot-check list ("Publishing the fork") as a Markdown table |
@@ -285,7 +296,7 @@ bash scripts/zipline-fork.sh release <work> <empty repo dir>
 ```
 
 `check-release.py` fails the release unless every file is under `dev.keliver.zipline` at
-`1.28.0-keliver.1`; nothing names `app.cash.zipline` as a Maven group (POMs, Gradle module
+`RELEASE_VERSION` (`1.28.0-keliver.2` now); nothing names `app.cash.zipline` as a Maven group (POMs, Gradle module
 metadata) except as a capability, and every variant with files declares both capabilities; the
 artifact names are exactly upstream's; every POM has a name and a description, names both
 licences, Keliver's developer and the SCM, and points at the source ref (url and scm tag); Maven
@@ -302,7 +313,7 @@ four ABIs with each library QuickJS 2026 (the atom `BigInt64Array`, which Ziplin
 never has; upstream's own libraries are the control); every native klib of `zipline` carries the
 engine's bitcode; and the Gradle plugin declares both ids, names no `app.cash.zipline` coordinate,
 and its `BuildConfig` constants are the fork's: `KOTLIN_PLUGIN_GROUP` and `ziplineGroup`
-`dev.keliver.zipline`, `KOTLIN_PLUGIN_VERSION` and `ziplineVersion` `1.28.0-keliver.1` (the
+`dev.keliver.zipline`, `KOTLIN_PLUGIN_VERSION` and `ziplineVersion` `RELEASE_VERSION` (the
 compiler plugin and the CLI every build applying the plugin resolves). It then lists every
 artifact with its files' sizes. 2026-11-22, on this Mac: 54 artifacts, 1,825 files, 32.6 MB; 53
 Gradle module files with 152 variants; 200 jars, AARs and klibs; `zipline-jvm` 2.7 MB (six
@@ -340,7 +351,7 @@ no emulator).
 **Publishing** (the owner's decision, 2026-11-22: review mode for the first release; this is the
 third release line, beside the libraries and the tools bundle, CLAUDE.md "Releases"):
 
-1. Tag the commit on `main`: `zipline-fork-v<RELEASE_VERSION>` (`zipline-fork-v1.28.0-keliver.1`;
+1. Tag the commit on `main`: `zipline-fork-v<RELEASE_VERSION>` (`zipline-fork-v1.28.0-keliver.2` for the next release;
    it matches neither `v*` nor `portal-tools-v*`, so no other workflow fires).
 2. Dispatch `zipline-fork.yml` from `main` with that tag, `publish` ticked and the version typed
    out. The `guard` job refuses a run not from `main`, a tag that is not
@@ -394,7 +405,7 @@ third release line, beside the libraries and the tools bundle, CLAUDE.md "Releas
    - `zipline/<v>/zipline-<v>.module` (the multiplatform module's metadata and capabilities)
 
    Then press **Publish**, or **Drop** to abandon it. Maven Central has no undo; a fix after that
-   is `1.28.0-keliver.2`.
+   is `1.28.0-keliver.3` (`.2` is the release these steps publish).
 
 ### What the upload relies on
 

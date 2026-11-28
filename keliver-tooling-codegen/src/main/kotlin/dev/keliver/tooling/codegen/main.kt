@@ -25,6 +25,7 @@ public fun main(vararg args: String) {
   NoOpCliktCommand()
     .subcommands(
       GenerateCommand(),
+      FrameRulesCommand(),
     )
     .main(args)
 }

@@ -118,6 +118,29 @@
     "Filled.History", "Filled.Receipt", "Filled.Warning", "Filled.KeyboardArrowRight", "Filled.Search", "Filled.Info"
   ],
   "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry"],
+  "frameRules": {
+    "exceptions": [
+      {"param": "maxLines", "rule": "NotData", "why": "a line limit: layout"},
+      {"param": "minLines", "rule": "NotData", "why": "a line minimum: layout"},
+      {"param": "softWrap", "rule": "NotData", "why": "whether a text wraps: layout"},
+      {"param": "maxItemsInEachRow", "rule": "NotData", "why": "a flow row's item limit: layout"},
+      {"param": "propagateMinConstraints", "rule": "NotData", "why": "how a box passes constraints on: layout"},
+      {"param": "clipToBounds", "rule": "NotData", "why": "whether an image clips to its bounds: style"},
+      {"param": "alpha", "rule": "NotData", "why": "an opacity: style"},
+      {"param": "fraction", "rule": "NotData", "why": "a fill fraction: layout"},
+      {"param": "weight", "rule": "NotData", "why": "a share of a row or column: layout"},
+      {"param": "fill", "rule": "NotData", "why": "whether a weighted element fills its share: layout"},
+      {"param": "reverseLayout", "rule": "NotData", "why": "a lazy list's direction: layout"},
+      {"param": "userScrollEnabled", "rule": "NotData", "why": "whether a list takes scroll gestures: interaction, not content"},
+      {"param": "reverseScrolling", "rule": "NotData", "why": "a scroll direction: layout"},
+      {"param": "degrees", "rule": "NotData", "why": "a rotation: style"},
+      {"param": "scale", "rule": "NotData", "why": "a scale: style"},
+      {"param": "clip", "rule": "NotData", "why": "whether a shadow clips its content: style"},
+      {"spec": "androidx.compose.animation.AnimatedVisibility(visible,modifier,enter,exit,label,content)", "param": "label", "rule": "NeverCached", "why": "an animation's debug label: never drawn, and a guest-chosen string stores nothing"},
+      {"spec": "androidx.compose.animation.AnimatedVisibility@ColumnScope(visible,modifier,enter,exit,label,content)", "param": "label", "rule": "NeverCached", "why": "an animation's debug label: never drawn, and a guest-chosen string stores nothing"},
+      {"spec": "androidx.compose.animation.AnimatedVisibility@RowScope(visible,modifier,enter,exit,label,content)", "param": "label", "rule": "NeverCached", "why": "an animation's debug label: never drawn, and a guest-chosen string stores nothing"}
+    ]
+  },
   "scrollContainers": [
     "androidx.compose.foundation.horizontalScroll(state,enabled,flingBehavior,reverseScrolling)",
     "androidx.compose.foundation.horizontalScroll(state,overscrollEffect,enabled,flingBehavior,reverseScrolling)",

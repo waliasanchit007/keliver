@@ -15,8 +15,10 @@
  */
 package dev.keliver.gradle
 
+import org.gradle.api.Action
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Nested
 
 public abstract class RedwoodGeneratorExtension {
   /**
@@ -27,4 +29,15 @@ public abstract class RedwoodGeneratorExtension {
 
   /** The fully-qualified name of the `@Schema`-annotated interface. */
   public abstract val type: Property<String>
+
+  /**
+   * NF5's frame rules: the review list of the values a `Shell` frame keeps, and whether it is
+   * strict. Read by `dev.keliver.generator.protocol.host` only.
+   */
+  @get:Nested
+  public abstract val frameRules: FrameRulesExtension
+
+  public fun frameRules(action: Action<FrameRulesExtension>) {
+    action.execute(frameRules)
+  }
 }

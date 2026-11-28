@@ -93,7 +93,15 @@ jobs:
     # stopped the run. 150 since 2026-11-11: after Kotlin 2.4.20 and the JS/wasm test
     # step the job takes 85-100 minutes, and every build at 90 was cancelled in its
     # last step (e.g. run 42886398822), main's included, so no cache was saved.
-    timeout-minutes: 150
+    # 180 since 2026-11-28: three runs in a row reached 150 inside the iOS test step (the first
+    # attempts of #323 and #327, and main's run at 233f03e5a), with the simulator links cold
+    # (the kn-caches entry was partial, below) and publishToMavenLocal alone taking 44-76
+    # minutes on the same runner image.
+    timeout-minutes: 180
+    # Debug iOS simulator links always run in this job, never FROM-CACHE, so Kotlin/Native builds
+    # the library caches the kn-caches steps keep (RedwoodBuildPlugin reads this).
+    env:
+      KELIVER_CI_LINK_WITHOUT_BUILD_CACHE: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -135,13 +143,16 @@ jobs:
           fi
           echo "kotlin=$kotlin" >> "$GITHUB_OUTPUT"
           echo "dir=${KONAN_DATA_DIR:-$HOME/.konan}/kotlin-native-prebuilt-$host-$kotlin/klib/cache" >> "$GITHUB_OUTPUT"
-      # The restore-key applies on main too. Gradle's build cache (setup-gradle restores main's)
-      # serves every link task whose inputs did not change, and Kotlin/Native builds caches only
-      # for the links that run (#322's warm re-run took all six simulator links FROM-CACHE).
-      # Without the restore-key, a main run after a catalog change would start empty and save only
-      # the caches of the links it ran; pull requests would then hit that entry exactly and
-      # rebuild the rest on every run until the next catalog change. The cost: fingerprints the
-      # catalog no longer uses are carried forward until a Kotlin upgrade starts a new key.
+      # Kotlin/Native builds a library's cache only while a link that needs it runs. Gradle's
+      # build cache (setup-gradle restores main's) would serve every link whose inputs did not
+      # change FROM-CACHE, so this job sets KELIVER_CI_LINK_WITHOUT_BUILD_CACHE (above) and its
+      # debug simulator links always run. Before that, main's first save after #322 took all six
+      # links from the build cache and kept 8.8 MiB of about 129, and pull requests then hit that
+      # entry exactly and rebuilt the rest on every run (#327's links took 13-20 minutes). The
+      # key's "v2" leaves that entry behind. The restore-key applies on main too: after a catalog
+      # change, main starts from the previous set and a changed library gets a new fingerprint
+      # beside the old. The cost: fingerprints the catalog no longer uses are carried forward
+      # until a Kotlin upgrade or a new key version starts again from nothing.
       - name: Kotlin/Native compiler caches (iOS simulator), restore
         id: kn-restore
         if: steps.kn.outputs.dir != ''
@@ -152,8 +163,8 @@ jobs:
           path: |
             ${{ steps.kn.outputs.dir }}/ios_simulator_arm64-gSTATIC-user-pl
             ${{ steps.kn.outputs.dir }}/ios_simulator_arm64-gSTATIC-system
-          key: kn-caches-ios-sim-${{ runner.os }}-${{ runner.arch }}-kotlin-${{ steps.kn.outputs.kotlin }}-${{ hashFiles('gradle/libs.versions.toml') }}
-          restore-keys: kn-caches-ios-sim-${{ runner.os }}-${{ runner.arch }}-kotlin-${{ steps.kn.outputs.kotlin }}-
+          key: kn-caches-v2-ios-sim-${{ runner.os }}-${{ runner.arch }}-kotlin-${{ steps.kn.outputs.kotlin }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: kn-caches-v2-ios-sim-${{ runner.os }}-${{ runner.arch }}-kotlin-${{ steps.kn.outputs.kotlin }}-
       # A restore that did not finish may leave half-written files: the step timed out or failed
       # (outcome failure; continue-on-error makes its conclusion success), or the archive failed
       # to unpack, which actions/cache only warns about and reports as a miss (no
@@ -304,6 +315,10 @@ jobs:
       # ZiplineService surface) and redwoodApiCheck (each schema's keliver-api.xml:
       # widget and modifier tags) are on `check` too, and drifted there unseen
       # until both were named here. Regenerate with ziplineApiDump / redwoodApiGenerate.
+      # redwoodFrameRulesCheck (NF5 A1: each protocol-host module's checked-in frame-rules review
+      # list; strict for the prototype's group) is on `check` too. Regenerate with
+      # `:<project>:redwoodFrameRulesGenerate` (the failure message names it; never the bare name,
+      # which writes into every module) after classifying the values it names.
       # spotlessCheck (format and license header) and the Gradle plugin's validatePlugins
       # are on `check` as well, for the same reason. Fix the first with spotlessApply.
       - name: Test + API check
@@ -313,6 +328,7 @@ jobs:
           apiCheck
           ziplineApiCheck
           redwoodApiCheck
+          redwoodFrameRulesCheck
           spotlessCheck
           :keliver-gradle-plugin:validatePlugins
           :keliver-treehouse-host:checkBaselineProfilePackaged
@@ -401,7 +417,7 @@ jobs:
       # here passed. It sits right after the last step that links for the iOS simulator, not at
       # the end of the job: the steps below run JS, wasm and JVM tests only and never touch these
       # directories, so the caches are final here, and a later failure or the job's timeout
-      # (main's run takes 85-100 minutes) does not throw away a set that cost a cold link to
+      # (runs have reached 150 minutes) does not throw away a set that cost a cold link to
       # build. A new step that links for the simulator goes above this one.
       - name: Kotlin/Native compiler caches (iOS simulator), save from main
         if: steps.kn.outputs.dir != '' && github.ref == 'refs/heads/main' && steps.kn-restore.outputs.cache-hit != 'true'
