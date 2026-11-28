@@ -86,7 +86,6 @@ import dev.keliver.compose.core.modifier.GenBorder2
 import dev.keliver.compose.core.modifier.GenBoxScopeAlign1
 import dev.keliver.compose.core.modifier.GenBoxScopeMatchParentSize1
 import dev.keliver.compose.core.modifier.GenClickable1
-import dev.keliver.compose.core.modifier.GenClickable2
 import dev.keliver.compose.core.modifier.GenClip1
 import dev.keliver.compose.core.modifier.GenColumnScopeAlign1
 import dev.keliver.compose.core.modifier.GenColumnScopeWeight1
@@ -141,7 +140,6 @@ import dev.keliver.compose.core.widget.GenSpacer1
 import dev.keliver.compose.core.widget.GenSurface1
 import dev.keliver.compose.core.widget.GenSurface2
 import dev.keliver.compose.core.widget.GenText1
-import dev.keliver.compose.core.widget.GenText2
 import dev.keliver.compose.core.widget.GenTextButton1
 import dev.keliver.compose.core.widget.GenTopAppBar1
 import dev.keliver.compose.core.widget.KeliverComposeCoreWidgetFactory
@@ -301,7 +299,7 @@ internal class ComposeUiGenFlowRow1 : GenFlowRow1<@Composable (Modifier) -> Unit
   }
 }
 
-/** A hidden overload of `androidx.compose.material3.Text` (kept for guests built before it was hidden): calls the visible one. */
+/** Calls the real `androidx.compose.material3.Text`. */
 internal class ComposeUiGenText1 : GenText1<@Composable (Modifier) -> Unit>, GeneratedWidget {
   private var version by mutableIntStateOf(0)
   override var modifier: KeliverModifier = KeliverModifier
@@ -359,83 +357,6 @@ internal class ComposeUiGenText1 : GenText1<@Composable (Modifier) -> Unit>, Gen
       androidx.compose.material3.Text(
         text = text,
         modifier = incoming.applyGenerated(modifier, this@ComposeUiGenText1),
-        color = color,
-        fontSize = fontSize,
-        fontStyle = fontStyle,
-        fontWeight = fontWeight,
-        fontFamily = fontFamily,
-        letterSpacing = letterSpacing,
-        textDecoration = textDecoration,
-        textAlign = textAlign,
-        lineHeight = lineHeight,
-        overflow = overflow,
-        softWrap = softWrap,
-        maxLines = maxLines,
-        minLines = minLines,
-        style = style,
-      )
-    }
-  }
-}
-
-/** Calls the real `androidx.compose.material3.Text`. */
-internal class ComposeUiGenText2 : GenText2<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  private var version by mutableIntStateOf(0)
-  override var modifier: KeliverModifier = KeliverModifier
-    set(value) { if (field != value) { field = value; version++ } }
-  override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_text: Any? = Unset
-  override fun text(text: kotlin.String) { if (p_text != text) { p_text = text; version++ } }
-  private var p_color: Any? = null
-  override fun color(color: dev.keliver.compose.ui.graphics.Color) { if (p_color != color) { p_color = color; version++ } }
-  private var p_fontSize: Any? = null
-  override fun fontSize(fontSize: dev.keliver.compose.ui.unit.TextUnit) { if (p_fontSize != fontSize) { p_fontSize = fontSize; version++ } }
-  private var p_fontStyle: Any? = null
-  override fun fontStyle(fontStyle: dev.keliver.compose.ui.text.font.FontStyle?) { if (p_fontStyle != fontStyle) { p_fontStyle = fontStyle; version++ } }
-  private var p_fontWeight: Any? = null
-  override fun fontWeight(fontWeight: dev.keliver.compose.ui.text.font.FontWeight?) { if (p_fontWeight != fontWeight) { p_fontWeight = fontWeight; version++ } }
-  private var p_fontFamily: Any? = null
-  override fun fontFamily(fontFamily: dev.keliver.compose.ui.text.font.FontFamily?) { if (p_fontFamily != fontFamily) { p_fontFamily = fontFamily; version++ } }
-  private var p_letterSpacing: Any? = null
-  override fun letterSpacing(letterSpacing: dev.keliver.compose.ui.unit.TextUnit) { if (p_letterSpacing != letterSpacing) { p_letterSpacing = letterSpacing; version++ } }
-  private var p_textDecoration: Any? = null
-  override fun textDecoration(textDecoration: dev.keliver.compose.ui.text.style.TextDecoration?) { if (p_textDecoration != textDecoration) { p_textDecoration = textDecoration; version++ } }
-  private var p_textAlign: Any? = null
-  override fun textAlign(textAlign: dev.keliver.compose.ui.text.style.TextAlign?) { if (p_textAlign != textAlign) { p_textAlign = textAlign; version++ } }
-  private var p_lineHeight: Any? = null
-  override fun lineHeight(lineHeight: dev.keliver.compose.ui.unit.TextUnit) { if (p_lineHeight != lineHeight) { p_lineHeight = lineHeight; version++ } }
-  private var p_overflow: Any? = null
-  override fun overflow(overflow: dev.keliver.compose.ui.text.style.TextOverflow) { if (p_overflow != overflow) { p_overflow = overflow; version++ } }
-  private var p_softWrap: Any? = null
-  override fun softWrap(softWrap: kotlin.Boolean) { if (p_softWrap != softWrap) { p_softWrap = softWrap; version++ } }
-  private var p_maxLines: Any? = null
-  override fun maxLines(maxLines: kotlin.Int) { if (p_maxLines != maxLines) { p_maxLines = maxLines; version++ } }
-  private var p_minLines: Any? = null
-  override fun minLines(minLines: kotlin.Int) { if (p_minLines != minLines) { p_minLines = minLines; version++ } }
-  private var p_style: Any? = null
-  override fun style(style: dev.keliver.compose.ui.text.TextStyle?) { if (p_style != style) { p_style = style; version++ } }
-  override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
-  override val value: @Composable (Modifier) -> Unit = { incoming ->
-    version
-    if (p_text !== Unset) {
-      val text = (p_text as kotlin.String)
-      val color = (p_color as dev.keliver.compose.ui.graphics.Color?)?.toCompose() ?: Color.Unspecified
-      val fontSize = (p_fontSize as dev.keliver.compose.ui.unit.TextUnit?)?.toCompose() ?: TextUnit.Unspecified
-      val fontStyle = (p_fontStyle as dev.keliver.compose.ui.text.font.FontStyle?)?.toCompose()
-      val fontWeight = (p_fontWeight as dev.keliver.compose.ui.text.font.FontWeight?)?.toCompose()
-      val fontFamily = (p_fontFamily as dev.keliver.compose.ui.text.font.FontFamily?)?.toCompose()
-      val letterSpacing = (p_letterSpacing as dev.keliver.compose.ui.unit.TextUnit?)?.toCompose() ?: TextUnit.Unspecified
-      val textDecoration = (p_textDecoration as dev.keliver.compose.ui.text.style.TextDecoration?)?.toCompose()
-      val textAlign = (p_textAlign as dev.keliver.compose.ui.text.style.TextAlign?)?.toCompose()
-      val lineHeight = (p_lineHeight as dev.keliver.compose.ui.unit.TextUnit?)?.toCompose() ?: TextUnit.Unspecified
-      val overflow = (p_overflow as dev.keliver.compose.ui.text.style.TextOverflow?)?.toCompose() ?: TextOverflow.Clip
-      val softWrap = (p_softWrap as kotlin.Boolean?) ?: true
-      val maxLines = (p_maxLines as kotlin.Int?) ?: Int.MAX_VALUE
-      val minLines = (p_minLines as kotlin.Int?) ?: 1
-      val style = (p_style as dev.keliver.compose.ui.text.TextStyle?)?.toCompose() ?: LocalTextStyle.current
-      androidx.compose.material3.Text(
-        text = text,
-        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenText2),
         color = color,
         fontSize = fontSize,
         fontStyle = fontStyle,
@@ -1217,7 +1138,6 @@ public class ComposeUiKeliverComposeCoreWidgetFactory : KeliverComposeCoreWidget
   override fun GenSpacer1(): GenSpacer1<@Composable (Modifier) -> Unit> = ComposeUiGenSpacer1()
   override fun GenFlowRow1(): GenFlowRow1<@Composable (Modifier) -> Unit> = ComposeUiGenFlowRow1()
   override fun GenText1(): GenText1<@Composable (Modifier) -> Unit> = ComposeUiGenText1()
-  override fun GenText2(): GenText2<@Composable (Modifier) -> Unit> = ComposeUiGenText2()
   override fun GenIcon1(): GenIcon1<@Composable (Modifier) -> Unit> = ComposeUiGenIcon1()
   override fun GenImage1(): GenImage1<@Composable (Modifier) -> Unit> = ComposeUiGenImage1()
   override fun GenImage2(): GenImage2<@Composable (Modifier) -> Unit> = ComposeUiGenImage2()
@@ -1256,7 +1176,6 @@ public class ComposeUiKeliverComposeCoreWidgetFactory : KeliverComposeCoreWidget
   override fun GenBorder1(value: @Composable (Modifier) -> Unit, modifier: GenBorder1) {}
   override fun GenBorder2(value: @Composable (Modifier) -> Unit, modifier: GenBorder2) {}
   override fun GenClickable1(value: @Composable (Modifier) -> Unit, modifier: GenClickable1) {}
-  override fun GenClickable2(value: @Composable (Modifier) -> Unit, modifier: GenClickable2) {}
   override fun GenHorizontalScroll1(value: @Composable (Modifier) -> Unit, modifier: GenHorizontalScroll1) {}
   override fun GenVerticalScroll1(value: @Composable (Modifier) -> Unit, modifier: GenVerticalScroll1) {}
   override fun GenClip1(value: @Composable (Modifier) -> Unit, modifier: GenClip1) {}
@@ -1306,7 +1225,6 @@ public fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWidge
         is GenBorder1 -> run { val width = e.width.toCompose(); val color = e.color.toCompose(); val shape = e.shape.toCompose(); m.border(width = width, color = color, shape = shape) }
         is GenBorder2 -> run { val border = e.border.toCompose(); val shape = e.shape.toCompose(); m.border(border = border, shape = shape) }
         is GenClickable1 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
-        is GenClickable2 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
         is GenHorizontalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling).pressScrollContainer(state = state, enabled = enabled) }
         is GenVerticalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling).pressScrollContainer(state = state, enabled = enabled) }
         is GenClip1 -> run { val shape = e.shape.toCompose(); m.clip(shape = shape) }
