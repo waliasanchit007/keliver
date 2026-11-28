@@ -84,6 +84,8 @@ kotlin {
         // RetainedHostBackTest, PressSignalTest: keliver-nav's retained stack on the host container
         // (keliver-nav has jvm and js targets only, so not in sameSourceTest).
         implementation projects.keliverNav
+        // RemoteStubMessageTest compiles guest snippets that must fail with the stubs' messages.
+        implementation libs.kotlin.compilerEmbeddable
       }
     }
   }
@@ -108,7 +110,7 @@ tasks.withType(org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimu
 afterEvaluate {
   spotless {
     kotlin {
-      targetExclude("src/**/Generated.kt")
+      targetExclude("src/**/Generated.kt", "src/**/GeneratedRemote.kt")
     }
   }
 }

@@ -201,7 +201,8 @@ class GeneratorTest {
     assertEquals("dev.keliver.compose.core", core.schemaPackage)
     assertEquals(emptyList(), gatea.declarations - (core.declarations + coil.declarations).toSet(), "prototype declarations missing from the product")
     assertEquals(emptyList(), gatea.errors.map { it.first } - core.errors.map { it.first }.toSet())
-    assertEquals(gatea.extras, core.extras)
+    // The product also carries the remote-object runtime (MS4-43, G2); the prototype has none.
+    assertEquals(gatea.extras, core.extras - "RemoteObject")
     assertEquals(gatea.extraModifiers, core.extraModifiers)
     // The product's group has no legacy schema dependency (the prototype has layout, lazy layout and material).
     assertEquals(emptyList(), core.dependencies, "core depends on no legacy schema")

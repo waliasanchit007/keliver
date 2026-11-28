@@ -599,6 +599,8 @@ internal const val CORE_WIRE_OFFSET = 10 * 1_000_000
 internal fun guestOnHost(
   tap: EventTap? = null,
   backDispatcher: OnBackPressedDispatcher? = null,
+  /** The guest's saved state (what the host app persists across process death); RemoteObjectTest saves and restores it. */
+  saveableStateRegistry: androidx.compose.runtime.saveable.SaveableStateRegistry? = null,
   content: @Composable () -> Unit,
 ): GuestOnHost {
   // Each guest starts with no measured viewports, as a new Zipline guest does: in one JVM every
@@ -615,7 +617,7 @@ internal fun guestOnHost(
         override fun cancel() = Unit
       }
     },
-    saveableStateRegistry = null,
+    saveableStateRegistry = saveableStateRegistry,
     uiConfigurations = MutableStateFlow(UiConfiguration()),
   )
   val root = ScopedChildren()

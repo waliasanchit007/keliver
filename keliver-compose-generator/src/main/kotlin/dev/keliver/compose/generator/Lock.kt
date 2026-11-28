@@ -36,6 +36,19 @@ data class Lock(
   val nextFactoryTag: Int = 1,
   /** `*Defaults` factories (`ButtonDefaults.buttonColors(…)`): a call record carries the tag. */
   val factories: Map<String, LockEntry> = emptyMap(),
+  /** MS4-43 (G2): the next remote-object class tag. Written only once a group has a remote object. */
+  @OptIn(ExperimentalSerializationApi::class)
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
+  val nextRemoteTag: Int = 1,
+  /**
+   * Remote objects (host-owned state classes, MS4-43): the key is the class's name, the entry's tag
+   * the class's tag (`RemoteObjectWire.type`), and [LockEntry.params] and [LockEntry.wire] are its
+   * members by canonical signature (a field by its name, a command by `name(p:Type,…)`): each
+   * member's tag, and the level it started crossing at. A member that cannot cross has no entry.
+   */
+  @OptIn(ExperimentalSerializationApi::class)
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
+  val remotes: Map<String, LockEntry> = emptyMap(),
 )
 
 @Serializable
@@ -67,6 +80,15 @@ data class LockEntry(
   @OptIn(ExperimentalSerializationApi::class)
   @EncodeDefault(EncodeDefault.Mode.NEVER)
   val animated: Boolean = false,
+  /**
+   * A remote object's (MS4-43) wire types: each field's type, each command's result type, each setter's
+   * value type, and each argument of the host factory (`@init.<name>`), as the generator reads them from
+   * Compose. A Compose upgrade that changes one changes the wire, so it fails [checkAppendOnly].
+   * Empty (and not written) for widgets, modifiers and factories.
+   */
+  @OptIn(ExperimentalSerializationApi::class)
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
+  val types: Map<String, String> = emptyMap(),
 )
 
 val lockJson = Json {
@@ -119,6 +141,34 @@ class LockBuilder(
     return LockEntry(nextFactoryTag++, name, params, since = newLevel, wire = wire.associateWith { newLevel })
       .also { factories[decl.key] = it }
   }
+  private val remotes = old.remotes.toMutableMap()
+  private var nextRemoteTag = old.nextRemoteTag
+
+  /**
+   * The entry of remote object [fq] with [members] (canonical signatures) that cross: the existing
+   * one with any new member appended at the next free tag, or a new one.
+   */
+  fun remote(fq: String, members: List<String>, types: Map<String, String>): LockEntry {
+    val existing = remotes[fq]
+    if (existing == null) {
+      appended = true
+      val params = members.withIndex().associate { (i, m) -> m to i + 1 }
+      return LockEntry(nextRemoteTag++, fq.substringAfterLast('.'), params, since = newLevel, wire = members.associateWith { newLevel }, types = types)
+        .also { remotes[fq] = it }
+    }
+    val fresh = members.filter { it !in existing.params }
+    var next = (existing.params.values.maxOrNull() ?: 0) + 1
+    val params = existing.params + fresh.associateWith { next++ }
+    val oldWire = existing.wire.orEmpty()
+    // The wire is what crosses now, not what ever did: a member that stopped crossing leaves it, and so fails
+    // checkAppendOnly (its tag stays reserved in params). Likewise the types: a changed or dropped one fails.
+    val wire = members.associateWith { oldWire[it] ?: newLevel }
+    val updated = existing.copy(params = params, wire = wire, types = types)
+    if (updated == existing) return existing
+    if (members.any { it !in oldWire } || types.keys.any { it !in existing.types }) appended = true
+    return updated.also { remotes[fq] = it }
+  }
+
   private var appended = false
   private val newLevel = old.level + 1
 
@@ -187,6 +237,8 @@ class LockBuilder(
     modifiers = modifiers.toSortedMap(),
     nextFactoryTag = nextFactoryTag,
     factories = factories.toSortedMap(),
+    nextRemoteTag = nextRemoteTag,
+    remotes = remotes.toSortedMap(),
   )
 }
 
@@ -196,6 +248,7 @@ fun checkAppendOnly(old: Lock, new: Lock): List<String> = buildList {
     Triple("widget", old.widgets, new.widgets),
     Triple("modifier", old.modifiers, new.modifiers),
     Triple("factory", old.factories, new.factories),
+    Triple("remote object", old.remotes, new.remotes),
   )
   for ((kind, o, n) in kinds) {
     for ((key, entry) in o) {
@@ -207,10 +260,11 @@ fun checkAppendOnly(old: Lock, new: Lock): List<String> = buildList {
         entry.wire.orEmpty().any { (p, level) -> now.wire?.get(p) != level } -> add("$kind $key stopped sending a parameter, or changed when it started")
         now.since != entry.since -> add("$kind $key changed its level")
         entry.animated && !now.animated -> add("$kind $key stopped accepting animated references")
+        entry.types.any { (k, t) -> now.types[k] != t } -> add("$kind $key changed the type of a member or of a factory argument, or dropped one (the wire changed: a new key, or the old guests stay on the old shape)")
       }
     }
   }
-  if (new.nextWidgetTag < old.nextWidgetTag || new.nextModifierTag < old.nextModifierTag || new.nextFactoryTag < old.nextFactoryTag) {
+  if (new.nextWidgetTag < old.nextWidgetTag || new.nextModifierTag < old.nextModifierTag || new.nextFactoryTag < old.nextFactoryTag || new.nextRemoteTag < old.nextRemoteTag) {
     add("a next-tag counter went backwards")
   }
   if (new.level < old.level) add("the level went backwards")

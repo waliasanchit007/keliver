@@ -87,6 +87,7 @@ public final class dev/keliver/compose/core/composeui/ComposeUiKeliverComposeCor
 	public fun GenText1 ()Ldev/keliver/compose/core/widget/GenText1;
 	public fun GenText2 ()Ldev/keliver/compose/core/widget/GenText2;
 	public fun GenTextButton1 ()Ldev/keliver/compose/core/widget/GenTextButton1;
+	public fun GenTimeInput1 ()Ldev/keliver/compose/core/widget/GenTimeInput1;
 	public fun GenTopAppBar1 ()Ldev/keliver/compose/core/widget/GenTopAppBar1;
 	public synthetic fun GenVerticalScroll1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenVerticalScroll1;)V
 	public fun GenVerticalScroll1 (Lkotlin/jvm/functions/Function3;Ldev/keliver/compose/core/modifier/GenVerticalScroll1;)V

@@ -170,6 +170,10 @@ public final class dev/keliver/compose/core/compose/GenTextButton1Kt {
 	public static final fun GenTextButton1 (Lkotlin/jvm/functions/Function0;ZLdev/keliver/compose/ui/graphics/Shape;Ldev/keliver/compose/material3/ButtonColors;Ldev/keliver/compose/material3/ButtonElevation;Ldev/keliver/compose/foundation/BorderStroke;Ldev/keliver/compose/foundation/layout/PaddingValues;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/compose/core/compose/GenTimeInput1Kt {
+	public static final fun GenTimeInput1 (Ldev/keliver/compose/remote/RemoteObjectWire;Lkotlin/jvm/functions/Function1;Ldev/keliver/compose/material3/TimePickerColors;Lkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/compose/core/compose/GenTopAppBar1Kt {
 	public static final fun GenTopAppBar1-iZIEvcI (Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function3;Ldev/keliver/compose/ui/unit/Dp;Ldev/keliver/compose/material3/TopAppBarColors;Lkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -409,6 +413,107 @@ public final class dev/keliver/compose/foundation/lazy/LazyWindowSizing {
 	public final fun setViewportSized (Z)V
 }
 
+public final class dev/keliver/compose/foundation/lazy/grid/GeneratedRemoteKt {
+	public static final fun rememberLazyGridState (IILandroidx/compose/runtime/Composer;II)Ldev/keliver/compose/foundation/lazy/grid/LazyGridState;
+}
+
+public final class dev/keliver/compose/foundation/lazy/grid/LazyGridState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun animateScrollToItem (IILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun animateScrollToItem$default (Ldev/keliver/compose/foundation/lazy/grid/LazyGridState;IILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun dispatchRawDelta ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun dispatchRawDelta$default (Ldev/keliver/compose/foundation/lazy/grid/LazyGridState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun getCanScrollBackward ()Z
+	public final fun getCanScrollForward ()Z
+	public final fun getFirstVisibleItemIndex ()I
+	public final fun getFirstVisibleItemScrollOffset ()I
+	public final fun getInteractionSource ()Ljava/lang/Void;
+	public final fun getLastScrolledBackward ()Z
+	public final fun getLastScrolledForward ()Z
+	public final fun getLayoutInfo ()Ljava/lang/Void;
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getScrollIndicatorState ()Ljava/lang/Void;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun isScrollInProgress ()Z
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun requestScrollToItem (II)V
+	public static synthetic fun requestScrollToItem$default (Ldev/keliver/compose/foundation/lazy/grid/LazyGridState;IIILjava/lang/Object;)V
+	public final fun scroll ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun scroll$default (Ldev/keliver/compose/foundation/lazy/grid/LazyGridState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun scrollToItem (IILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun scrollToItem$default (Ldev/keliver/compose/foundation/lazy/grid/LazyGridState;IILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class dev/keliver/compose/foundation/lazy/staggeredgrid/GeneratedRemoteKt {
+	public static final fun rememberLazyStaggeredGridState (IILandroidx/compose/runtime/Composer;II)Ldev/keliver/compose/foundation/lazy/staggeredgrid/LazyStaggeredGridState;
+}
+
+public final class dev/keliver/compose/foundation/lazy/staggeredgrid/LazyStaggeredGridState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun animateScrollToItem (IILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun animateScrollToItem$default (Ldev/keliver/compose/foundation/lazy/staggeredgrid/LazyStaggeredGridState;IILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun dispatchRawDelta ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun dispatchRawDelta$default (Ldev/keliver/compose/foundation/lazy/staggeredgrid/LazyStaggeredGridState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun getCanScrollBackward ()Z
+	public final fun getCanScrollForward ()Z
+	public final fun getFirstVisibleItemIndex ()I
+	public final fun getFirstVisibleItemScrollOffset ()I
+	public final fun getInteractionSource ()Ljava/lang/Void;
+	public final fun getLastScrolledBackward ()Z
+	public final fun getLastScrolledForward ()Z
+	public final fun getLayoutInfo ()Ljava/lang/Void;
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getScrollIndicatorState ()Ljava/lang/Void;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun isScrollInProgress ()Z
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun requestScrollToItem (II)V
+	public static synthetic fun requestScrollToItem$default (Ldev/keliver/compose/foundation/lazy/staggeredgrid/LazyStaggeredGridState;IIILjava/lang/Object;)V
+	public final fun scroll ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun scroll$default (Ldev/keliver/compose/foundation/lazy/staggeredgrid/LazyStaggeredGridState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun scrollToItem (IILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun scrollToItem$default (Ldev/keliver/compose/foundation/lazy/staggeredgrid/LazyStaggeredGridState;IILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class dev/keliver/compose/foundation/pager/GeneratedRemoteKt {
+	public static final fun rememberPagerState (IFLkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)Ldev/keliver/compose/foundation/pager/PagerState;
+}
+
+public final class dev/keliver/compose/foundation/pager/PagerState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun animateScrollToPage (IFLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun animateScrollToPage$default (Ldev/keliver/compose/foundation/pager/PagerState;IFLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun dispatchRawDelta ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun dispatchRawDelta$default (Ldev/keliver/compose/foundation/pager/PagerState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun getCanScrollBackward ()Z
+	public final fun getCanScrollForward ()Z
+	public final fun getCurrentPage ()I
+	public final fun getCurrentPageOffsetFraction ()F
+	public final fun getInteractionSource ()Ljava/lang/Void;
+	public final fun getLastScrolledBackward ()Z
+	public final fun getLastScrolledForward ()Z
+	public final fun getLayoutInfo ()Ljava/lang/Void;
+	public final fun getOffsetDistanceInPages ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun getOffsetDistanceInPages$default (Ldev/keliver/compose/foundation/pager/PagerState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun getPageCount ()I
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getScrollIndicatorState ()Ljava/lang/Void;
+	public final fun getSettledPage ()I
+	public final fun getTargetPage ()I
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun isScrollInProgress ()Z
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun requestScrollToPage (IF)V
+	public static synthetic fun requestScrollToPage$default (Ldev/keliver/compose/foundation/pager/PagerState;IFILjava/lang/Object;)V
+	public final fun scroll ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun scroll$default (Ldev/keliver/compose/foundation/pager/PagerState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun scrollToPage (IFLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun scrollToPage$default (Ldev/keliver/compose/foundation/pager/PagerState;IFLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
 public final class dev/keliver/compose/foundation/text/TextAutoSize {
 	public static final field $stable I
 }
@@ -482,6 +587,39 @@ public final class dev/keliver/compose/material3/ComposableSingletons$GeneratedK
 	public final fun getLambda$829740228$dev_keliver_keliver_compose_core_compose ()Lkotlin/jvm/functions/Function2;
 }
 
+public final class dev/keliver/compose/material3/DatePickerState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun getDisplayMode ()Ljava/lang/Void;
+	public final fun getDisplayedMonthMillis ()J
+	public final fun getLocale ()Ljava/lang/Void;
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getSelectableDates ()Ljava/lang/Void;
+	public final fun getSelectedDateMillis ()Ljava/lang/Long;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun getYearRange ()Ljava/lang/Void;
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun setDisplayedMonthMillis (J)V
+	public final fun setSelectedDateMillis (Ljava/lang/Long;)V
+}
+
+public final class dev/keliver/compose/material3/DateRangePickerState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun getDisplayMode ()Ljava/lang/Void;
+	public final fun getDisplayedMonthMillis ()J
+	public final fun getLocale ()Ljava/lang/Void;
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getSelectableDates ()Ljava/lang/Void;
+	public final fun getSelectedEndDateMillis ()Ljava/lang/Long;
+	public final fun getSelectedStartDateMillis ()Ljava/lang/Long;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun getYearRange ()Ljava/lang/Void;
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun setDisplayedMonthMillis (J)V
+	public final fun setSelection (Ljava/lang/Long;Ljava/lang/Long;)V
+}
+
 public final class dev/keliver/compose/material3/FabPosition {
 	public static final field $stable I
 }
@@ -507,12 +645,146 @@ public final class dev/keliver/compose/material3/GeneratedKt {
 	public static final fun Text-tdy3QH0 (Ljava/lang/String;Ldev/keliver/Modifier;JLdev/keliver/compose/foundation/text/TextAutoSize;JLdev/keliver/compose/ui/text/font/FontStyle;Ldev/keliver/compose/ui/text/font/FontWeight;Ldev/keliver/compose/ui/text/font/FontFamily;JLdev/keliver/compose/ui/text/style/TextDecoration;Ldev/keliver/compose/ui/text/style/TextAlign;JIZIILkotlin/jvm/functions/Function1;Ldev/keliver/compose/ui/text/TextStyle;Landroidx/compose/runtime/Composer;III)V
 	public static final fun TextButton (Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;ZLdev/keliver/compose/ui/graphics/Shape;Ldev/keliver/compose/material3/ButtonColors;Ldev/keliver/compose/material3/ButtonElevation;Ldev/keliver/compose/foundation/BorderStroke;Ldev/keliver/compose/foundation/layout/PaddingValues;Ldev/keliver/compose/foundation/interaction/MutableInteractionSource;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
 	public static final fun TextButton (Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;ZLdev/keliver/compose/ui/graphics/Shape;Ldev/keliver/compose/material3/ButtonColors;Ldev/keliver/compose/material3/ButtonElevation;Ldev/keliver/compose/foundation/BorderStroke;Ldev/keliver/compose/foundation/layout/PaddingValues;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
+	public static final fun TimeInput (Ldev/keliver/compose/material3/TimePickerState;Ldev/keliver/Modifier;Ldev/keliver/compose/material3/TimePickerColors;Landroidx/compose/runtime/Composer;II)V
 	public static final fun TopAppBar-fdD0nnI (Lkotlin/jvm/functions/Function2;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function3;FLdev/keliver/compose/foundation/layout/WindowInsets;Ldev/keliver/compose/material3/TopAppBarColors;Ldev/keliver/compose/material3/TopAppBarScrollBehavior;Landroidx/compose/runtime/Composer;II)V
 	public static final fun TopAppBar-v__mVKk (Lkotlin/jvm/functions/Function2;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function3;FLdev/keliver/compose/material3/TopAppBarColors;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/compose/material3/GeneratedRemoteKt {
+	public static final fun rememberDatePickerState (Ljava/lang/Long;Landroidx/compose/runtime/Composer;II)Ldev/keliver/compose/material3/DatePickerState;
+	public static final fun rememberDateRangePickerState (Ljava/lang/Long;Ljava/lang/Long;Landroidx/compose/runtime/Composer;II)Ldev/keliver/compose/material3/DateRangePickerState;
+	public static final fun rememberModalBottomSheetState (ZLandroidx/compose/runtime/Composer;II)Ldev/keliver/compose/material3/SheetState;
+	public static final fun rememberRangeSliderState (FFILandroidx/compose/runtime/Composer;II)Ldev/keliver/compose/material3/RangeSliderState;
+	public static final fun rememberSliderState (FILandroidx/compose/runtime/Composer;II)Ldev/keliver/compose/material3/SliderState;
+	public static final fun rememberSwipeToDismissBoxState (Landroidx/compose/runtime/Composer;I)Ldev/keliver/compose/material3/SwipeToDismissBoxState;
+	public static final fun rememberTimePickerState (IILandroidx/compose/runtime/Composer;II)Ldev/keliver/compose/material3/TimePickerState;
+	public static final fun rememberTooltipState (ZZLandroidx/compose/runtime/Composer;II)Ldev/keliver/compose/material3/TooltipState;
+	public static final fun rememberTopAppBarState (FFLandroidx/compose/runtime/Composer;II)Ldev/keliver/compose/material3/TopAppBarState;
+}
+
+public final class dev/keliver/compose/material3/RangeSliderState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun getActiveRangeEnd ()F
+	public final fun getActiveRangeStart ()F
+	public final fun getOnValueChangeFinished ()Ljava/lang/Void;
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getSteps ()I
+	public final fun getValueRange ()Ljava/lang/Void;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun setActiveRangeEnd (F)V
+	public final fun setActiveRangeStart (F)V
+}
+
+public final class dev/keliver/compose/material3/SheetState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun expand (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun getCurrentValue ()Ljava/lang/Void;
+	public final fun getHasExpandedState ()Z
+	public final fun getHasPartiallyExpandedState ()Z
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getTargetValue ()Ljava/lang/Void;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun hide (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun isAnimationRunning ()Z
+	public final fun isVisible ()Z
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun partialExpand (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun requireOffset ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun requireOffset$default (Ldev/keliver/compose/material3/SheetState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun show (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class dev/keliver/compose/material3/SliderState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun dispatchRawDelta (F)V
+	public final fun drag ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun drag$default (Ldev/keliver/compose/material3/SliderState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun getCoercedValueAsFraction ()F
+	public final fun getOnValueChange ()Ljava/lang/Void;
+	public final fun getOnValueChangeFinished ()Ljava/lang/Void;
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getShouldAutoSnap ()Z
+	public final fun getSteps ()I
+	public final fun getValue ()F
+	public final fun getValueRange ()Ljava/lang/Void;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun isDragging ()Z
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun setShouldAutoSnap (Z)V
+	public final fun setValue (F)V
+}
+
+public final class dev/keliver/compose/material3/SwipeToDismissBoxState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun dismiss ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun dismiss$default (Ldev/keliver/compose/material3/SwipeToDismissBoxState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun getCurrentValue ()Ljava/lang/Void;
+	public final fun getDismissDirection ()Ljava/lang/Void;
+	public final fun getProgress ()F
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getSettledValue ()Ljava/lang/Void;
+	public final fun getTargetValue ()Ljava/lang/Void;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun requireOffset ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun requireOffset$default (Ldev/keliver/compose/material3/SwipeToDismissBoxState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+	public final fun reset (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun snapTo ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Void;
+	public static synthetic fun snapTo$default (Ldev/keliver/compose/material3/SwipeToDismissBoxState;[Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ljava/lang/Void;
+}
+
+public final class dev/keliver/compose/material3/TimePickerState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun getHour ()I
+	public final fun getMinute ()I
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getSelection ()Ljava/lang/Void;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun is24hour ()Z
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun set24hour (Z)V
+	public final fun setHour (I)V
+	public final fun setMinute (I)V
+}
+
+public final class dev/keliver/compose/material3/TooltipState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun dismiss ()V
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getTransition ()Ljava/lang/Void;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun isPersistent ()Z
+	public final fun isVisible ()Z
+	public final fun onDispose ()V
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun show (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
 public final class dev/keliver/compose/material3/TopAppBarScrollBehavior {
 	public static final field $stable I
+}
+
+public final class dev/keliver/compose/material3/TopAppBarState {
+	public static final field $stable I
+	public fun <init> (Ldev/keliver/compose/remote/RemoteObject;)V
+	public final fun getCollapsedFraction ()F
+	public final fun getContentOffset ()F
+	public final fun getHeightOffset ()F
+	public final fun getHeightOffsetLimit ()F
+	public final fun getOverlappedFraction ()F
+	public final fun getRemote ()Ldev/keliver/compose/remote/RemoteObject;
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun setContentOffset (F)V
+	public final fun setHeightOffset (F)V
+	public final fun setHeightOffsetLimit (F)V
 }
 
 public final class dev/keliver/compose/ui/draw/GeneratedKt {

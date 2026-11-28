@@ -51,6 +51,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
@@ -143,6 +144,7 @@ import dev.keliver.compose.core.widget.GenSurface2
 import dev.keliver.compose.core.widget.GenText1
 import dev.keliver.compose.core.widget.GenText2
 import dev.keliver.compose.core.widget.GenTextButton1
+import dev.keliver.compose.core.widget.GenTimeInput1
 import dev.keliver.compose.core.widget.GenTopAppBar1
 import dev.keliver.compose.core.widget.KeliverComposeCoreWidgetFactory
 import dev.keliver.compose.wire.arg
@@ -1072,6 +1074,33 @@ internal class ComposeUiGenHorizontalDivider1 : GenHorizontalDivider1<@Composabl
   }
 }
 
+/** Calls the real `androidx.compose.material3.TimeInput`. */
+internal class ComposeUiGenTimeInput1 : GenTimeInput1<@Composable (Modifier) -> Unit>, GeneratedWidget {
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
+  override var modifierEventSink: ((Int) -> Unit)? = null
+  private var p_state: Any? = Unset
+  override fun state(state: dev.keliver.compose.remote.RemoteObjectWire) { if (p_state != state) { p_state = state; version++ } }
+  private var p_stateReport: ((dev.keliver.compose.remote.RemoteReport) -> Unit)? = null
+  override fun stateReport(stateReport: ((dev.keliver.compose.remote.RemoteReport) -> Unit)?) { p_stateReport = stateReport }
+  private var p_colors: Any? = null
+  override fun colors(colors: dev.keliver.compose.material3.TimePickerColors?) { if (p_colors != colors) { p_colors = colors; version++ } }
+  override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
+  override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
+    if (p_state !== Unset) {
+      val state = GeneratedRemoteObjects.host(p_state as dev.keliver.compose.remote.RemoteObjectWire) { r -> (p_stateReport as ((dev.keliver.compose.remote.RemoteReport) -> Unit)?)?.invoke(r) } as androidx.compose.material3.TimePickerState
+      val colors = (p_colors as dev.keliver.compose.material3.TimePickerColors?)?.toCompose() ?: TimePickerDefaults.colors()
+      androidx.compose.material3.TimeInput(
+        state = state,
+        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenTimeInput1),
+        colors = colors,
+      )
+    }
+  }
+}
+
 /** Calls the real `androidx.compose.material3.TopAppBar`. */
 internal class ComposeUiGenTopAppBar1 : GenTopAppBar1<@Composable (Modifier) -> Unit>, GeneratedWidget {
   private var version by mutableIntStateOf(0)
@@ -1233,6 +1262,7 @@ public class ComposeUiKeliverComposeCoreWidgetFactory : KeliverComposeCoreWidget
   override fun GenOutlinedButton1(): GenOutlinedButton1<@Composable (Modifier) -> Unit> = ComposeUiGenOutlinedButton1()
   override fun GenIconButton1(): GenIconButton1<@Composable (Modifier) -> Unit> = ComposeUiGenIconButton1()
   override fun GenHorizontalDivider1(): GenHorizontalDivider1<@Composable (Modifier) -> Unit> = ComposeUiGenHorizontalDivider1()
+  override fun GenTimeInput1(): GenTimeInput1<@Composable (Modifier) -> Unit> = ComposeUiGenTimeInput1()
   override fun GenTopAppBar1(): GenTopAppBar1<@Composable (Modifier) -> Unit> = ComposeUiGenTopAppBar1()
   override fun GenAnimatedVisibility1(): GenAnimatedVisibility1<@Composable (Modifier) -> Unit> = ComposeUiGenAnimatedVisibility1()
   override fun GenColumnScopeAnimatedVisibility1(): GenColumnScopeAnimatedVisibility1<@Composable (Modifier) -> Unit> = ComposeUiGenColumnScopeAnimatedVisibility1()
@@ -1389,6 +1419,14 @@ internal fun dev.keliver.compose.material3.IconButtonColors.toCompose(): android
   12 -> androidx.compose.material3.IconButtonDefaults.iconButtonColors()
   13 -> run { val containerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(1)?.toCompose() ?: Color.Unspecified; val contentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(2)?.toCompose() ?: LocalContentColor.current; val disabledContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(3)?.toCompose() ?: Color.Unspecified; val disabledContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(4)?.toCompose() ?: contentColor.copy(alpha = 0.38f); androidx.compose.material3.IconButtonDefaults.iconButtonColors(containerColor = containerColor, contentColor = contentColor, disabledContainerColor = disabledContainerColor, disabledContentColor = disabledContentColor) }
   else -> { reportMismatchOnce("IconButtonColors: unknown factory ${call.factory}; Compose's default instead"); null }
+}
+
+/** Makes the guest's recorded `TimePickerColors` by calling the real factory. */
+@Composable
+internal fun dev.keliver.compose.material3.TimePickerColors.toCompose(): androidx.compose.material3.TimePickerColors? = when (call.factory) {
+  16 -> androidx.compose.material3.TimePickerDefaults.colors()
+  17 -> run { val clockDialColor = call.arg<dev.keliver.compose.ui.graphics.Color>(1)?.toCompose() ?: Color.Unspecified; val clockDialSelectedContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(2)?.toCompose() ?: Color.Unspecified; val clockDialUnselectedContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(3)?.toCompose() ?: Color.Unspecified; val selectorColor = call.arg<dev.keliver.compose.ui.graphics.Color>(4)?.toCompose() ?: Color.Unspecified; val containerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(5)?.toCompose() ?: Color.Unspecified; val periodSelectorBorderColor = call.arg<dev.keliver.compose.ui.graphics.Color>(6)?.toCompose() ?: Color.Unspecified; val periodSelectorSelectedContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(7)?.toCompose() ?: Color.Unspecified; val periodSelectorUnselectedContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(8)?.toCompose() ?: Color.Unspecified; val periodSelectorSelectedContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(9)?.toCompose() ?: Color.Unspecified; val periodSelectorUnselectedContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(10)?.toCompose() ?: Color.Unspecified; val timeSelectorSelectedContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(11)?.toCompose() ?: Color.Unspecified; val timeSelectorUnselectedContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(12)?.toCompose() ?: Color.Unspecified; val timeSelectorSelectedContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(13)?.toCompose() ?: Color.Unspecified; val timeSelectorUnselectedContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(14)?.toCompose() ?: Color.Unspecified; androidx.compose.material3.TimePickerDefaults.colors(clockDialColor = clockDialColor, clockDialSelectedContentColor = clockDialSelectedContentColor, clockDialUnselectedContentColor = clockDialUnselectedContentColor, selectorColor = selectorColor, containerColor = containerColor, periodSelectorBorderColor = periodSelectorBorderColor, periodSelectorSelectedContainerColor = periodSelectorSelectedContainerColor, periodSelectorUnselectedContainerColor = periodSelectorUnselectedContainerColor, periodSelectorSelectedContentColor = periodSelectorSelectedContentColor, periodSelectorUnselectedContentColor = periodSelectorUnselectedContentColor, timeSelectorSelectedContainerColor = timeSelectorSelectedContainerColor, timeSelectorUnselectedContainerColor = timeSelectorUnselectedContainerColor, timeSelectorSelectedContentColor = timeSelectorSelectedContentColor, timeSelectorUnselectedContentColor = timeSelectorUnselectedContentColor) }
+  else -> { reportMismatchOnce("TimePickerColors: unknown factory ${call.factory}; Compose's default instead"); null }
 }
 
 /** Makes the guest's recorded `TopAppBarColors` by calling the real factory. */

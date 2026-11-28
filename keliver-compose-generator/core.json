@@ -63,6 +63,7 @@
     "androidx.compose.material3.OutlinedButton(onClick,modifier,enabled,shape,colors,elevation,border,contentPadding,interactionSource,content)",
     "androidx.compose.material3.IconButton(onClick,modifier,enabled,colors,interactionSource,shape,content)",
     "androidx.compose.material3.HorizontalDivider(modifier,thickness,color)",
+    "androidx.compose.material3.TimeInput(state,modifier,colors)",
     "androidx.compose.material3.TopAppBar(title,modifier,navigationIcon,actions,expandedHeight,windowInsets,colors,scrollBehavior)",
     "androidx.compose.foundation.layout.offset(x,y)",
     "androidx.compose.ui.draw.rotate(degrees)",
@@ -111,6 +112,20 @@
     "Filled.History", "Filled.Receipt", "Filled.Warning", "Filled.KeyboardArrowRight", "Filled.Search", "Filled.Info"
   ],
   "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry"],
+  "remoteObjects": [
+    "androidx.compose.foundation.pager.PagerState|initialPage=currentPage,initialPageOffsetFraction=currentPageOffsetFraction",
+    "androidx.compose.foundation.lazy.grid.LazyGridState|initialFirstVisibleItemIndex=firstVisibleItemIndex,initialFirstVisibleItemScrollOffset=firstVisibleItemScrollOffset",
+    "androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState|initialFirstVisibleItemIndex=firstVisibleItemIndex,initialFirstVisibleItemScrollOffset=firstVisibleItemScrollOffset",
+    "androidx.compose.material3.SheetState#rememberModalBottomSheetState",
+    "androidx.compose.material3.DatePickerState|initialSelectedDateMillis=selectedDateMillis",
+    "androidx.compose.material3.DateRangePickerState|initialSelectedStartDateMillis=selectedStartDateMillis,initialSelectedEndDateMillis=selectedEndDateMillis",
+    "androidx.compose.material3.TimePickerState|initialHour=hour,initialMinute=minute",
+    "androidx.compose.material3.TooltipState|initialIsVisible=isVisible",
+    "androidx.compose.material3.SwipeToDismissBoxState",
+    "androidx.compose.material3.SliderState|value=value",
+    "androidx.compose.material3.RangeSliderState|activeRangeStart=activeRangeStart,activeRangeEnd=activeRangeEnd",
+    "androidx.compose.material3.TopAppBarState|initialHeightOffset=heightOffset,initialContentOffset=contentOffset"
+  ],
   "scrollContainers": [
     "androidx.compose.foundation.horizontalScroll(state,enabled,flingBehavior,reverseScrolling)",
     "androidx.compose.foundation.horizontalScroll(state,overscrollEffect,enabled,flingBehavior,reverseScrolling)",

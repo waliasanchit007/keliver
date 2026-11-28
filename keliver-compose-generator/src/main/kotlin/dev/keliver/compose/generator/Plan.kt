@@ -87,6 +87,11 @@ class Config(
   val sharedRuntime: Boolean = false,
   /** NF5 A1: the group's frame rules, or null for none (FrameRules.kt). */
   val frameRules: FrameRulesConfig? = null,
+  /**
+   * MS4-43 (G2): host-owned state classes the group exposes as remote objects, each `fq` or
+   * `fq#<remember function>` (the factory defaults to `remember<Name>`). RemoteObjectEmit.kt.
+   */
+  val remoteObjects: List<String> = emptyList(),
 ) {
   /** The Compose versions read (for the schema's header), or null. */
   var input: String? = null
@@ -122,7 +127,9 @@ fun wireNames(params: List<Classified>): List<String> =
 
 /** Extra tagged properties a parameter needs: a lazy list's window (`content.before` …). */
 fun syntheticNames(params: List<Classified>): List<String> = params.filter { it.kind == ParamKind.LAZY }
-  .flatMap { c -> LAZY_SYNTHETIC.map { "${c.param.name}.$it" } }
+  .flatMap { c -> LAZY_SYNTHETIC.map { "${c.param.name}.$it" } } +
+  // A remote object's state (MS4-43): the event its host report comes back by.
+  params.filter { it.kind == ParamKind.VALUE && it.param.type.fq in TypeMap.remoteState }.map { "${it.param.name}.report" }
 
 val LAZY_SYNTHETIC: List<String> = listOf("before", "after", "viewport")
 

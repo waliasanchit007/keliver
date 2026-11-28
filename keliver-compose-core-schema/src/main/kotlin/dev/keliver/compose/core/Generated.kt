@@ -38,6 +38,7 @@ import dev.keliver.schema.Widget
     GenOutlinedButton1::class,
     GenIconButton1::class,
     GenHorizontalDivider1::class,
+    GenTimeInput1::class,
     GenTopAppBar1::class,
     GenAnimatedVisibility1::class,
     GenColumnScopeAnimatedVisibility1::class,
@@ -385,6 +386,15 @@ public data class GenIconButton1(
 public data class GenHorizontalDivider1(
   @Property(2) val thickness: dev.keliver.compose.ui.unit.Dp?,
   @Property(3) val color: dev.keliver.compose.ui.graphics.Color?,
+  @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
+)
+
+/** `androidx.compose.material3.TimeInput`: Time pickers help users select and set a specific time. */
+@Widget(30)
+public data class GenTimeInput1(
+  @Property(1) val state: dev.keliver.compose.remote.RemoteObjectWire,
+  @Property(4) val stateReport: ((dev.keliver.compose.remote.RemoteReport) -> Unit)?,
+  @Property(3) val colors: dev.keliver.compose.material3.TimePickerColors?,
   @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
 )
 

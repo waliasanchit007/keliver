@@ -16,6 +16,7 @@ import dev.keliver.compose.core.compose.GenSurface1
 import dev.keliver.compose.core.compose.GenSurface2
 import dev.keliver.compose.core.compose.GenText1
 import dev.keliver.compose.core.compose.GenTextButton1
+import dev.keliver.compose.core.compose.GenTimeInput1
 import dev.keliver.compose.core.compose.GenTopAppBar1
 import dev.keliver.compose.foundation.layout.ColumnScopeInstance
 import dev.keliver.compose.foundation.layout.RowScopeInstance
@@ -462,6 +463,25 @@ public fun HorizontalDivider(
   GenHorizontalDivider1(
     thickness = if (thickness == default_thickness) null else thickness,
     color = if (color == default_color) null else color,
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+/** Time pickers help users select and set a specific time. */
+@androidx.compose.runtime.Composable
+public fun TimeInput(
+  state: dev.keliver.compose.material3.TimePickerState,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  colors: dev.keliver.compose.material3.TimePickerColors = TimePickerDefaults.colors(),
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_colors = TimePickerDefaults.colors()
+  val stateWire = state.remote.bind()
+  GenTimeInput1(
+    state = stateWire,
+    stateReport = state::onHostReport,
+    colors = if (colors == default_colors) null else colors,
     modifierEvent = split.events,
     modifier = split.modifier,
   )

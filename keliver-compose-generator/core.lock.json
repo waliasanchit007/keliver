@@ -1,7 +1,7 @@
 {
   "group": "core",
-  "level": 5,
-  "nextWidgetTag": 30,
+  "level": 6,
+  "nextWidgetTag": 31,
   "nextModifierTag": 37,
   "widgets": {
     "androidx.compose.animation/AnimatedVisibility(visible:kotlin.Boolean,modifier:androidx.compose.ui.Modifier,enter:androidx.compose.animation.EnterTransition,exit:androidx.compose.animation.ExitTransition,label:kotlin.String,content:@Composable androidx.compose.animation.AnimatedVisibilityScope.()->kotlin.Unit)": {
@@ -590,6 +590,22 @@
         "content": 4
       }
     },
+    "androidx.compose.material3/TimeInput(state:androidx.compose.material3.TimePickerState,modifier:androidx.compose.ui.Modifier,colors:androidx.compose.material3.TimePickerColors)": {
+      "tag": 30,
+      "name": "GenTimeInput1",
+      "params": {
+        "state": 1,
+        "modifier": 2,
+        "colors": 3,
+        "state.report": 4
+      },
+      "since": 6,
+      "wire": {
+        "state": 6,
+        "colors": 6,
+        "state.report": 6
+      }
+    },
     "androidx.compose.material3/TopAppBar(title:@Composable ()->kotlin.Unit,modifier:androidx.compose.ui.Modifier,navigationIcon:@Composable ()->kotlin.Unit,actions:@Composable androidx.compose.foundation.layout.RowScope.()->kotlin.Unit,expandedHeight:androidx.compose.ui.unit.Dp,windowInsets:androidx.compose.foundation.layout.WindowInsets,colors:androidx.compose.material3.TopAppBarColors,scrollBehavior:androidx.compose.material3.TopAppBarScrollBehavior?)": {
       "tag": 26,
       "name": "GenTopAppBar1",
@@ -1134,7 +1150,7 @@
       }
     }
   },
-  "nextFactoryTag": 16,
+  "nextFactoryTag": 18,
   "factories": {
     "androidx.compose.material3/ButtonDefaults#buttonColors()": {
       "tag": 4,
@@ -1307,6 +1323,50 @@
         "disabledContentColor": 4
       }
     },
+    "androidx.compose.material3/TimePickerDefaults#colors()": {
+      "tag": 16,
+      "name": "TimePickerDefaults.colors1",
+      "params": {},
+      "since": 6,
+      "wire": {}
+    },
+    "androidx.compose.material3/TimePickerDefaults#colors(clockDialColor:androidx.compose.ui.graphics.Color,clockDialSelectedContentColor:androidx.compose.ui.graphics.Color,clockDialUnselectedContentColor:androidx.compose.ui.graphics.Color,selectorColor:androidx.compose.ui.graphics.Color,containerColor:androidx.compose.ui.graphics.Color,periodSelectorBorderColor:androidx.compose.ui.graphics.Color,periodSelectorSelectedContainerColor:androidx.compose.ui.graphics.Color,periodSelectorUnselectedContainerColor:androidx.compose.ui.graphics.Color,periodSelectorSelectedContentColor:androidx.compose.ui.graphics.Color,periodSelectorUnselectedContentColor:androidx.compose.ui.graphics.Color,timeSelectorSelectedContainerColor:androidx.compose.ui.graphics.Color,timeSelectorUnselectedContainerColor:androidx.compose.ui.graphics.Color,timeSelectorSelectedContentColor:androidx.compose.ui.graphics.Color,timeSelectorUnselectedContentColor:androidx.compose.ui.graphics.Color)": {
+      "tag": 17,
+      "name": "TimePickerDefaults.colors2",
+      "params": {
+        "clockDialColor": 1,
+        "clockDialSelectedContentColor": 2,
+        "clockDialUnselectedContentColor": 3,
+        "selectorColor": 4,
+        "containerColor": 5,
+        "periodSelectorBorderColor": 6,
+        "periodSelectorSelectedContainerColor": 7,
+        "periodSelectorUnselectedContainerColor": 8,
+        "periodSelectorSelectedContentColor": 9,
+        "periodSelectorUnselectedContentColor": 10,
+        "timeSelectorSelectedContainerColor": 11,
+        "timeSelectorUnselectedContainerColor": 12,
+        "timeSelectorSelectedContentColor": 13,
+        "timeSelectorUnselectedContentColor": 14
+      },
+      "since": 6,
+      "wire": {
+        "clockDialColor": 6,
+        "clockDialSelectedContentColor": 6,
+        "clockDialUnselectedContentColor": 6,
+        "selectorColor": 6,
+        "containerColor": 6,
+        "periodSelectorBorderColor": 6,
+        "periodSelectorSelectedContainerColor": 6,
+        "periodSelectorUnselectedContainerColor": 6,
+        "periodSelectorSelectedContentColor": 6,
+        "periodSelectorUnselectedContentColor": 6,
+        "timeSelectorSelectedContainerColor": 6,
+        "timeSelectorUnselectedContainerColor": 6,
+        "timeSelectorSelectedContentColor": 6,
+        "timeSelectorUnselectedContentColor": 6
+      }
+    },
     "androidx.compose.material3/TopAppBarDefaults#topAppBarColors()": {
       "tag": 14,
       "name": "TopAppBarDefaults.topAppBarColors1",
@@ -1333,6 +1393,415 @@
         "titleContentColor": 4,
         "actionIconContentColor": 4,
         "subtitleContentColor": 4
+      }
+    }
+  },
+  "nextRemoteTag": 13,
+  "remotes": {
+    "androidx.compose.foundation.lazy.grid.LazyGridState": {
+      "tag": 2,
+      "name": "LazyGridState",
+      "params": {
+        "firstVisibleItemIndex": 1,
+        "firstVisibleItemScrollOffset": 2,
+        "isScrollInProgress": 3,
+        "canScrollForward": 4,
+        "canScrollBackward": 5,
+        "lastScrolledForward": 6,
+        "lastScrolledBackward": 7,
+        "scrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 8,
+        "requestScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 9,
+        "animateScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 10
+      },
+      "since": 6,
+      "wire": {
+        "firstVisibleItemIndex": 6,
+        "firstVisibleItemScrollOffset": 6,
+        "isScrollInProgress": 6,
+        "canScrollForward": 6,
+        "canScrollBackward": 6,
+        "lastScrolledForward": 6,
+        "lastScrolledBackward": 6,
+        "scrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 6,
+        "requestScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 6,
+        "animateScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 6
+      },
+      "types": {
+        "firstVisibleItemIndex": "kotlin.Int",
+        "firstVisibleItemScrollOffset": "kotlin.Int",
+        "isScrollInProgress": "kotlin.Boolean",
+        "canScrollForward": "kotlin.Boolean",
+        "canScrollBackward": "kotlin.Boolean",
+        "lastScrolledForward": "kotlin.Boolean",
+        "lastScrolledBackward": "kotlin.Boolean",
+        "scrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": "kotlin.Unit",
+        "requestScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": "kotlin.Unit",
+        "animateScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": "kotlin.Unit",
+        "@init.initialFirstVisibleItemIndex": "kotlin.Int",
+        "@init.initialFirstVisibleItemScrollOffset": "kotlin.Int"
+      }
+    },
+    "androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState": {
+      "tag": 3,
+      "name": "LazyStaggeredGridState",
+      "params": {
+        "firstVisibleItemIndex": 1,
+        "firstVisibleItemScrollOffset": 2,
+        "canScrollForward": 3,
+        "canScrollBackward": 4,
+        "lastScrolledForward": 5,
+        "lastScrolledBackward": 6,
+        "isScrollInProgress": 7,
+        "scrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 8,
+        "animateScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 9,
+        "requestScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 10
+      },
+      "since": 6,
+      "wire": {
+        "firstVisibleItemIndex": 6,
+        "firstVisibleItemScrollOffset": 6,
+        "canScrollForward": 6,
+        "canScrollBackward": 6,
+        "lastScrolledForward": 6,
+        "lastScrolledBackward": 6,
+        "isScrollInProgress": 6,
+        "scrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 6,
+        "animateScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 6,
+        "requestScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 6
+      },
+      "types": {
+        "firstVisibleItemIndex": "kotlin.Int",
+        "firstVisibleItemScrollOffset": "kotlin.Int",
+        "canScrollForward": "kotlin.Boolean",
+        "canScrollBackward": "kotlin.Boolean",
+        "lastScrolledForward": "kotlin.Boolean",
+        "lastScrolledBackward": "kotlin.Boolean",
+        "isScrollInProgress": "kotlin.Boolean",
+        "scrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": "kotlin.Unit",
+        "animateScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": "kotlin.Unit",
+        "requestScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": "kotlin.Unit",
+        "@init.initialFirstVisibleItemIndex": "kotlin.Int",
+        "@init.initialFirstVisibleItemScrollOffset": "kotlin.Int"
+      }
+    },
+    "androidx.compose.foundation.pager.PagerState": {
+      "tag": 1,
+      "name": "PagerState",
+      "params": {
+        "pageCount": 1,
+        "currentPage": 2,
+        "settledPage": 3,
+        "targetPage": 4,
+        "currentPageOffsetFraction": 5,
+        "isScrollInProgress": 6,
+        "canScrollForward": 7,
+        "canScrollBackward": 8,
+        "lastScrolledForward": 9,
+        "lastScrolledBackward": 10,
+        "scrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": 11,
+        "requestScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": 12,
+        "animateScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float,animationSpec:androidx.compose.animation.core.AnimationSpec<kotlin.Float>)": 13
+      },
+      "since": 6,
+      "wire": {
+        "pageCount": 6,
+        "currentPage": 6,
+        "settledPage": 6,
+        "targetPage": 6,
+        "currentPageOffsetFraction": 6,
+        "isScrollInProgress": 6,
+        "canScrollForward": 6,
+        "canScrollBackward": 6,
+        "lastScrolledForward": 6,
+        "lastScrolledBackward": 6,
+        "scrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": 6,
+        "requestScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": 6,
+        "animateScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float,animationSpec:androidx.compose.animation.core.AnimationSpec<kotlin.Float>)": 6
+      },
+      "types": {
+        "pageCount": "kotlin.Int",
+        "currentPage": "kotlin.Int",
+        "settledPage": "kotlin.Int",
+        "targetPage": "kotlin.Int",
+        "currentPageOffsetFraction": "kotlin.Float",
+        "isScrollInProgress": "kotlin.Boolean",
+        "canScrollForward": "kotlin.Boolean",
+        "canScrollBackward": "kotlin.Boolean",
+        "lastScrolledForward": "kotlin.Boolean",
+        "lastScrolledBackward": "kotlin.Boolean",
+        "scrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": "kotlin.Unit",
+        "requestScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": "kotlin.Unit",
+        "animateScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float,animationSpec:androidx.compose.animation.core.AnimationSpec<kotlin.Float>)": "kotlin.Unit",
+        "@init.initialPage": "kotlin.Int",
+        "@init.initialPageOffsetFraction": "kotlin.Float",
+        "@init.pageCount": "()->kotlin.Int"
+      }
+    },
+    "androidx.compose.material3.DatePickerState": {
+      "tag": 5,
+      "name": "DatePickerState",
+      "params": {
+        "selectedDateMillis": 1,
+        "selectedDateMillis=": 2,
+        "displayedMonthMillis": 3,
+        "displayedMonthMillis=": 4
+      },
+      "since": 6,
+      "wire": {
+        "selectedDateMillis": 6,
+        "selectedDateMillis=": 6,
+        "displayedMonthMillis": 6,
+        "displayedMonthMillis=": 6
+      },
+      "types": {
+        "selectedDateMillis": "kotlin.Long?",
+        "selectedDateMillis=": "kotlin.Long?",
+        "displayedMonthMillis": "kotlin.Long",
+        "displayedMonthMillis=": "kotlin.Long",
+        "@init.initialSelectedDateMillis": "kotlin.Long?"
+      }
+    },
+    "androidx.compose.material3.DateRangePickerState": {
+      "tag": 6,
+      "name": "DateRangePickerState",
+      "params": {
+        "selectedStartDateMillis": 1,
+        "selectedEndDateMillis": 2,
+        "displayedMonthMillis": 3,
+        "displayedMonthMillis=": 4,
+        "setSelection(startDateMillis:kotlin.Long?,endDateMillis:kotlin.Long?)": 5
+      },
+      "since": 6,
+      "wire": {
+        "selectedStartDateMillis": 6,
+        "selectedEndDateMillis": 6,
+        "displayedMonthMillis": 6,
+        "displayedMonthMillis=": 6,
+        "setSelection(startDateMillis:kotlin.Long?,endDateMillis:kotlin.Long?)": 6
+      },
+      "types": {
+        "selectedStartDateMillis": "kotlin.Long?",
+        "selectedEndDateMillis": "kotlin.Long?",
+        "displayedMonthMillis": "kotlin.Long",
+        "displayedMonthMillis=": "kotlin.Long",
+        "setSelection(startDateMillis:kotlin.Long?,endDateMillis:kotlin.Long?)": "kotlin.Unit",
+        "@init.initialSelectedStartDateMillis": "kotlin.Long?",
+        "@init.initialSelectedEndDateMillis": "kotlin.Long?"
+      }
+    },
+    "androidx.compose.material3.RangeSliderState": {
+      "tag": 11,
+      "name": "RangeSliderState",
+      "params": {
+        "steps": 1,
+        "activeRangeStart": 2,
+        "activeRangeStart=": 3,
+        "activeRangeEnd": 4,
+        "activeRangeEnd=": 5
+      },
+      "since": 6,
+      "wire": {
+        "steps": 6,
+        "activeRangeStart": 6,
+        "activeRangeStart=": 6,
+        "activeRangeEnd": 6,
+        "activeRangeEnd=": 6
+      },
+      "types": {
+        "steps": "kotlin.Int",
+        "activeRangeStart": "kotlin.Float",
+        "activeRangeStart=": "kotlin.Float",
+        "activeRangeEnd": "kotlin.Float",
+        "activeRangeEnd=": "kotlin.Float",
+        "@init.activeRangeStart": "kotlin.Float",
+        "@init.activeRangeEnd": "kotlin.Float",
+        "@init.steps": "kotlin.Int"
+      }
+    },
+    "androidx.compose.material3.SheetState": {
+      "tag": 4,
+      "name": "SheetState",
+      "params": {
+        "isVisible": 1,
+        "isAnimationRunning": 2,
+        "hasExpandedState": 3,
+        "hasPartiallyExpandedState": 4,
+        "expand()": 5,
+        "partialExpand()": 6,
+        "show()": 7,
+        "hide()": 8
+      },
+      "since": 6,
+      "wire": {
+        "isVisible": 6,
+        "isAnimationRunning": 6,
+        "hasExpandedState": 6,
+        "hasPartiallyExpandedState": 6,
+        "expand()": 6,
+        "partialExpand()": 6,
+        "show()": 6,
+        "hide()": 6
+      },
+      "types": {
+        "isVisible": "kotlin.Boolean",
+        "isAnimationRunning": "kotlin.Boolean",
+        "hasExpandedState": "kotlin.Boolean",
+        "hasPartiallyExpandedState": "kotlin.Boolean",
+        "expand()": "kotlin.Unit",
+        "partialExpand()": "kotlin.Unit",
+        "show()": "kotlin.Unit",
+        "hide()": "kotlin.Unit",
+        "@init.skipPartiallyExpanded": "kotlin.Boolean"
+      }
+    },
+    "androidx.compose.material3.SliderState": {
+      "tag": 10,
+      "name": "SliderState",
+      "params": {
+        "steps": 1,
+        "value": 2,
+        "value=": 3,
+        "shouldAutoSnap": 4,
+        "shouldAutoSnap=": 5,
+        "coercedValueAsFraction": 6,
+        "isDragging": 7,
+        "dispatchRawDelta(delta:kotlin.Float)": 8
+      },
+      "since": 6,
+      "wire": {
+        "steps": 6,
+        "value": 6,
+        "value=": 6,
+        "shouldAutoSnap": 6,
+        "shouldAutoSnap=": 6,
+        "coercedValueAsFraction": 6,
+        "isDragging": 6,
+        "dispatchRawDelta(delta:kotlin.Float)": 6
+      },
+      "types": {
+        "steps": "kotlin.Int",
+        "value": "kotlin.Float",
+        "value=": "kotlin.Float",
+        "shouldAutoSnap": "kotlin.Boolean",
+        "shouldAutoSnap=": "kotlin.Boolean",
+        "coercedValueAsFraction": "kotlin.Float",
+        "isDragging": "kotlin.Boolean",
+        "dispatchRawDelta(delta:kotlin.Float)": "kotlin.Unit",
+        "@init.value": "kotlin.Float",
+        "@init.steps": "kotlin.Int"
+      }
+    },
+    "androidx.compose.material3.SwipeToDismissBoxState": {
+      "tag": 9,
+      "name": "SwipeToDismissBoxState",
+      "params": {
+        "progress": 1,
+        "reset()": 2
+      },
+      "since": 6,
+      "wire": {
+        "progress": 6,
+        "reset()": 6
+      },
+      "types": {
+        "progress": "kotlin.Float",
+        "reset()": "kotlin.Unit"
+      }
+    },
+    "androidx.compose.material3.TimePickerState": {
+      "tag": 7,
+      "name": "TimePickerState",
+      "params": {
+        "minute": 1,
+        "minute=": 2,
+        "hour": 3,
+        "hour=": 4,
+        "is24hour": 5,
+        "is24hour=": 6
+      },
+      "since": 6,
+      "wire": {
+        "minute": 6,
+        "minute=": 6,
+        "hour": 6,
+        "hour=": 6,
+        "is24hour": 6,
+        "is24hour=": 6
+      },
+      "types": {
+        "minute": "kotlin.Int",
+        "minute=": "kotlin.Int",
+        "hour": "kotlin.Int",
+        "hour=": "kotlin.Int",
+        "is24hour": "kotlin.Boolean",
+        "is24hour=": "kotlin.Boolean",
+        "@init.initialHour": "kotlin.Int",
+        "@init.initialMinute": "kotlin.Int"
+      }
+    },
+    "androidx.compose.material3.TooltipState": {
+      "tag": 8,
+      "name": "TooltipState",
+      "params": {
+        "isVisible": 1,
+        "isPersistent": 2,
+        "show(mutatePriority:androidx.compose.foundation.MutatePriority)": 3,
+        "dismiss()": 4,
+        "onDispose()": 5
+      },
+      "since": 6,
+      "wire": {
+        "isVisible": 6,
+        "isPersistent": 6,
+        "show(mutatePriority:androidx.compose.foundation.MutatePriority)": 6,
+        "dismiss()": 6,
+        "onDispose()": 6
+      },
+      "types": {
+        "isVisible": "kotlin.Boolean",
+        "isPersistent": "kotlin.Boolean",
+        "show(mutatePriority:androidx.compose.foundation.MutatePriority)": "kotlin.Unit",
+        "dismiss()": "kotlin.Unit",
+        "onDispose()": "kotlin.Unit",
+        "@init.initialIsVisible": "kotlin.Boolean",
+        "@init.isPersistent": "kotlin.Boolean"
+      }
+    },
+    "androidx.compose.material3.TopAppBarState": {
+      "tag": 12,
+      "name": "TopAppBarState",
+      "params": {
+        "heightOffsetLimit": 1,
+        "heightOffsetLimit=": 2,
+        "heightOffset": 3,
+        "heightOffset=": 4,
+        "contentOffset": 5,
+        "contentOffset=": 6,
+        "collapsedFraction": 7,
+        "overlappedFraction": 8
+      },
+      "since": 6,
+      "wire": {
+        "heightOffsetLimit": 6,
+        "heightOffsetLimit=": 6,
+        "heightOffset": 6,
+        "heightOffset=": 6,
+        "contentOffset": 6,
+        "contentOffset=": 6,
+        "collapsedFraction": 6,
+        "overlappedFraction": 6
+      },
+      "types": {
+        "heightOffsetLimit": "kotlin.Float",
+        "heightOffsetLimit=": "kotlin.Float",
+        "heightOffset": "kotlin.Float",
+        "heightOffset=": "kotlin.Float",
+        "contentOffset": "kotlin.Float",
+        "contentOffset=": "kotlin.Float",
+        "collapsedFraction": "kotlin.Float",
+        "overlappedFraction": "kotlin.Float",
+        "@init.initialHeightOffset": "kotlin.Float",
+        "@init.initialContentOffset": "kotlin.Float"
       }
     }
   }

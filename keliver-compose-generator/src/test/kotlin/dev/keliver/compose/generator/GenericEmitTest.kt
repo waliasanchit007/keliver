@@ -45,14 +45,7 @@ class GenericEmitTest {
     assertTrue("androidx.compose.ui.graphics.drawscope.Stroke.DefaultMiter" in host)
   }
 
-  @Test fun remoteObject() {
-    val guest = generated.getValue("dev/keliver/spike/compose/foundation/pager/GeneratedRemote.kt")
-    assertTrue("public val currentPage: kotlin.Int get() = remote.read(\"currentPage\")" in guest)
-    assertTrue("public suspend fun animateScrollToPage(page: kotlin.Int, pageOffsetFraction: kotlin.Float? = null)" in guest)
-    // A synchronous result and a lambda argument cannot cross: error stubs.
-    assertTrue("`PagerState.dispatchRawDelta(delta)` does not cross the bridge (a synchronous result)" in guest)
-    assertTrue("`PagerState.scroll(scrollPriority,block)` does not cross the bridge (an argument type)" in guest)
-  }
+  // The remote-object checks moved to RemoteObjectEmitTest (MS4-43, G2).
 
   @Test fun recordedInterface() {
     val host = generated.getValue("dev/keliver/spike/host/GeneratedDrawReplay.kt")

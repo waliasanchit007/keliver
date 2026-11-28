@@ -854,6 +854,29 @@ public final class dev/keliver/compose/material3/Shapes {
 	public final fun getSmall ()Ldev/keliver/compose/ui/graphics/Shape;
 }
 
+public final class dev/keliver/compose/material3/TimePickerColors : dev/keliver/compose/wire/DefaultsValue {
+	public static final field $stable I
+	public static final field Companion Ldev/keliver/compose/material3/TimePickerColors$Companion;
+	public fun <init> (Ldev/keliver/compose/wire/DefaultsCall;)V
+}
+
+public final class dev/keliver/compose/material3/TimePickerColors$Codec : dev/keliver/compose/wire/DefaultsValueCodec {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/compose/material3/TimePickerColors$Codec;
+}
+
+public final class dev/keliver/compose/material3/TimePickerColors$Companion {
+	public final fun getExplicitNull ()Ldev/keliver/compose/material3/TimePickerColors;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/compose/material3/TimePickerDefaults {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/compose/material3/TimePickerDefaults;
+	public final fun colors (Landroidx/compose/runtime/Composer;I)Ldev/keliver/compose/material3/TimePickerColors;
+	public final fun colors-Nry0lWE (JJJJJJJJJJJJJJLandroidx/compose/runtime/Composer;III)Ldev/keliver/compose/material3/TimePickerColors;
+}
+
 public final class dev/keliver/compose/material3/TopAppBarColors : dev/keliver/compose/wire/DefaultsValue {
 	public static final field $stable I
 	public static final field Companion Ldev/keliver/compose/material3/TopAppBarColors$Companion;
@@ -897,6 +920,157 @@ public final class dev/keliver/compose/material3/Typography {
 	public final fun getTitleLarge ()Ldev/keliver/compose/ui/text/TextStyle;
 	public final fun getTitleMedium ()Ldev/keliver/compose/ui/text/TextStyle;
 	public final fun getTitleSmall ()Ldev/keliver/compose/ui/text/TextStyle;
+}
+
+public final class dev/keliver/compose/remote/RemoteCommand {
+	public static final field $stable I
+	public static final field Companion Ldev/keliver/compose/remote/RemoteCommand$Companion;
+	public fun <init> (IILkotlinx/serialization/json/JsonObject;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()Lkotlinx/serialization/json/JsonObject;
+	public final fun copy (IILkotlinx/serialization/json/JsonObject;)Ldev/keliver/compose/remote/RemoteCommand;
+	public static synthetic fun copy$default (Ldev/keliver/compose/remote/RemoteCommand;IILkotlinx/serialization/json/JsonObject;ILjava/lang/Object;)Ldev/keliver/compose/remote/RemoteCommand;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArgs ()Lkotlinx/serialization/json/JsonObject;
+	public final fun getMember ()I
+	public final fun getSeq ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/compose/remote/RemoteCommand$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/compose/remote/RemoteCommand$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/compose/remote/RemoteCommand;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/compose/remote/RemoteCommand;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/compose/remote/RemoteCommand$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/compose/remote/RemoteCommandException : java/lang/RuntimeException {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;)V
+}
+
+public final class dev/keliver/compose/remote/RemoteObject {
+	public static final field $stable I
+	public static final field Companion Ldev/keliver/compose/remote/RemoteObject$Companion;
+	public fun <init> (Ljava/lang/String;ILjava/lang/String;Ljava/util/List;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Ljava/lang/String;ILjava/lang/String;Ljava/util/List;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun assign (ILkotlinx/serialization/json/JsonElement;ILkotlinx/serialization/json/JsonObject;)V
+	public final fun bind (Landroidx/compose/runtime/Composer;I)Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun call (ILkotlinx/serialization/json/JsonObject;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getType ()I
+	public final fun getWire ()Ldev/keliver/compose/remote/RemoteObjectWire;
+	public final fun onHostReport (Ldev/keliver/compose/remote/RemoteReport;)V
+	public final fun peek (I)Lkotlinx/serialization/json/JsonElement;
+	public final fun read (I)Lkotlinx/serialization/json/JsonElement;
+	public final fun seed (ILkotlinx/serialization/json/JsonElement;)V
+	public final fun send (ILkotlinx/serialization/json/JsonObject;)V
+}
+
+public final class dev/keliver/compose/remote/RemoteObject$Companion {
+	public final fun nextId ()Ljava/lang/String;
+}
+
+public final class dev/keliver/compose/remote/RemoteObjectWire {
+	public static final field $stable I
+	public static final field Companion Ldev/keliver/compose/remote/RemoteObjectWire$Companion;
+	public fun <init> (Ljava/lang/String;ILkotlinx/serialization/json/JsonObject;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlinx/serialization/json/JsonObject;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()Lkotlinx/serialization/json/JsonObject;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Ljava/util/List;
+	public final fun component6 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;ILkotlinx/serialization/json/JsonObject;Ljava/util/List;Ljava/util/List;Ljava/util/List;)Ldev/keliver/compose/remote/RemoteObjectWire;
+	public static synthetic fun copy$default (Ldev/keliver/compose/remote/RemoteObjectWire;Ljava/lang/String;ILkotlinx/serialization/json/JsonObject;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/compose/remote/RemoteObjectWire;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCommands ()Ljava/util/List;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getInit ()Lkotlinx/serialization/json/JsonObject;
+	public final fun getObserved ()Ljava/util/List;
+	public final fun getRestore ()Ljava/util/List;
+	public final fun getType ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/compose/remote/RemoteObjectWire$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/compose/remote/RemoteObjectWire$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/compose/remote/RemoteObjectWire;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/compose/remote/RemoteObjectWire;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/compose/remote/RemoteObjectWire$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/compose/remote/RemoteReport {
+	public static final field $stable I
+	public static final field Companion Ldev/keliver/compose/remote/RemoteReport$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;)Ldev/keliver/compose/remote/RemoteReport;
+	public static synthetic fun copy$default (Ldev/keliver/compose/remote/RemoteReport;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;ILjava/lang/Object;)Ldev/keliver/compose/remote/RemoteReport;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCancelled ()Ljava/util/List;
+	public final fun getDone ()Ljava/util/Map;
+	public final fun getFailed ()Ljava/util/Map;
+	public final fun getFields ()Ljava/util/Map;
+	public final fun getSettled ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/compose/remote/RemoteReport$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/compose/remote/RemoteReport$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/compose/remote/RemoteReport;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/compose/remote/RemoteReport;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/compose/remote/RemoteReport$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/compose/remote/RemoteRestore {
+	public static final field $stable I
+	public static final field Companion Ldev/keliver/compose/remote/RemoteRestore$Companion;
+	public fun <init> ()V
+	public final fun getLive ()Lkotlin/jvm/functions/Function0;
+	public final fun getSaved ()Lkotlinx/serialization/json/JsonObject;
+	public final fun setLive (Lkotlin/jvm/functions/Function0;)V
+	public final fun setSaved (Lkotlinx/serialization/json/JsonObject;)V
+}
+
+public final class dev/keliver/compose/remote/RemoteRestore$Companion {
+	public final fun getSaver ()Landroidx/compose/runtime/saveable/Saver;
 }
 
 public abstract interface class dev/keliver/compose/ui/Alignment {
