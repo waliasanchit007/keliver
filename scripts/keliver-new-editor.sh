@@ -111,7 +111,6 @@ rootProject.name = "$LOWER-editor"
 pluginManagement {
   repositories {
     ${MAVEN_LOCAL}
-    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     google { mavenContent { includeGroupAndSubgroups("androidx"); includeGroupAndSubgroups("com.android"); includeGroupAndSubgroups("com.google") } }
     mavenCentral()
     gradlePluginPortal()
@@ -121,7 +120,6 @@ pluginManagement {
 dependencyResolutionManagement {
   repositories {
     ${MAVEN_LOCAL}
-    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     google { mavenContent { includeGroupAndSubgroups("androidx"); includeGroupAndSubgroups("com.android"); includeGroupAndSubgroups("com.google") } }
     mavenCentral()
   }

@@ -5,6 +5,11 @@ public abstract class dev/keliver/gradle/BundleSizeBudgetTask : org/gradle/api/D
 	public abstract fun getWarnAtBytes ()Lorg/gradle/api/provider/Property;
 }
 
+public abstract class dev/keliver/gradle/FrameRulesExtension {
+	public fun <init> ()V
+	public abstract fun getStrict ()Lorg/gradle/api/provider/Property;
+}
+
 public final class dev/keliver/gradle/RedwoodComposeGeneratorPlugin : dev/keliver/gradle/RedwoodGeneratorPlugin {
 	public fun <init> ()V
 }
@@ -17,6 +22,8 @@ public final class dev/keliver/gradle/RedwoodComposeProtocolGeneratorPlugin : de
 
 public abstract class dev/keliver/gradle/RedwoodGeneratorExtension {
 	public fun <init> ()V
+	public final fun frameRules (Lorg/gradle/api/Action;)V
+	public abstract fun getFrameRules ()Ldev/keliver/gradle/FrameRulesExtension;
 	public abstract fun getSource ()Lorg/gradle/api/provider/Property;
 	public abstract fun getType ()Lorg/gradle/api/provider/Property;
 }

@@ -26,7 +26,9 @@
 #   apply.sh android <work>   build the Android AAR (zipline-android-ndk: Zipline's CMake and release
 #                             flags, -fwrapv) for arm64-v8a, armeabi-v7a, x86_64 and x86 with the NDK, and
 #                             check each ABI's libquickjs.so is in it, built with those flags, and (64-bit
-#                             ABIs) every LOAD segment aligned for 16 KB pages (llvm-readelf from the NDK)
+#                             ABIs) every LOAD segment aligned for 16 KB pages (llvm-readelf from the NDK),
+#                             and shipped stripped (-Wl,--strip-all: no .debug_*, .symtab or .strtab) with
+#                             the Java_app_cash_zipline_ JNI exports in .dynsym
 #   apply.sh qjs-android <work>   after android: build android/run-js.c on the fork's engine and on the
 #                             unpatched release with the NDK, per ABI, with the AAR's compile line for
 #                             quickjs.c (its target and every flag; for check-bigint-device)
@@ -63,7 +65,7 @@
 #                             the JVM tests ran with on every host), into the source tree
 #   apply.sh release <work> <empty maven repo dir> [--central <tested repo>]   step 4, after engine and
 #                             jni-all (or jni-from): every Zipline artifact as
-#                             dev.keliver.zipline:<upstream name>:1.28.0-keliver.1 (a Mac with Xcode),
+#                             dev.keliver.zipline:<upstream name>:$RELEASE_VERSION (a Mac with Xcode),
 #                             to the directory, checked by check-release.py and listed with sizes; with
 #                             --central, signed, checked, its native libraries compared with the tested
 #                             repository's (publish-checks.py natives: identical sha256s), then to Maven
@@ -110,7 +112,7 @@ FORK_VERSION=1.28.0-q20260604
 # The release's coordinates: the one place they are written (zipline-build.init.gradle gets the
 # group as -PziplineForkRelease; use-release.init.gradle and the workflow read both from here).
 RELEASE_GROUP=dev.keliver.zipline
-RELEASE_VERSION=1.28.0-keliver.1
+RELEASE_VERSION=1.28.0-keliver.2
 # The version of vanniktech's maven-publish plugin Zipline's build uploads with. What `release
 # --central` relies on from it was read from this version's bytecode (the fork's README, "What the
 # upload relies on"): the bundle zip is written right before the upload and never deleted, and a
@@ -415,7 +417,7 @@ do_android() { # the AAR, from Zipline's own build (zipline-android-ndk's CMake 
   zipline_gradle :zipline-android-ndk:assembleRelease
   local aar="$zl/zipline-android-ndk/build/outputs/aar/zipline-android-ndk-release.aar"
   local bin; bin="$(ndk_bin)"
-  local listing abi size line flag fail=0 so aligns a min tmp base base_listing base_size
+  local sections sec listing abi size line flag fail=0 so aligns a min tmp base base_listing base_size
   listing="$(unzip -l "$aar")"
   # The baseline for the sizes: 1.28.0's AAR from Maven Central, checked against its .sha1.
   local central="https://repo1.maven.org/maven2/app/cash/zipline/zipline-android-ndk/$ZIPLINE_TAG"
@@ -457,6 +459,23 @@ do_android() { # the AAR, from Zipline's own build (zipline-android-ndk's CMake 
         arm64-v8a|x86_64) echo "android: $abi: libquickjs.so LOAD alignment $aligns, below 16 KB (0x4000)" >&2; fail=1 ;;
         *) echo "android: $abi: NOTE libquickjs.so LOAD alignment $aligns, below 16 KB (no 32-bit device has 16 KB pages)" ;;
       esac
+    fi
+    # No debug information in the library the AAR ships: no .debug_* section, no static .symtab (the
+    # dynamic symbols JNI needs are .dynsym). Printed per ABI, so a regression shows what grew.
+    sections="$("$bin/llvm-readelf" -SW "$so" | sed -n 's/^ *\[ *[0-9]*\] *\([^ ]*\) .*/\1/p' | tr '\n' ' ')"
+    echo "android: $abi sections: ${sections% }"
+    for sec in $sections; do
+      case "$sec" in
+        .debug_*|.symtab|.strtab) echo "android: $abi: libquickjs.so carries $sec (the AAR must ship it stripped)" >&2; fail=1 ;;
+      esac
+    done
+    case " $sections " in *" .dynsym "*) ;; *) echo "android: $abi: libquickjs.so has no .dynsym (JNI needs it)" >&2; fail=1 ;; esac
+    # Zipline has no JNI_OnLoad/RegisterNatives: the JVM finds the natives by dlsym of these names.
+    jni_exports="$("$bin/llvm-readelf" --dyn-syms -W "$so" | grep -c 'Java_app_cash_zipline_' || true)"
+    if [ "$jni_exports" -lt 1 ]; then
+      echo "android: $abi: libquickjs.so exports no Java_app_cash_zipline_ symbol in .dynsym (JNI could not find its natives)" >&2; fail=1
+    else
+      echo "android: $abi: $jni_exports Java_app_cash_zipline_ exports in .dynsym"
     fi
     base_size="$(awk -v f="jni/$abi/libquickjs.so" '$4 == f {print $1}' <<<"$base_listing")"
     [ -n "$base_size" ] && base_size=", $ZIPLINE_TAG's $base_size ($(awk -v a="$size" -v b="$base_size" 'BEGIN {printf "%+.1f%%", (a - b) * 100 / b}'))"
