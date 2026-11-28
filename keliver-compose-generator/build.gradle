@@ -48,6 +48,9 @@ dependencies {
     composeApi it
     composeSources "$it:sources@jar"
   }
+  // GenericEmit's call records read TextStyle's default expressions from ui-text's sources (from #312).
+  // Sources only: the API inputs, and so every generated group, are unchanged.
+  composeSources "${desktopOf(libs.jetbrains.compose.ui.asProvider(), 'ui-text')}:sources@jar"
 }
 
 // Recorded in the generated files' header, so a regeneration's diff names the Compose it read.
@@ -115,6 +118,14 @@ def rootArgs = { List extra ->
   ['--root', file('root.json').absolutePath, '--out-schema', rootProject.file('keliver-compose-root-schema/src/main/kotlin').absolutePath] + extra
 }
 
+// The editor canvas's interpreter (MS4-41, G0): each group that passes --out-editor-render writes its
+// own GeneratedEditorRender_<Group>.kt; one generated dispatcher (Generated.kt) lists those groups.
+def editorRenderDir = rootProject.file('portal-compose-render/src/commonMain/kotlin').absolutePath
+def editorRenderGroups = groups.findAll { it.args.contains('--out-editor-render') }.collect { it.name }
+def editorRenderArgs = { List extra ->
+  ['--editor-dispatcher', editorRenderGroups.join(','), '--out-editor-render', editorRenderDir] + extra
+}
+
 def generateTasks = groups.collect { group ->
   tasks.register("generateComposeApi${group.name.capitalize()}", JavaExec) {
     description = "Regenerate group ${group.name} (schema, guest stubs, host renderers, lock, editor metadata) from Compose"
@@ -129,13 +140,22 @@ def generateRoot = tasks.register('generateComposeApiRoot', JavaExec) {
   mainClass = 'dev.keliver.compose.generator.MainKt'
   args = rootArgs([])
 }
-// Each group after the one before it: the prototype reads the factory tags core has just written.
+def generateEditorRender = tasks.register('generateComposeApiEditorRender', JavaExec) {
+  description = 'Regenerate the editor interpreter\'s dispatcher over the groups that write one'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.keliver.compose.generator.MainKt'
+  args = editorRenderArgs([])
+}
+// Each group after the one before it: the prototype reads the factory tags core has just written
+// (the values owner's lock is the one ordering the groups share).
 generateTasks.eachWithIndex { task, i -> if (i > 0) task.configure { mustRunAfter(generateTasks[i - 1]) } }
 
+// The aggregate stays what CI and the docs run; each group's own task is generateComposeApi<Group>
+// (generateComposeApiCore, ...Coil, ...Gatea), writing and checking only that group's files.
 tasks.register('generateComposeApi') {
   group = 'build'
-  description = 'Regenerate every generated group (the product\'s core and coil, and the prototype) and the root schema from Compose'
-  dependsOn(generateTasks + [generateRoot])
+  description = 'Regenerate every generated group (the product\'s core and coil, and the prototype), the root schema and the editor dispatcher from Compose'
+  dependsOn(generateTasks + [generateRoot, generateEditorRender])
 }
 
 // GeneratorTest reads the same Compose API (and, for default texts, its sources) the generator does.
@@ -163,8 +183,15 @@ def checkRoot = tasks.register('checkComposeApiRoot', JavaExec) {
   args = rootArgs(['--check'])
 }
 
+def checkEditorRender = tasks.register('checkComposeApiEditorRender', JavaExec) {
+  description = 'Fails when the editor interpreter\'s checked-in dispatcher differs from a fresh generation'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.keliver.compose.generator.MainKt'
+  args = editorRenderArgs(['--check'])
+}
+
 tasks.register('checkComposeApi') {
   group = 'verification'
-  description = 'Fails when any generated group\'s (or the root\'s) checked-in sources or lock differ from a fresh generation, or a lock changed other than by appends'
-  dependsOn(checkTasks + [checkRoot])
+  description = 'Fails when any generated group\'s (or the root\'s, or the editor dispatcher\'s) checked-in sources or lock differ from a fresh generation, or a lock changed other than by appends'
+  dependsOn(checkTasks + [checkRoot, checkEditorRender])
 }

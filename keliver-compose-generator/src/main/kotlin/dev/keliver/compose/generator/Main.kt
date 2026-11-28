@@ -125,6 +125,24 @@ fun main(argv: Array<String>) {
   fun arg(name: String) = args[args.indexOf(name) + 1]
   val check = "--check" in args
   if ("--root" in args) return root(File(arg("--root")), File(arg("--out-schema")), check)
+  if ("--editor-dispatcher" in args) return editorDispatcherMain(arg("--editor-dispatcher").split(',').filter { it.isNotEmpty() }, File(arg("--out-editor-render")), check)
+  val problems = runGroup(args)
+  if (problems.isNotEmpty()) {
+    System.err.println(
+      if (check) "checkComposeApi failed (run :keliver-compose-generator:generateComposeApi):\n  " + problems.joinToString("\n  ")
+      else "refusing to write: the lock would change other than by appends:\n  " + problems.joinToString("\n  "),
+    )
+    exitProcess(1)
+  }
+}
+
+/**
+ * One group's generation (or, with `--check`, its staleness check): writes only that group's own files
+ * and returns the problems (empty when done); never exits, so a test can drive it.
+ */
+fun runGroup(args: List<String>): List<String> {
+  fun arg(name: String) = args[args.indexOf(name) + 1]
+  val check = "--check" in args
   val config = loadConfig(File(arg("--config"))).also { it.input = if ("--input" in args) arg("--input") else null }
   val lockFile = File(arg("--lock"))
   fun readLock(file: File) = lockJson.decodeFromString(Lock.serializer(), file.readText())
@@ -144,42 +162,56 @@ fun main(argv: Array<String>) {
   val sources = arg("--sources").split(File.pathSeparator).map(::File)
   val out = generate(config, oldLock, classpath, sources, factoryOwner)
 
-  // Each output root is one group's own (the values root is the owner group's), so the stale check
-  // below never deletes another group's files.
+  // A group's generation and check touch only that group's own files (MS4-41, G0). Each root names
+  // the file it holds of this group's: the schema, guest and host roots are the group's own modules
+  // (`Generated.kt`); the values root is the owner group's (`GeneratedDefaults.kt`, never written by
+  // another group's run); the editor-render root is shared by every group, so a group owns only its
+  // `GeneratedEditorRender_<Group>.kt` there (the dispatcher `Generated.kt` is the dispatcher's).
+  class GroupRoot(val root: File, val files: Map<String, String>, val ownFileName: String)
   val roots = listOf(
-    File(arg("--out-schema")) to out.schema,
-    File(arg("--out-guest")) to out.guest,
-    File(arg("--out-host")) to out.host,
-  ) + (if ("--out-values" in args) listOf(File(arg("--out-values")) to out.values) else emptyList()) +
-    (if ("--out-editor-render" in args) listOf(File(arg("--out-editor-render")) to out.editorRender) else emptyList())
+    GroupRoot(File(arg("--out-schema")), out.schema, "Generated.kt"),
+    GroupRoot(File(arg("--out-guest")), out.guest, "Generated.kt"),
+    GroupRoot(File(arg("--out-host")), out.host, "Generated.kt"),
+  ) + (if ("--out-values" in args) listOf(GroupRoot(File(arg("--out-values")), out.values, GENERATED_DEFAULTS)) else emptyList()) +
+    (if ("--out-editor-render" in args) listOf(GroupRoot(File(arg("--out-editor-render")), out.editorRender, editorRenderFile(config.group))) else emptyList())
   val expected = buildMap {
-    for ((root, files) in roots) for ((path, text) in files) put(File(root, path), text)
+    for (r in roots) for ((path, text) in r.files) put(File(r.root, path), text)
     put(File(arg("--out-editor")), out.editor)
     put(lockFile, lockJson.encodeToString(Lock.serializer(), out.lock) + "\n")
   }
-  // A Generated.kt (or GeneratedDefaults.kt) the generator no longer writes is stale.
-  val stale = roots.flatMap { (root, _) -> root.walk().filter { it.name == "Generated.kt" || it.name == GENERATED_DEFAULTS }.toList() }
+  // One of this group's own files the generator no longer writes is stale; nothing else is looked at.
+  val stale = roots.flatMap { r -> r.root.walk().filter { it.name == r.ownFileName }.toList() }
     .filter { it !in expected }
 
   val problems = checkAppendOnly(oldLock, out.lock).toMutableList()
   if (check) {
     for ((file, text) in expected) if (!file.exists() || file.readText() != text) problems += "$file is out of date"
     stale.forEach { problems += "$it is stale" }
-    if (problems.isNotEmpty()) {
-      System.err.println("checkComposeApi failed (run :keliver-compose-generator:generateComposeApi):\n  " + problems.joinToString("\n  "))
-      exitProcess(1)
-    }
-    println("checkComposeApi: up to date (group ${config.group}, level ${out.lock.level})")
-  } else {
-    if (problems.isNotEmpty()) {
-      System.err.println("refusing to write: the lock would change other than by appends:\n  " + problems.joinToString("\n  "))
-      exitProcess(1)
-    }
+    if (problems.isEmpty()) println("checkComposeApi: up to date (group ${config.group}, level ${out.lock.level})")
+  } else if (problems.isEmpty()) {
     stale.forEach { it.delete() }
     for ((file, text) in expected) {
       file.parentFile.mkdirs()
       file.writeText(text)
     }
     println("generated group ${config.group}: level ${out.lock.level}, ${out.lock.widgets.size} widgets, ${out.lock.modifiers.size} modifiers")
+  }
+  return problems
+}
+
+/** `--editor-dispatcher <group,group> --out-editor-render <dir> [--check]`: writes (or checks) the editor interpreter's dispatcher. */
+fun editorDispatcherMain(groups: List<String>, outRender: File, check: Boolean) {
+  val (path, text) = editorDispatcher(groups, EDITOR_RENDER_PACKAGE)
+  val file = File(outRender, path)
+  if (check) {
+    if (!file.exists() || file.readText() != text) {
+      System.err.println("checkComposeApi failed (run :keliver-compose-generator:generateComposeApiEditorRender):\n  $file is out of date")
+      exitProcess(1)
+    }
+    println("checkComposeApi: up to date (editor dispatcher over ${groups.joinToString()})")
+  } else {
+    file.parentFile.mkdirs()
+    file.writeText(text)
+    println("generated editor dispatcher over ${groups.joinToString()}")
   }
 }
