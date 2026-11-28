@@ -27,10 +27,52 @@ public final class dev/keliver/compose/BackHandlerKt {
 	public static final fun getLocalOnBackPressedDispatcher ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 }
 
+public final class dev/keliver/compose/CachedFrameKt {
+	public static final fun CachedFrame (Ldev/keliver/compose/FrameCachePolicy;ZLjava/lang/String;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
+	public static final fun cached (Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;I)Ldev/keliver/Modifier;
+	public static final fun getLocalFrameScopeSink ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+	public static final fun notCached (Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;I)Ldev/keliver/Modifier;
+	public static final fun rememberFrameScope (Landroidx/compose/runtime/Composer;I)Ldev/keliver/compose/FrameScope;
+}
+
 public abstract interface annotation class dev/keliver/compose/ExperimentalKeliverBackApi : java/lang/annotation/Annotation {
 }
 
 public abstract interface annotation class dev/keliver/compose/ExperimentalKeliverHostFeaturesApi : java/lang/annotation/Annotation {
+}
+
+public abstract interface class dev/keliver/compose/FrameCacheMarker : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getFields ()Ljava/util/Map;
+	public abstract fun getTag ()I
+}
+
+public final class dev/keliver/compose/FrameCachePolicy {
+	public static final field $stable I
+	public synthetic fun <init> (Ldev/keliver/compose/FrameContent;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContent ()Ldev/keliver/compose/FrameContent;
+	public final fun getMaxAge-UwyO8pc ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/compose/FrameContent : java/lang/Enum {
+	public static final field Shell Ldev/keliver/compose/FrameContent;
+	public static final field Whole Ldev/keliver/compose/FrameContent;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/compose/FrameContent;
+	public static fun values ()[Ldev/keliver/compose/FrameContent;
+}
+
+public final class dev/keliver/compose/FrameScope {
+	public static final field $stable I
+	public final fun sessionChanged (Ljava/lang/String;)V
+	public final fun variantChanged (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/compose/FrameScopeSink {
+	public abstract fun sessionChanged (Ljava/lang/String;)V
+	public abstract fun variantChanged (Ljava/lang/String;)V
 }
 
 public final class dev/keliver/compose/HostFeaturesKt {
@@ -39,6 +81,8 @@ public final class dev/keliver/compose/HostFeaturesKt {
 
 public final class dev/keliver/compose/KeliverHostFeatures {
 	public static final field $stable I
+	public static final field CACHED_FRAME_1 Ljava/lang/String;
+	public static final field FRAME_SCOPE_1 Ljava/lang/String;
 	public static final field INSTANCE Ldev/keliver/compose/KeliverHostFeatures;
 	public static final field NAV_RETAINED_CONTAINER_1 Ljava/lang/String;
 	public static final field PRESS_1 Ljava/lang/String;

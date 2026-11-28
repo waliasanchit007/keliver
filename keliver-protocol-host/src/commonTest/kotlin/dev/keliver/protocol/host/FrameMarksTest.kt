@@ -54,7 +54,7 @@ class FrameMarksTest {
   private val protocol = FakeProtocol(mismatches)
   private val container = FakeChildren()
   private val adapter = HostProtocolAdapter(
-    guestVersion = RedwoodVersion("test"),
+    guestVersion = RedwoodVersion("0.5.0"),
     container = container,
     protocol = protocol,
     widgetSystem = object : WidgetSystem<String> {
