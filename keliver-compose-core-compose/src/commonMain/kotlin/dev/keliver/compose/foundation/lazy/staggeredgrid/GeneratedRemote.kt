@@ -66,7 +66,7 @@ public class LazyStaggeredGridState(public val remote: RemoteObject) {
   public val isScrollInProgress: kotlin.Boolean get() = remote.read(7)?.jsonPrimitive?.booleanOrNull ?: false
 
   @Deprecated("Keliver: `LazyStaggeredGridState.scroll` takes an argument type (`scrollPriority`: MutatePriority), which does not cross to the guest.", level = DeprecationLevel.ERROR)
-  public fun scroll(vararg args: Any?): Nothing = error("not remote")
+  public fun scroll(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 
   /** `scrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)` on the host's state; returns when the host's call returns. */
   public suspend fun scrollToItem(index: kotlin.Int, scrollOffset: kotlin.Int = 0) {
@@ -93,31 +93,33 @@ public class LazyStaggeredGridState(public val remote: RemoteObject) {
   }
 
   @Deprecated("Keliver: `LazyStaggeredGridState.dispatchRawDelta` returns a value synchronously: the host's answer cannot be waited for in composition.", level = DeprecationLevel.ERROR)
-  public fun dispatchRawDelta(vararg args: Any?): Nothing = error("not remote")
+  public fun dispatchRawDelta(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 }
 
 /**
  * Creates the proxy of a host `LazyStaggeredGridState`, made on the host by `rememberLazyStaggeredGridState` with these arguments. A lambda is sampled: its value is sent
  * whenever it changes.
- * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host
- * reported of `initialFirstVisibleItemIndex`, `initialFirstVisibleItemScrollOffset`'s fields, and passes them back as those arguments after a restore (so the fields are always observed).
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host
+ * reported of `initialFirstVisibleItemIndex`, `initialFirstVisibleItemScrollOffset`'s fields (once the state has been still: a scroll reports nothing per frame unless the
+ * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.
  */
 @Composable
 public fun rememberLazyStaggeredGridState(initialFirstVisibleItemIndex: kotlin.Int = 0, initialFirstVisibleItemScrollOffset: kotlin.Int = 0): LazyStaggeredGridState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 3) {
+    RemoteObject(RemoteObject.nextId(), 3, "LazyStaggeredGridState", listOf(1, 2)) {
       kotlinx.serialization.json.buildJsonObject {
-        put("initialFirstVisibleItemIndex", restore.saved?.get("initialFirstVisibleItemIndex") ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemIndex))
-        put("initialFirstVisibleItemScrollOffset", restore.saved?.get("initialFirstVisibleItemScrollOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemScrollOffset))
+        put("initialFirstVisibleItemIndex", peek(1) ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemIndex))
+        put("initialFirstVisibleItemScrollOffset", peek(2) ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemScrollOffset))
       }
     }.also { r ->
-      r.read(1)
-      r.read(2)
+      r.seed(1, restore.saved?.get("initialFirstVisibleItemIndex") ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemIndex))
+      r.seed(2, restore.saved?.get("initialFirstVisibleItemScrollOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemScrollOffset))
+      restore.saved = null
       restore.live = {
         kotlinx.serialization.json.buildJsonObject {
-          r.read(1)?.let { put("initialFirstVisibleItemIndex", it) }
-          r.read(2)?.let { put("initialFirstVisibleItemScrollOffset", it) }
+          r.peek(1)?.let { put("initialFirstVisibleItemIndex", it) }
+          r.peek(2)?.let { put("initialFirstVisibleItemScrollOffset", it) }
         }
       }
     }

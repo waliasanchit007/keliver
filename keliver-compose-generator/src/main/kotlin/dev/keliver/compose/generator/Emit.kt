@@ -170,7 +170,13 @@ class Emitter(
               append("  @Property(${p.getValue("$n.viewport")}) val ${n}Viewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?,\n")
             }
             ParamKind.EVENT -> append("  @Property($tag) val ${c.param.name}: ((${t.functionParams.joinToString(", ") { it.fq }}) -> Unit)?,\n")
-            else -> append("  @Property($tag) ${frameRules.valueAnnotation(w, c)}val ${c.param.name}: ${TypeMap.wireType(t, t.nullable || c.defaultCase == DefaultCase.EXPRESSION)},\n")
+            else -> {
+              append("  @Property($tag) ${frameRules.valueAnnotation(w, c)}val ${c.param.name}: ${TypeMap.wireType(t, t.nullable || c.defaultCase == DefaultCase.EXPRESSION)},\n")
+              // A remote object's state (MS4-43): the host's report comes back as this widget's event.
+              if (t.fq in TypeMap.remoteState) {
+                append("  @Property(${w.entry.params.getValue("${c.param.name}.report")}) val ${c.param.name}Report: ((${TypeMap.REMOTE_REPORT}) -> Unit)?,\n")
+              }
+            }
           }
         }
         append("  @Property($MODIFIER_EVENT_TAG) val modifierEvent: ((kotlin.Int) -> Unit)? = null,\n)\n\n")
@@ -352,6 +358,9 @@ class Emitter(
     p.params.filter { it.defaultCase == DefaultCase.EXPRESSION }.forEach {
       append("  val default_${it.param.name} = ${it.param.defaultText}\n")
     }
+    for (c in p.params.filter { it.kind == ParamKind.VALUE && it.param.type.fq in TypeMap.remoteState }) {
+      append("  val ${c.param.name}Wire = ${c.param.name}.remote.bind()\n")
+    }
     for (c in p.params.filter { it.kind == ParamKind.LAZY }) {
       val state = p.lazyState ?: error("${d.spec}: a lazy list needs a LazyListState parameter")
       append("  val window_${c.param.name} = dev.keliver.compose.foundation.lazy.rememberLazyWindow(${state.param.name}, ${c.param.name})\n")
@@ -373,6 +382,9 @@ class Emitter(
           append("    ${n}Viewport = window_$n::onViewport,\n")
         }
         ParamKind.VALUE -> when {
+          // A remote object's state (MS4-43): bound to this widget from its first composition (the wire is the
+          // property, the host's report the event), so the screen never names the binding.
+          c.param.type.fq in TypeMap.remoteState -> append("    $n = ${n}Wire,\n    ${n}Report = $n::onHostReport,\n")
           c.param.type.fq == TypeMap.IMAGE_MODEL -> append("    $n = dev.keliver.compose.internal.imageModel($n),\n")
           c.explicitNull -> append("    $n = if ($n == default_$n) null else ($n ?: ${mirrorFq(c.param.type.fq)}.ExplicitNull),\n")
           c.defaultCase == DefaultCase.EXPRESSION -> append("    $n = if ($n == default_$n) null else ${TypeMap.sendExpr(c.param.type, n)},\n")
@@ -522,6 +534,10 @@ class Emitter(
             // parameter travelled never sends it, and the renderer then uses Compose's default.
             body.append("  private var p_$n: Any? = ${if (c.param.hasDefault) "null" else "Unset"}\n")
             body.append("  override fun $n($n: ${TypeMap.wireType(c.param.type, c.param.type.nullable || c.defaultCase == DefaultCase.EXPRESSION)}) { if (p_$n != $n) { p_$n = $n; version++ } }\n")
+            if (c.param.type.fq in TypeMap.remoteState) {
+              body.append("  private var p_${n}Report: ((${TypeMap.REMOTE_REPORT}) -> Unit)? = null\n")
+              body.append("  override fun ${n}Report(${n}Report: ((${TypeMap.REMOTE_REPORT}) -> Unit)?) { p_${n}Report = ${n}Report }\n")
+            }
           }
         }
       }
@@ -696,6 +712,11 @@ class Emitter(
   private fun hostLocal(c: Classified, d: DeclInfo, imports: MutableSet<String>): String? {
     val n = c.param.name
     val t = c.param.type
+    // A remote object's state (MS4-43): the real state is made here, by the generated factory (GeneratedRemote.kt) the
+    // guest's commands run on, from the first frame, and reports back through this widget's event.
+    if (c.kind == ParamKind.VALUE && t.fq in TypeMap.remoteState) {
+      return "val $n = GeneratedRemoteObjects.host(p_$n as ${TypeMap.REMOTE_WIRE}) { r -> (p_${n}Report as ((${TypeMap.REMOTE_REPORT}) -> Unit)?)?.invoke(r) } as ${t.fq}"
+    }
     return when (c.kind) {
       ParamKind.VALUE -> {
         val sentNullable = t.nullable || c.defaultCase == DefaultCase.EXPRESSION
@@ -1006,6 +1027,8 @@ class Emitter(
       // A lazy list's content is a LazyListScope block, not a slot: the canvas does not draw it yet
       // (renderGenerated says false, and the canvas reports the node instead of guessing).
       if (w.params.any { it.kind == ParamKind.LAZY }) continue
+      // Nor does a widget that takes a remote object's state (MS4-43): the canvas has no host to own it.
+      if (w.params.any { it.kind == ParamKind.VALUE && it.param.type.fq in TypeMap.remoteState }) continue
       val d = w.decl
       currentDecl = d
       body.append("    \"${d.mirrorPkg}.${d.name}#${w.entry.tag}\" -> {\n")

@@ -24,6 +24,7 @@ import kotlin.metadata.Visibility
 import kotlin.metadata.declaresDefaultValue
 import kotlin.metadata.isNullable
 import kotlin.metadata.isSuspend
+import kotlin.metadata.isVar
 import kotlin.metadata.jvm.signature
 import kotlin.metadata.visibility
 
@@ -54,13 +55,15 @@ import kotlin.metadata.visibility
 class RemoteObjectEmitter(private val index: GenericIndex, private val src: SourceReader, private val config: Config, private val lock: LockBuilder) {
   /** A class's members, as classified. */
   class Member(val key: String, val kind: Kind, val name: String, val detail: String) {
-    enum class Kind { OBSERVED, AWAITED, UNAWAITED, STUB }
+    /** SETTER: a `var`'s setter, which crosses as a command that is not awaited (the field is [OBSERVED] by the same name). */
+    enum class Kind { OBSERVED, AWAITED, UNAWAITED, SETTER, STUB }
   }
 
   class ClassReport(val fq: String, val tag: Int, val members: List<Member>, val factory: String) {
     val observed get() = members.filter { it.kind == Member.Kind.OBSERVED }
     val awaited get() = members.filter { it.kind == Member.Kind.AWAITED }
-    val unawaited get() = members.filter { it.kind == Member.Kind.UNAWAITED }
+    val unawaited get() = members.filter { it.kind == Member.Kind.UNAWAITED || it.kind == Member.Kind.SETTER }
+    val setters get() = members.filter { it.kind == Member.Kind.SETTER }
     val stubs get() = members.filter { it.kind == Member.Kind.STUB }
   }
 
@@ -94,6 +97,17 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
 
   private fun simple(fq: String) = fq.substringAfterLast('.')
 
+  /** A type as a message writes it: simple names, arguments kept (`Function1<Float, Unit>?`, never `Unit>?`). */
+  private fun shortType(t: KmType): String {
+    val base = when (val c = t.classifier) {
+      is KmClassifier.Class -> simple(c.name.replace('/', '.'))
+      is KmClassifier.TypeAlias -> simple(c.name.replace('/', '.'))
+      is KmClassifier.TypeParameter -> "T"
+    }
+    val args = if (t.arguments.isEmpty()) "" else t.arguments.joinToString(", ", "<", ">") { a -> a.type?.let(::shortType) ?: "*" }
+    return base + args + (if (t.isNullable) "?" else "")
+  }
+
   /** The guest's package of a Compose package (`androidx.compose.foundation.pager` → `dev.keliver.compose.foundation.pager`). */
   private fun guestPackage(pkg: String) = "dev.keliver.compose." + pkg.removePrefix("androidx.compose.")
 
@@ -101,6 +115,9 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
 
   /** The member text of the wire key: `name(p:Type,…)` for a command. */
   private fun commandKey(f: KmFunction) = f.name + "(" + f.valueParameters.joinToString(",") { it.name + ":" + typeKey(it.type) } + ")"
+
+  /** A setter's lock key: the field's name and `=`. */
+  private fun setterKey(name: String) = "$name="
 
   private val literal = Regex("""-?\d+(\.\d+)?[fFL]?|true|false|null|"[^"\\]*"""")
 
@@ -123,7 +140,7 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
         }
         p.declaresDefaultValue -> dropped += p.name
         else -> {
-          val why = if (fqOf(p.type)?.startsWith("kotlin.Function") == true) "a lambda argument (`${p.name}`)" else "an argument type (`${p.name}`: ${simple(typeKey(p.type))})"
+          val why = if (fqOf(p.type)?.startsWith("kotlin.Function") == true) "a lambda argument (`${p.name}`)" else "an argument type (`${p.name}`: ${shortType(p.type)})"
           return Params(emptyList(), emptyMap(), emptyList(), why)
         }
       }
@@ -187,10 +204,14 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
       val jvm = index.jvmName(owner)
       for (p in k.properties.filter { it.visibility == Visibility.PUBLIC && it.receiverParameterType == null }) {
         if (!seen.add("p:" + p.name)) continue
-        out += if (crosses(p.returnType)) {
-          Member(p.name, Member.Kind.OBSERVED, p.name, "${p.name}: ${typeKey(p.returnType)}")
+        if (crosses(p.returnType)) {
+          out += Member(p.name, Member.Kind.OBSERVED, p.name, "${p.name}: ${typeKey(p.returnType)}")
+          // A settable primitive is a `var` on the guest: the new value reads back at once, and crosses as a command that is not awaited.
+          if (p.isVar && (p.setter?.visibility ?: Visibility.PUBLIC) == Visibility.PUBLIC) {
+            out += Member(setterKey(p.name), Member.Kind.SETTER, p.name, "${p.name} = ${typeKey(p.returnType)}")
+          }
         } else {
-          Member(p.name, Member.Kind.STUB, p.name, "`$sn.${p.name}` (${simple(typeKey(p.returnType))}) is a type that does not cross to the guest")
+          out += Member(p.name, Member.Kind.STUB, p.name, "`$sn.${p.name}` (${shortType(p.returnType)}) is a type that does not cross to the guest")
         }
       }
       for (f in k.functions.filter { it.visibility == Visibility.PUBLIC && it.receiverParameterType == null && !index.isHidden(jvm, it) }) {
@@ -202,7 +223,7 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
         out += when {
           ps.unsupported != null -> Member(key, Member.Kind.STUB, name, "`$sn.$name` takes ${ps.unsupported}, which does not cross to the guest")
           !f.isSuspend && !unit -> Member(key, Member.Kind.STUB, name, "`$sn.$name` returns a value synchronously: the host's answer cannot be waited for in composition")
-          f.isSuspend && !unit && !crosses(f.returnType) -> Member(key, Member.Kind.STUB, name, "`$sn.$name` returns ${simple(typeKey(f.returnType))}, a type that does not cross to the guest")
+          f.isSuspend && !unit && !crosses(f.returnType) -> Member(key, Member.Kind.STUB, name, "`$sn.$name` returns ${shortType(f.returnType)}, a type that does not cross to the guest")
           f.isSuspend -> Member(key, Member.Kind.AWAITED, name, key)
           else -> Member(key, Member.Kind.UNAWAITED, name, key)
         }
@@ -228,6 +249,27 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
     error("$fq.$name")
   }
 
+  /**
+   * What the wire carries, as the lock records it (MS4-43, M3): each field's type, each command's result,
+   * each setter's value type, and each argument of the factory (`@init.<name>`; a lambda the guest samples
+   * is `()->T`). A Compose upgrade that changes any of them changes the wire, and fails `checkAppendOnly`.
+   */
+  private fun wireTypes(fq: String, crossing: List<Member>, factory: KmFunction): Map<String, String> {
+    val commands = commandsOf(fq)
+    val out = linkedMapOf<String, String>()
+    for (m in crossing) {
+      out[m.key] = when (m.kind) {
+        Member.Kind.OBSERVED, Member.Kind.SETTER -> typeKey(propertyType(fq, m.name))
+        else -> typeKey(commands.getValue(m.key).second.returnType)
+      }
+    }
+    val pkg = packageOf(fq)
+    for (p in paramsOf(pkg, null, factory.name, factory.valueParameters, true).sent) {
+      out["@init.${p.name}"] = if (isSupplier(p.type)) "()->" + typeKey(p.type.arguments.single().type!!) else typeKey(p.type)
+    }
+    return out
+  }
+
   /** `<specs>`: each `fq` or `fq#factoryFunction`. */
   fun generate(specs: List<String>): Result {
     val guest = linkedMapOf<String, StringBuilder>()
@@ -247,9 +289,9 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
       require(simpleNames.add(simple(fq))) { "two remote objects named ${simple(fq)}: the host's dispatcher names are their simple names" }
       val members = classify(fq)
       val crossing = members.filter { it.kind != Member.Kind.STUB }
-      val entry = lock.remote(fq, crossing.map { it.key })
-      val tag = { m: Member -> entry.params.getValue(m.key) }
       val factory = factoryOf(fq, factoryName)
+      val entry = lock.remote(fq, crossing.map { it.key }, wireTypes(fq, crossing, factory))
+      val tag = { m: Member -> entry.params.getValue(m.key) }
       classes += ClassReport(fq, entry.tag, members, factory.name)
 
       val pkg = packageOf(fq)
@@ -318,9 +360,17 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
       when (m.kind) {
         Member.Kind.OBSERVED -> {
           val t = propertyType(fq, m.name)
+          val setter = members.firstOrNull { it.kind == Member.Kind.SETTER && it.name == m.name }
           g.append("  /** The host's `${m.name}`, as last reported (observed from the first read; at most once a frame). */\n")
-          g.append("  public val ${m.name}: ${guestTypeOf(t)} get() = ${decodeGuest(t, "remote.read(${tag(m)})")}\n")
+          if (setter == null) {
+            g.append("  public val ${m.name}: ${guestTypeOf(t)} get() = ${decodeGuest(t, "remote.read(${tag(m)})")}\n")
+          } else {
+            // A settable field: reads back the new value at once; the host's field is set by a command that is not awaited.
+            g.append("  public var ${m.name}: ${guestTypeOf(t)}\n    get() = ${decodeGuest(t, "remote.read(${tag(m)})")}\n")
+            g.append("    set(value) {\n      remote.assign(${tag(m)}, ${encodeGuest(t, "value")}, ${tag(setter)}, kotlinx.serialization.json.buildJsonObject {\n        put(\"value\", ${encodeGuest(t, "value")})\n      })\n    }\n")
+          }
         }
+        Member.Kind.SETTER -> {}
         Member.Kind.AWAITED, Member.Kind.UNAWAITED -> {
           val (owner, f) = commands.getValue(m.key)
           val ps = paramsOf(packageOf(owner), owner.removePrefix(packageOf(owner) + "."), f.name, f.valueParameters, false)
@@ -336,7 +386,8 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
         Member.Kind.STUB -> if (stubNames.add(m.name)) {
           val isProperty = m.key == m.name
           g.append("  @Deprecated(\"Keliver: ${m.detail}.\", level = DeprecationLevel.ERROR)\n")
-          g.append(if (isProperty) "  public val ${m.name}: Nothing get() = error(\"not remote\")\n" else "  public fun ${m.name}(vararg args: Any?): Nothing = error(\"not remote\")\n")
+          // A call with a trailing lambda (`state.scroll { … }`) finds the stub too, so it shows the Keliver message.
+          g.append(if (isProperty) "  public val ${m.name}: Nothing get() = error(\"not remote\")\n" else "  public fun ${m.name}(vararg args: Any?, block: Any? = null): Nothing = error(\"not remote\")\n")
         }
       }
     }
@@ -351,24 +402,29 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
     }
     g.append("/**\n * Creates the proxy of a host `$sn`, made on the host by `${f.name}` with these arguments. A lambda is sampled: its value is sent\n * whenever it changes.")
     if (restore.isNotEmpty()) {
-      g.append("\n * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host\n * reported of ${restore.keys.joinToString { "`$it`" }}'s fields, and passes them back as those arguments after a restore (so the fields are always observed).")
+      g.append("\n * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host\n * reported of ${restore.keys.joinToString { "`$it`" }}'s fields (once the state has been still: a scroll reports nothing per frame unless the\n * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.")
     }
     g.append("\n */\n@Composable\npublic fun ${f.name}($params): $sn {\n")
     for (p in ps.sent.filter { isSupplier(it.type) }) g.append("  val ${p.name}Latest by rememberUpdatedState(${p.name})\n")
     if (restore.isNotEmpty()) g.append("  val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }\n")
-    g.append("  val remote = remember {\n    RemoteObject(RemoteObject.nextId(), $typeTag) {\n      kotlinx.serialization.json.buildJsonObject {\n")
+    g.append("  val remote = remember {\n    RemoteObject(RemoteObject.nextId(), $typeTag, \"$sn\", listOf(${restore.values.joinToString(", ")})) {\n      kotlinx.serialization.json.buildJsonObject {\n")
     for (p in ps.sent) {
       val v = if (isSupplier(p.type)) "${p.name}Latest()" else p.name
       val t = if (isSupplier(p.type)) p.type.arguments.single().type!! else p.type
       val value = encodeGuest(t, v)
-      g.append(if (p.name in restore) "        put(\"${p.name}\", restore.saved?.get(\"${p.name}\") ?: $value)\n" else "        put(\"${p.name}\", $value)\n")
+      // A restorable argument carries the position the guest last knew, so a host that re-creates the state starts there.
+      g.append(if (p.name in restore) "        put(\"${p.name}\", peek(${restore.getValue(p.name)}) ?: $value)\n" else "        put(\"${p.name}\", $value)\n")
     }
     g.append("      }\n    }")
     if (restore.isNotEmpty()) {
       g.append(".also { r ->\n")
-      for (tag in restore.values) g.append("      r.read($tag)\n")
+      for ((p, tag) in restore) {
+        val prm = ps.sent.first { it.name == p }
+        g.append("      r.seed($tag, restore.saved?.get(\"$p\") ?: ${encodeGuest(prm.type, p)})\n")
+      }
+      g.append("      restore.saved = null\n")
       g.append("      restore.live = {\n        kotlinx.serialization.json.buildJsonObject {\n")
-      for ((p, tag) in restore) g.append("          r.read($tag)?.let { put(\"$p\", it) }\n")
+      for ((p, tag) in restore) g.append("          r.peek($tag)?.let { put(\"$p\", it) }\n")
       g.append("        }\n      }\n    }")
     }
     g.append("\n  }\n  return remember(remote) { $sn(remote) }\n}\n\n")
@@ -377,6 +433,7 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
   private val hostImports = listOf(
     "androidx.compose.runtime.Composable",
     "androidx.compose.runtime.getValue",
+    "androidx.compose.runtime.key",
     "androidx.compose.runtime.rememberUpdatedState",
     "dev.keliver.compose.remote.RemoteObjectWire",
     "dev.keliver.compose.remote.RemoteReport",
@@ -405,12 +462,17 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
   private fun hostDispatcher(fq: String, sn: String, members: List<Member>, tag: (Member) -> Int, commands: Map<String, Pair<String, KmFunction>>): String = buildString {
     append("/** Host dispatcher for `$fq`: reads a field and runs a command on the real state, by tag. */\n")
     append("internal object ${sn}Remote : RemoteDispatcher<$fq> {\n")
-    append("  override fun read(state: $fq, member: Int): JsonElement = when (member) {\n")
+    // A tag this host does not know (a newer guest's) is null: the field is ignored, the command answered with a failure.
+    append("  override fun read(state: $fq, member: Int): JsonElement? = when (member) {\n")
     for (m in members.filter { it.kind == Member.Kind.OBSERVED }) {
       append("    ${tag(m)} -> ${encodeHost(propertyType(fq, m.name), "state.${m.name}")}\n")
     }
-    append("    else -> error(\"unknown field \$member\")\n  }\n\n")
-    append("  override suspend fun invoke(state: $fq, member: Int, args: JsonObject): JsonElement = when (member) {\n")
+    append("    else -> null\n  }\n\n")
+    append("  override suspend fun invoke(state: $fq, member: Int, args: JsonObject): JsonElement? = when (member) {\n")
+    for (m in members.filter { it.kind == Member.Kind.SETTER }) {
+      val t = propertyType(fq, m.name)
+      append("    ${tag(m)} -> {\n      state.${m.name} = ${decodeHost(t, "args.getValue(\"value\")")}\n      JsonNull\n    }\n")
+    }
     for (m in members.filter { it.kind == Member.Kind.AWAITED || it.kind == Member.Kind.UNAWAITED }) {
       val (owner, f) = commands.getValue(m.key)
       val ps = paramsOf(packageOf(owner), owner.removePrefix(packageOf(owner) + "."), f.name, f.valueParameters, false)
@@ -418,20 +480,28 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
       val unit = fqOf(f.returnType) == "kotlin.Unit"
       append("    ${tag(m)} -> ${if (unit) "{\n      $call\n      JsonNull\n    }" else encodeHost(f.returnType, call)}\n")
     }
-    append("    else -> error(\"unknown command \$member\")\n  }\n}\n")
+    append("    else -> null\n  }\n}\n")
+  }
+
+  /** A factory argument read from the guest's `init`, never throwing: a missing or mistyped one is the factory's default. */
+  private fun decodeInit(t: KmType, j: String, default: String?): String {
+    val p = prims.getValue(fqOf(t)!!)
+    val read = "($j as? JsonPrimitive)?.${p.read}"
+    return if (t.isNullable) read else "$read ?: ${default?.takeIf { it != "null" } ?: p.zero}"
   }
 
   private fun hostFactory(fq: String, sn: String, typeTag: Int, f: KmFunction, pkg: String): String {
     val ps = paramsOf(pkg, null, f.name, f.valueParameters, true)
-    val args = ps.sent.joinToString(",\n          ") { p ->
+    val args = ps.sent.joinToString(",\n            ") { p ->
       if (isSupplier(p.type)) {
         val t = p.type.arguments.single().type!!
-        "${p.name} = { ${decodeHost(t, "init.value.getValue(\"${p.name}\")")} }"
+        "${p.name} = { ${decodeInit(t, "init.value[\"${p.name}\"]", null)} }"
       } else {
-        "${p.name} = ${decodeHost(p.type, "wire.init.getValue(\"${p.name}\")")}"
+        "${p.name} = ${decodeInit(p.type, "wire.init[\"${p.name}\"]", ps.defaults[p.name])}"
       }
     }
-    return "    $typeTag -> {\n      val init = rememberUpdatedState(wire.init)\n      val state = $pkg.${f.name}(\n          $args\n      )\n" +
+    // Keyed by the guest's id: a binding that receives another proxy of the same class gets its own state (and its own commands).
+    return "    $typeTag -> key(wire.id) {\n      val init = rememberUpdatedState(wire.init)\n      val state = $pkg.${f.name}(\n            $args\n      )\n" +
       "      RemoteHost(wire, state, ${sn}Remote, report)\n      state\n    }\n"
   }
 }

@@ -54,7 +54,7 @@ public class SheetState(public val remote: RemoteObject) {
   public val hasPartiallyExpandedState: kotlin.Boolean get() = remote.read(4)?.jsonPrimitive?.booleanOrNull ?: false
 
   @Deprecated("Keliver: `SheetState.requireOffset` returns a value synchronously: the host's answer cannot be waited for in composition.", level = DeprecationLevel.ERROR)
-  public fun requireOffset(vararg args: Any?): Nothing = error("not remote")
+  public fun requireOffset(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 
   /** `expand()` on the host's state; returns when the host's call returns. */
   public suspend fun expand() {
@@ -92,7 +92,7 @@ public class SheetState(public val remote: RemoteObject) {
 @Composable
 public fun rememberModalBottomSheetState(skipPartiallyExpanded: kotlin.Boolean = false): SheetState {
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 4) {
+    RemoteObject(RemoteObject.nextId(), 4, "SheetState", listOf()) {
       kotlinx.serialization.json.buildJsonObject {
         put("skipPartiallyExpanded", kotlinx.serialization.json.JsonPrimitive(skipPartiallyExpanded))
       }
@@ -116,10 +116,24 @@ public class DatePickerState(public val remote: RemoteObject) {
   }
 
   /** The host's `selectedDateMillis`, as last reported (observed from the first read; at most once a frame). */
-  public val selectedDateMillis: kotlin.Long? get() = remote.read(1)?.jsonPrimitive?.longOrNull
+  public var selectedDateMillis: kotlin.Long?
+    get() = remote.read(1)?.jsonPrimitive?.longOrNull
+    set(value) {
+      remote.assign(1, if (value == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(value), 2, kotlinx.serialization.json.buildJsonObject {
+        put("value", if (value == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   /** The host's `displayedMonthMillis`, as last reported (observed from the first read; at most once a frame). */
-  public val displayedMonthMillis: kotlin.Long get() = remote.read(2)?.jsonPrimitive?.longOrNull ?: 0L
+  public var displayedMonthMillis: kotlin.Long
+    get() = remote.read(3)?.jsonPrimitive?.longOrNull ?: 0L
+    set(value) {
+      remote.assign(3, kotlinx.serialization.json.JsonPrimitive(value), 4, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   @Deprecated("Keliver: `DatePickerState.displayMode` (DisplayMode) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
   public val displayMode: Nothing get() = error("not remote")
@@ -137,22 +151,24 @@ public class DatePickerState(public val remote: RemoteObject) {
 /**
  * Creates the proxy of a host `DatePickerState`, made on the host by `rememberDatePickerState` with these arguments. A lambda is sampled: its value is sent
  * whenever it changes.
- * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host
- * reported of `initialSelectedDateMillis`'s fields, and passes them back as those arguments after a restore (so the fields are always observed).
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host
+ * reported of `initialSelectedDateMillis`'s fields (once the state has been still: a scroll reports nothing per frame unless the
+ * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.
  */
 @Composable
 public fun rememberDatePickerState(initialSelectedDateMillis: kotlin.Long? = null): DatePickerState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 5) {
+    RemoteObject(RemoteObject.nextId(), 5, "DatePickerState", listOf(1)) {
       kotlinx.serialization.json.buildJsonObject {
-        put("initialSelectedDateMillis", restore.saved?.get("initialSelectedDateMillis") ?: if (initialSelectedDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedDateMillis))
+        put("initialSelectedDateMillis", peek(1) ?: if (initialSelectedDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedDateMillis))
       }
     }.also { r ->
-      r.read(1)
+      r.seed(1, restore.saved?.get("initialSelectedDateMillis") ?: if (initialSelectedDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedDateMillis))
+      restore.saved = null
       restore.live = {
         kotlinx.serialization.json.buildJsonObject {
-          r.read(1)?.let { put("initialSelectedDateMillis", it) }
+          r.peek(1)?.let { put("initialSelectedDateMillis", it) }
         }
       }
     }
@@ -181,7 +197,14 @@ public class DateRangePickerState(public val remote: RemoteObject) {
   public val selectedEndDateMillis: kotlin.Long? get() = remote.read(2)?.jsonPrimitive?.longOrNull
 
   /** The host's `displayedMonthMillis`, as last reported (observed from the first read; at most once a frame). */
-  public val displayedMonthMillis: kotlin.Long get() = remote.read(3)?.jsonPrimitive?.longOrNull ?: 0L
+  public var displayedMonthMillis: kotlin.Long
+    get() = remote.read(3)?.jsonPrimitive?.longOrNull ?: 0L
+    set(value) {
+      remote.assign(3, kotlinx.serialization.json.JsonPrimitive(value), 4, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   @Deprecated("Keliver: `DateRangePickerState.displayMode` (DisplayMode) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
   public val displayMode: Nothing get() = error("not remote")
@@ -197,7 +220,7 @@ public class DateRangePickerState(public val remote: RemoteObject) {
 
   /** `setSelection(startDateMillis:kotlin.Long?,endDateMillis:kotlin.Long?)` on the host's state; sent, not awaited. */
   public fun setSelection(startDateMillis: kotlin.Long?, endDateMillis: kotlin.Long?) {
-    remote.send(4, kotlinx.serialization.json.buildJsonObject {
+    remote.send(5, kotlinx.serialization.json.buildJsonObject {
       put("startDateMillis", if (startDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(startDateMillis))
       put("endDateMillis", if (endDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(endDateMillis))
     })
@@ -207,14 +230,28 @@ public class DateRangePickerState(public val remote: RemoteObject) {
 /**
  * Creates the proxy of a host `DateRangePickerState`, made on the host by `rememberDateRangePickerState` with these arguments. A lambda is sampled: its value is sent
  * whenever it changes.
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host
+ * reported of `initialSelectedStartDateMillis`, `initialSelectedEndDateMillis`'s fields (once the state has been still: a scroll reports nothing per frame unless the
+ * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.
  */
 @Composable
 public fun rememberDateRangePickerState(initialSelectedStartDateMillis: kotlin.Long? = null, initialSelectedEndDateMillis: kotlin.Long? = null): DateRangePickerState {
+  val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 6) {
+    RemoteObject(RemoteObject.nextId(), 6, "DateRangePickerState", listOf(1, 2)) {
       kotlinx.serialization.json.buildJsonObject {
-        put("initialSelectedStartDateMillis", if (initialSelectedStartDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedStartDateMillis))
-        put("initialSelectedEndDateMillis", if (initialSelectedEndDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedEndDateMillis))
+        put("initialSelectedStartDateMillis", peek(1) ?: if (initialSelectedStartDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedStartDateMillis))
+        put("initialSelectedEndDateMillis", peek(2) ?: if (initialSelectedEndDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedEndDateMillis))
+      }
+    }.also { r ->
+      r.seed(1, restore.saved?.get("initialSelectedStartDateMillis") ?: if (initialSelectedStartDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedStartDateMillis))
+      r.seed(2, restore.saved?.get("initialSelectedEndDateMillis") ?: if (initialSelectedEndDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedEndDateMillis))
+      restore.saved = null
+      restore.live = {
+        kotlinx.serialization.json.buildJsonObject {
+          r.peek(1)?.let { put("initialSelectedStartDateMillis", it) }
+          r.peek(2)?.let { put("initialSelectedEndDateMillis", it) }
+        }
       }
     }
   }
@@ -236,13 +273,34 @@ public class TimePickerState(public val remote: RemoteObject) {
   }
 
   /** The host's `minute`, as last reported (observed from the first read; at most once a frame). */
-  public val minute: kotlin.Int get() = remote.read(1)?.jsonPrimitive?.intOrNull ?: 0
+  public var minute: kotlin.Int
+    get() = remote.read(1)?.jsonPrimitive?.intOrNull ?: 0
+    set(value) {
+      remote.assign(1, kotlinx.serialization.json.JsonPrimitive(value), 2, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   /** The host's `hour`, as last reported (observed from the first read; at most once a frame). */
-  public val hour: kotlin.Int get() = remote.read(2)?.jsonPrimitive?.intOrNull ?: 0
+  public var hour: kotlin.Int
+    get() = remote.read(3)?.jsonPrimitive?.intOrNull ?: 0
+    set(value) {
+      remote.assign(3, kotlinx.serialization.json.JsonPrimitive(value), 4, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   /** The host's `is24hour`, as last reported (observed from the first read; at most once a frame). */
-  public val is24hour: kotlin.Boolean get() = remote.read(3)?.jsonPrimitive?.booleanOrNull ?: false
+  public var is24hour: kotlin.Boolean
+    get() = remote.read(5)?.jsonPrimitive?.booleanOrNull ?: false
+    set(value) {
+      remote.assign(5, kotlinx.serialization.json.JsonPrimitive(value), 6, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   @Deprecated("Keliver: `TimePickerState.selection` (TimePickerSelectionMode) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
   public val selection: Nothing get() = error("not remote")
@@ -251,25 +309,27 @@ public class TimePickerState(public val remote: RemoteObject) {
 /**
  * Creates the proxy of a host `TimePickerState`, made on the host by `rememberTimePickerState` with these arguments. A lambda is sampled: its value is sent
  * whenever it changes.
- * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host
- * reported of `initialHour`, `initialMinute`'s fields, and passes them back as those arguments after a restore (so the fields are always observed).
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host
+ * reported of `initialHour`, `initialMinute`'s fields (once the state has been still: a scroll reports nothing per frame unless the
+ * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.
  */
 @Composable
 public fun rememberTimePickerState(initialHour: kotlin.Int = 0, initialMinute: kotlin.Int = 0): TimePickerState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 7) {
+    RemoteObject(RemoteObject.nextId(), 7, "TimePickerState", listOf(3, 1)) {
       kotlinx.serialization.json.buildJsonObject {
-        put("initialHour", restore.saved?.get("initialHour") ?: kotlinx.serialization.json.JsonPrimitive(initialHour))
-        put("initialMinute", restore.saved?.get("initialMinute") ?: kotlinx.serialization.json.JsonPrimitive(initialMinute))
+        put("initialHour", peek(3) ?: kotlinx.serialization.json.JsonPrimitive(initialHour))
+        put("initialMinute", peek(1) ?: kotlinx.serialization.json.JsonPrimitive(initialMinute))
       }
     }.also { r ->
-      r.read(2)
-      r.read(1)
+      r.seed(3, restore.saved?.get("initialHour") ?: kotlinx.serialization.json.JsonPrimitive(initialHour))
+      r.seed(1, restore.saved?.get("initialMinute") ?: kotlinx.serialization.json.JsonPrimitive(initialMinute))
+      restore.saved = null
       restore.live = {
         kotlinx.serialization.json.buildJsonObject {
-          r.read(2)?.let { put("initialHour", it) }
-          r.read(1)?.let { put("initialMinute", it) }
+          r.peek(3)?.let { put("initialHour", it) }
+          r.peek(1)?.let { put("initialMinute", it) }
         }
       }
     }
@@ -291,7 +351,7 @@ public class TooltipState(public val remote: RemoteObject) {
     remote.onHostReport(report)
   }
 
-  @Deprecated("Keliver: `TooltipState.transition` (Boolean>) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
+  @Deprecated("Keliver: `TooltipState.transition` (MutableTransitionState<Boolean>) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
   public val transition: Nothing get() = error("not remote")
 
   /** The host's `isVisible`, as last reported (observed from the first read; at most once a frame). */
@@ -325,23 +385,25 @@ public class TooltipState(public val remote: RemoteObject) {
 /**
  * Creates the proxy of a host `TooltipState`, made on the host by `rememberTooltipState` with these arguments. A lambda is sampled: its value is sent
  * whenever it changes.
- * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host
- * reported of `initialIsVisible`'s fields, and passes them back as those arguments after a restore (so the fields are always observed).
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host
+ * reported of `initialIsVisible`'s fields (once the state has been still: a scroll reports nothing per frame unless the
+ * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.
  */
 @Composable
 public fun rememberTooltipState(initialIsVisible: kotlin.Boolean = false, isPersistent: kotlin.Boolean = false): TooltipState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 8) {
+    RemoteObject(RemoteObject.nextId(), 8, "TooltipState", listOf(1)) {
       kotlinx.serialization.json.buildJsonObject {
-        put("initialIsVisible", restore.saved?.get("initialIsVisible") ?: kotlinx.serialization.json.JsonPrimitive(initialIsVisible))
+        put("initialIsVisible", peek(1) ?: kotlinx.serialization.json.JsonPrimitive(initialIsVisible))
         put("isPersistent", kotlinx.serialization.json.JsonPrimitive(isPersistent))
       }
     }.also { r ->
-      r.read(1)
+      r.seed(1, restore.saved?.get("initialIsVisible") ?: kotlinx.serialization.json.JsonPrimitive(initialIsVisible))
+      restore.saved = null
       restore.live = {
         kotlinx.serialization.json.buildJsonObject {
-          r.read(1)?.let { put("initialIsVisible", it) }
+          r.peek(1)?.let { put("initialIsVisible", it) }
         }
       }
     }
@@ -379,10 +441,10 @@ public class SwipeToDismissBoxState(public val remote: RemoteObject) {
   public val dismissDirection: Nothing get() = error("not remote")
 
   @Deprecated("Keliver: `SwipeToDismissBoxState.requireOffset` returns a value synchronously: the host's answer cannot be waited for in composition.", level = DeprecationLevel.ERROR)
-  public fun requireOffset(vararg args: Any?): Nothing = error("not remote")
+  public fun requireOffset(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 
   @Deprecated("Keliver: `SwipeToDismissBoxState.snapTo` takes an argument type (`targetValue`: SwipeToDismissBoxValue), which does not cross to the guest.", level = DeprecationLevel.ERROR)
-  public fun snapTo(vararg args: Any?): Nothing = error("not remote")
+  public fun snapTo(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 
   /** `reset()` on the host's state; returns when the host's call returns. */
   public suspend fun reset() {
@@ -392,7 +454,7 @@ public class SwipeToDismissBoxState(public val remote: RemoteObject) {
   }
 
   @Deprecated("Keliver: `SwipeToDismissBoxState.dismiss` takes an argument type (`direction`: SwipeToDismissBoxValue), which does not cross to the guest.", level = DeprecationLevel.ERROR)
-  public fun dismiss(vararg args: Any?): Nothing = error("not remote")
+  public fun dismiss(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 }
 
 /**
@@ -402,7 +464,7 @@ public class SwipeToDismissBoxState(public val remote: RemoteObject) {
 @Composable
 public fun rememberSwipeToDismissBoxState(): SwipeToDismissBoxState {
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 9) {
+    RemoteObject(RemoteObject.nextId(), 9, "SwipeToDismissBoxState", listOf()) {
       kotlinx.serialization.json.buildJsonObject {
       }
     }
@@ -427,33 +489,47 @@ public class SliderState(public val remote: RemoteObject) {
   /** The host's `steps`, as last reported (observed from the first read; at most once a frame). */
   public val steps: kotlin.Int get() = remote.read(1)?.jsonPrimitive?.intOrNull ?: 0
 
-  @Deprecated("Keliver: `SliderState.onValueChangeFinished` (Unit>?) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
+  @Deprecated("Keliver: `SliderState.onValueChangeFinished` (Function0<Unit>?) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
   public val onValueChangeFinished: Nothing get() = error("not remote")
 
-  @Deprecated("Keliver: `SliderState.valueRange` (Float>) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
+  @Deprecated("Keliver: `SliderState.valueRange` (ClosedFloatingPointRange<Float>) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
   public val valueRange: Nothing get() = error("not remote")
 
   /** The host's `value`, as last reported (observed from the first read; at most once a frame). */
-  public val value: kotlin.Float get() = remote.read(2)?.jsonPrimitive?.floatOrNull ?: 0f
+  public var value: kotlin.Float
+    get() = remote.read(2)?.jsonPrimitive?.floatOrNull ?: 0f
+    set(value) {
+      remote.assign(2, kotlinx.serialization.json.JsonPrimitive(value), 3, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
 
-  @Deprecated("Keliver: `SliderState.onValueChange` (Unit>?) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
+
+  @Deprecated("Keliver: `SliderState.onValueChange` (Function1<Float, Unit>?) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
   public val onValueChange: Nothing get() = error("not remote")
 
   /** The host's `shouldAutoSnap`, as last reported (observed from the first read; at most once a frame). */
-  public val shouldAutoSnap: kotlin.Boolean get() = remote.read(3)?.jsonPrimitive?.booleanOrNull ?: false
+  public var shouldAutoSnap: kotlin.Boolean
+    get() = remote.read(4)?.jsonPrimitive?.booleanOrNull ?: false
+    set(value) {
+      remote.assign(4, kotlinx.serialization.json.JsonPrimitive(value), 5, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   /** The host's `coercedValueAsFraction`, as last reported (observed from the first read; at most once a frame). */
-  public val coercedValueAsFraction: kotlin.Float get() = remote.read(4)?.jsonPrimitive?.floatOrNull ?: 0f
+  public val coercedValueAsFraction: kotlin.Float get() = remote.read(6)?.jsonPrimitive?.floatOrNull ?: 0f
 
   /** The host's `isDragging`, as last reported (observed from the first read; at most once a frame). */
-  public val isDragging: kotlin.Boolean get() = remote.read(5)?.jsonPrimitive?.booleanOrNull ?: false
+  public val isDragging: kotlin.Boolean get() = remote.read(7)?.jsonPrimitive?.booleanOrNull ?: false
 
   @Deprecated("Keliver: `SliderState.drag` takes an argument type (`dragPriority`: MutatePriority), which does not cross to the guest.", level = DeprecationLevel.ERROR)
-  public fun drag(vararg args: Any?): Nothing = error("not remote")
+  public fun drag(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 
   /** `dispatchRawDelta(delta:kotlin.Float)` on the host's state; sent, not awaited. */
   public fun dispatchRawDelta(delta: kotlin.Float) {
-    remote.send(6, kotlinx.serialization.json.buildJsonObject {
+    remote.send(8, kotlinx.serialization.json.buildJsonObject {
       put("delta", kotlinx.serialization.json.JsonPrimitive(delta))
     })
   }
@@ -462,23 +538,25 @@ public class SliderState(public val remote: RemoteObject) {
 /**
  * Creates the proxy of a host `SliderState`, made on the host by `rememberSliderState` with these arguments. A lambda is sampled: its value is sent
  * whenever it changes.
- * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host
- * reported of `value`'s fields, and passes them back as those arguments after a restore (so the fields are always observed).
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host
+ * reported of `value`'s fields (once the state has been still: a scroll reports nothing per frame unless the
+ * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.
  */
 @Composable
 public fun rememberSliderState(value: kotlin.Float = 0f, steps: kotlin.Int = 0): SliderState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 10) {
+    RemoteObject(RemoteObject.nextId(), 10, "SliderState", listOf(2)) {
       kotlinx.serialization.json.buildJsonObject {
-        put("value", restore.saved?.get("value") ?: kotlinx.serialization.json.JsonPrimitive(value))
+        put("value", peek(2) ?: kotlinx.serialization.json.JsonPrimitive(value))
         put("steps", kotlinx.serialization.json.JsonPrimitive(steps))
       }
     }.also { r ->
-      r.read(2)
+      r.seed(2, restore.saved?.get("value") ?: kotlinx.serialization.json.JsonPrimitive(value))
+      restore.saved = null
       restore.live = {
         kotlinx.serialization.json.buildJsonObject {
-          r.read(2)?.let { put("value", it) }
+          r.peek(2)?.let { put("value", it) }
         }
       }
     }
@@ -503,42 +581,58 @@ public class RangeSliderState(public val remote: RemoteObject) {
   /** The host's `steps`, as last reported (observed from the first read; at most once a frame). */
   public val steps: kotlin.Int get() = remote.read(1)?.jsonPrimitive?.intOrNull ?: 0
 
-  @Deprecated("Keliver: `RangeSliderState.onValueChangeFinished` (Unit>?) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
+  @Deprecated("Keliver: `RangeSliderState.onValueChangeFinished` (Function0<Unit>?) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
   public val onValueChangeFinished: Nothing get() = error("not remote")
 
-  @Deprecated("Keliver: `RangeSliderState.valueRange` (Float>) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
+  @Deprecated("Keliver: `RangeSliderState.valueRange` (ClosedFloatingPointRange<Float>) is a type that does not cross to the guest.", level = DeprecationLevel.ERROR)
   public val valueRange: Nothing get() = error("not remote")
 
   /** The host's `activeRangeStart`, as last reported (observed from the first read; at most once a frame). */
-  public val activeRangeStart: kotlin.Float get() = remote.read(2)?.jsonPrimitive?.floatOrNull ?: 0f
+  public var activeRangeStart: kotlin.Float
+    get() = remote.read(2)?.jsonPrimitive?.floatOrNull ?: 0f
+    set(value) {
+      remote.assign(2, kotlinx.serialization.json.JsonPrimitive(value), 3, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   /** The host's `activeRangeEnd`, as last reported (observed from the first read; at most once a frame). */
-  public val activeRangeEnd: kotlin.Float get() = remote.read(3)?.jsonPrimitive?.floatOrNull ?: 0f
+  public var activeRangeEnd: kotlin.Float
+    get() = remote.read(4)?.jsonPrimitive?.floatOrNull ?: 0f
+    set(value) {
+      remote.assign(4, kotlinx.serialization.json.JsonPrimitive(value), 5, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 }
 
 /**
  * Creates the proxy of a host `RangeSliderState`, made on the host by `rememberRangeSliderState` with these arguments. A lambda is sampled: its value is sent
  * whenever it changes.
- * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host
- * reported of `activeRangeStart`, `activeRangeEnd`'s fields, and passes them back as those arguments after a restore (so the fields are always observed).
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host
+ * reported of `activeRangeStart`, `activeRangeEnd`'s fields (once the state has been still: a scroll reports nothing per frame unless the
+ * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.
  */
 @Composable
 public fun rememberRangeSliderState(activeRangeStart: kotlin.Float = 0f, activeRangeEnd: kotlin.Float = 1f, steps: kotlin.Int = 0): RangeSliderState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 11) {
+    RemoteObject(RemoteObject.nextId(), 11, "RangeSliderState", listOf(2, 4)) {
       kotlinx.serialization.json.buildJsonObject {
-        put("activeRangeStart", restore.saved?.get("activeRangeStart") ?: kotlinx.serialization.json.JsonPrimitive(activeRangeStart))
-        put("activeRangeEnd", restore.saved?.get("activeRangeEnd") ?: kotlinx.serialization.json.JsonPrimitive(activeRangeEnd))
+        put("activeRangeStart", peek(2) ?: kotlinx.serialization.json.JsonPrimitive(activeRangeStart))
+        put("activeRangeEnd", peek(4) ?: kotlinx.serialization.json.JsonPrimitive(activeRangeEnd))
         put("steps", kotlinx.serialization.json.JsonPrimitive(steps))
       }
     }.also { r ->
-      r.read(2)
-      r.read(3)
+      r.seed(2, restore.saved?.get("activeRangeStart") ?: kotlinx.serialization.json.JsonPrimitive(activeRangeStart))
+      r.seed(4, restore.saved?.get("activeRangeEnd") ?: kotlinx.serialization.json.JsonPrimitive(activeRangeEnd))
+      restore.saved = null
       restore.live = {
         kotlinx.serialization.json.buildJsonObject {
-          r.read(2)?.let { put("activeRangeStart", it) }
-          r.read(3)?.let { put("activeRangeEnd", it) }
+          r.peek(2)?.let { put("activeRangeStart", it) }
+          r.peek(4)?.let { put("activeRangeEnd", it) }
         }
       }
     }
@@ -561,43 +655,66 @@ public class TopAppBarState(public val remote: RemoteObject) {
   }
 
   /** The host's `heightOffsetLimit`, as last reported (observed from the first read; at most once a frame). */
-  public val heightOffsetLimit: kotlin.Float get() = remote.read(1)?.jsonPrimitive?.floatOrNull ?: 0f
+  public var heightOffsetLimit: kotlin.Float
+    get() = remote.read(1)?.jsonPrimitive?.floatOrNull ?: 0f
+    set(value) {
+      remote.assign(1, kotlinx.serialization.json.JsonPrimitive(value), 2, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   /** The host's `heightOffset`, as last reported (observed from the first read; at most once a frame). */
-  public val heightOffset: kotlin.Float get() = remote.read(2)?.jsonPrimitive?.floatOrNull ?: 0f
+  public var heightOffset: kotlin.Float
+    get() = remote.read(3)?.jsonPrimitive?.floatOrNull ?: 0f
+    set(value) {
+      remote.assign(3, kotlinx.serialization.json.JsonPrimitive(value), 4, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   /** The host's `contentOffset`, as last reported (observed from the first read; at most once a frame). */
-  public val contentOffset: kotlin.Float get() = remote.read(3)?.jsonPrimitive?.floatOrNull ?: 0f
+  public var contentOffset: kotlin.Float
+    get() = remote.read(5)?.jsonPrimitive?.floatOrNull ?: 0f
+    set(value) {
+      remote.assign(5, kotlinx.serialization.json.JsonPrimitive(value), 6, kotlinx.serialization.json.buildJsonObject {
+        put("value", kotlinx.serialization.json.JsonPrimitive(value))
+      })
+    }
+
 
   /** The host's `collapsedFraction`, as last reported (observed from the first read; at most once a frame). */
-  public val collapsedFraction: kotlin.Float get() = remote.read(4)?.jsonPrimitive?.floatOrNull ?: 0f
+  public val collapsedFraction: kotlin.Float get() = remote.read(7)?.jsonPrimitive?.floatOrNull ?: 0f
 
   /** The host's `overlappedFraction`, as last reported (observed from the first read; at most once a frame). */
-  public val overlappedFraction: kotlin.Float get() = remote.read(5)?.jsonPrimitive?.floatOrNull ?: 0f
+  public val overlappedFraction: kotlin.Float get() = remote.read(8)?.jsonPrimitive?.floatOrNull ?: 0f
 }
 
 /**
  * Creates the proxy of a host `TopAppBarState`, made on the host by `rememberTopAppBarState` with these arguments. A lambda is sampled: its value is sent
  * whenever it changes.
- * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host
- * reported of `initialHeightOffset`, `initialContentOffset`'s fields, and passes them back as those arguments after a restore (so the fields are always observed).
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host
+ * reported of `initialHeightOffset`, `initialContentOffset`'s fields (once the state has been still: a scroll reports nothing per frame unless the
+ * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.
  */
 @Composable
 public fun rememberTopAppBarState(initialHeightOffset: kotlin.Float = 0f, initialContentOffset: kotlin.Float = 0f): TopAppBarState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 12) {
+    RemoteObject(RemoteObject.nextId(), 12, "TopAppBarState", listOf(3, 5)) {
       kotlinx.serialization.json.buildJsonObject {
-        put("initialHeightOffset", restore.saved?.get("initialHeightOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialHeightOffset))
-        put("initialContentOffset", restore.saved?.get("initialContentOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialContentOffset))
+        put("initialHeightOffset", peek(3) ?: kotlinx.serialization.json.JsonPrimitive(initialHeightOffset))
+        put("initialContentOffset", peek(5) ?: kotlinx.serialization.json.JsonPrimitive(initialContentOffset))
       }
     }.also { r ->
-      r.read(2)
-      r.read(3)
+      r.seed(3, restore.saved?.get("initialHeightOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialHeightOffset))
+      r.seed(5, restore.saved?.get("initialContentOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialContentOffset))
+      restore.saved = null
       restore.live = {
         kotlinx.serialization.json.buildJsonObject {
-          r.read(2)?.let { put("initialHeightOffset", it) }
-          r.read(3)?.let { put("initialContentOffset", it) }
+          r.peek(3)?.let { put("initialHeightOffset", it) }
+          r.peek(5)?.let { put("initialContentOffset", it) }
         }
       }
     }

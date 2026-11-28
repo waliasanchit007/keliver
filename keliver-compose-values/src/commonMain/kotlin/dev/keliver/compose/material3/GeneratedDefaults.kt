@@ -67,6 +67,18 @@ public class IconButtonColors(call: dev.keliver.compose.wire.DefaultsCall) : dev
   }
 }
 
+/** Compose's `androidx.compose.material3.TimePickerColors`, made only by `TimePickerDefaults.colors`: the call, made by the host. */
+@androidx.compose.runtime.Immutable
+@kotlinx.serialization.Serializable(with = TimePickerColors.Codec::class)
+public class TimePickerColors(call: dev.keliver.compose.wire.DefaultsCall) : dev.keliver.compose.wire.DefaultsValue(call) {
+  public object Codec : dev.keliver.compose.wire.DefaultsValueCodec<TimePickerColors>("dev.keliver.compose.material3.TimePickerColors", ::TimePickerColors)
+
+  public companion object {
+    /** An explicit `null` where the parameter's default is not null. */
+    public val ExplicitNull: TimePickerColors = TimePickerColors(dev.keliver.compose.wire.DefaultsCall.ExplicitNull)
+  }
+}
+
 /** Compose's `androidx.compose.material3.TopAppBarColors`, made only by `TopAppBarDefaults.topAppBarColors`: the call, made by the host. */
 @androidx.compose.runtime.Immutable
 @kotlinx.serialization.Serializable(with = TopAppBarColors.Codec::class)
@@ -281,6 +293,50 @@ public object IconButtonDefaults {
   public val standardShape: dev.keliver.compose.ui.graphics.Shape
     @androidx.compose.runtime.Composable
     get() = dev.keliver.compose.ui.graphics.ShapeReference.of("IconButtonDefaults.standardShape")
+}
+
+/** The guest's `androidx.compose.material3.TimePickerDefaults`: the members the generated API names (design §5–§7). */
+public object TimePickerDefaults {
+  /** Default colors used by a [TimePicker] in different states. */
+  @androidx.compose.runtime.Composable
+  public fun colors(
+  ): dev.keliver.compose.material3.TimePickerColors = dev.keliver.compose.material3.TimePickerColors(dev.keliver.compose.wire.DefaultsCall(16))
+
+  /** Default colors used by a [TimePicker] in different states. */
+  @androidx.compose.runtime.Composable
+  public fun colors(
+    clockDialColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    clockDialSelectedContentColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    clockDialUnselectedContentColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    selectorColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    containerColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    periodSelectorBorderColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    periodSelectorSelectedContainerColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    periodSelectorUnselectedContainerColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    periodSelectorSelectedContentColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    periodSelectorUnselectedContentColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    timeSelectorSelectedContainerColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    timeSelectorUnselectedContainerColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    timeSelectorSelectedContentColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+    timeSelectorUnselectedContentColor: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+  ): dev.keliver.compose.material3.TimePickerColors {
+    val args = LinkedHashMap<Int, kotlinx.serialization.json.JsonElement>()
+    if (clockDialColor != (Color.Unspecified)) args[1] = dev.keliver.compose.wire.defaultsArg(clockDialColor)
+    if (clockDialSelectedContentColor != (Color.Unspecified)) args[2] = dev.keliver.compose.wire.defaultsArg(clockDialSelectedContentColor)
+    if (clockDialUnselectedContentColor != (Color.Unspecified)) args[3] = dev.keliver.compose.wire.defaultsArg(clockDialUnselectedContentColor)
+    if (selectorColor != (Color.Unspecified)) args[4] = dev.keliver.compose.wire.defaultsArg(selectorColor)
+    if (containerColor != (Color.Unspecified)) args[5] = dev.keliver.compose.wire.defaultsArg(containerColor)
+    if (periodSelectorBorderColor != (Color.Unspecified)) args[6] = dev.keliver.compose.wire.defaultsArg(periodSelectorBorderColor)
+    if (periodSelectorSelectedContainerColor != (Color.Unspecified)) args[7] = dev.keliver.compose.wire.defaultsArg(periodSelectorSelectedContainerColor)
+    if (periodSelectorUnselectedContainerColor != (Color.Unspecified)) args[8] = dev.keliver.compose.wire.defaultsArg(periodSelectorUnselectedContainerColor)
+    if (periodSelectorSelectedContentColor != (Color.Unspecified)) args[9] = dev.keliver.compose.wire.defaultsArg(periodSelectorSelectedContentColor)
+    if (periodSelectorUnselectedContentColor != (Color.Unspecified)) args[10] = dev.keliver.compose.wire.defaultsArg(periodSelectorUnselectedContentColor)
+    if (timeSelectorSelectedContainerColor != (Color.Unspecified)) args[11] = dev.keliver.compose.wire.defaultsArg(timeSelectorSelectedContainerColor)
+    if (timeSelectorUnselectedContainerColor != (Color.Unspecified)) args[12] = dev.keliver.compose.wire.defaultsArg(timeSelectorUnselectedContainerColor)
+    if (timeSelectorSelectedContentColor != (Color.Unspecified)) args[13] = dev.keliver.compose.wire.defaultsArg(timeSelectorSelectedContentColor)
+    if (timeSelectorUnselectedContentColor != (Color.Unspecified)) args[14] = dev.keliver.compose.wire.defaultsArg(timeSelectorUnselectedContentColor)
+    return dev.keliver.compose.material3.TimePickerColors(dev.keliver.compose.wire.DefaultsCall(17, args))
+  }
 }
 
 /** The guest's `androidx.compose.material3.TopAppBarDefaults`: the members the generated API names (design §5–§7). */

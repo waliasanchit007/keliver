@@ -80,6 +80,15 @@ data class LockEntry(
   @OptIn(ExperimentalSerializationApi::class)
   @EncodeDefault(EncodeDefault.Mode.NEVER)
   val animated: Boolean = false,
+  /**
+   * A remote object's (MS4-43) wire types: each field's type, each command's result type, each setter's
+   * value type, and each argument of the host factory (`@init.<name>`), as the generator reads them from
+   * Compose. A Compose upgrade that changes one changes the wire, so it fails [checkAppendOnly].
+   * Empty (and not written) for widgets, modifiers and factories.
+   */
+  @OptIn(ExperimentalSerializationApi::class)
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
+  val types: Map<String, String> = emptyMap(),
 )
 
 val lockJson = Json {
@@ -139,22 +148,25 @@ class LockBuilder(
    * The entry of remote object [fq] with [members] (canonical signatures) that cross: the existing
    * one with any new member appended at the next free tag, or a new one.
    */
-  fun remote(fq: String, members: List<String>): LockEntry {
+  fun remote(fq: String, members: List<String>, types: Map<String, String>): LockEntry {
     val existing = remotes[fq]
     if (existing == null) {
       appended = true
       val params = members.withIndex().associate { (i, m) -> m to i + 1 }
-      return LockEntry(nextRemoteTag++, fq.substringAfterLast('.'), params, since = newLevel, wire = members.associateWith { newLevel })
+      return LockEntry(nextRemoteTag++, fq.substringAfterLast('.'), params, since = newLevel, wire = members.associateWith { newLevel }, types = types)
         .also { remotes[fq] = it }
     }
     val fresh = members.filter { it !in existing.params }
     var next = (existing.params.values.maxOrNull() ?: 0) + 1
     val params = existing.params + fresh.associateWith { next++ }
     val oldWire = existing.wire.orEmpty()
-    val newWire = members.filter { it !in oldWire }
-    if (newWire.isEmpty()) return existing
-    appended = true
-    return existing.copy(params = params, wire = oldWire + newWire.associateWith { newLevel }).also { remotes[fq] = it }
+    // The wire is what crosses now, not what ever did: a member that stopped crossing leaves it, and so fails
+    // checkAppendOnly (its tag stays reserved in params). Likewise the types: a changed or dropped one fails.
+    val wire = members.associateWith { oldWire[it] ?: newLevel }
+    val updated = existing.copy(params = params, wire = wire, types = types)
+    if (updated == existing) return existing
+    if (members.any { it !in oldWire } || types.keys.any { it !in existing.types }) appended = true
+    return updated.also { remotes[fq] = it }
   }
 
   private var appended = false
@@ -248,6 +260,7 @@ fun checkAppendOnly(old: Lock, new: Lock): List<String> = buildList {
         entry.wire.orEmpty().any { (p, level) -> now.wire?.get(p) != level } -> add("$kind $key stopped sending a parameter, or changed when it started")
         now.since != entry.since -> add("$kind $key changed its level")
         entry.animated && !now.animated -> add("$kind $key stopped accepting animated references")
+        entry.types.any { (k, t) -> now.types[k] != t } -> add("$kind $key changed the type of a member or of a factory argument, or dropped one (the wire changed: a new key, or the old guests stay on the old shape)")
       }
     }
   }

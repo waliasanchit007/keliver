@@ -100,9 +100,21 @@ object TypeMap {
   /** The value a stub sends for a parameter of this type: `.wire` for a handle or a generic type. */
   fun sendExpr(t: TypeRef, name: String): String = if (t.fq in wireValue || t.fq in generic) "$name.wire" else name
 
+  /**
+   * MS4-43 (G2, M1): the host-owned state classes the group exposes as remote objects (its
+   * `remoteObjects`). A widget parameter of one of them is bound to its widget: the guest sends the
+   * proxy's [REMOTE_WIRE] as the property and takes the host's [REMOTE_REPORT] as the event
+   * (`<name>Report`, the lock's synthetic `<name>.report`), and the host's renderer draws with the
+   * real state the guest's commands run on. Reset by every run of the generator.
+   */
+  val remoteState: MutableSet<String> = sortedSetOf()
+  const val REMOTE_WIRE = "dev.keliver.compose.remote.RemoteObjectWire"
+  const val REMOTE_REPORT = "dev.keliver.compose.remote.RemoteReport"
+
   /** The type as the guest and the schema write it. */
   fun wireType(t: TypeRef, nullable: Boolean): String = when (t.fq) {
     IMAGE_MODEL -> "kotlin.String?"
+    in remoteState -> REMOTE_WIRE + if (nullable) "?" else ""
     else -> (wireValue[t.fq] ?: generic[t.fq] ?: mirrorFq(t.fq)) + if (nullable) "?" else ""
   }
 
@@ -169,6 +181,8 @@ fun classify(decl: DeclInfo, unsupportedDefault: (String) -> String? = { null })
       t.functionReturn?.fq == "kotlin.Unit" &&
       t.functionParams.size <= 1 &&
       t.functionParams.all { TypeMap.isPrimitive(it) } -> ParamKind.EVENT
+    // A remote object's state (MS4-43): bound to the widget that takes it (RemoteObjectEmit.kt).
+    decl.kind == DeclKind.WIDGET && t.fq in TypeMap.remoteState && t.args.isEmpty() && !t.nullable && !t.isFunction -> ParamKind.VALUE
     // Redwood's modifier serializers cannot take a nullable property (KotlinPoet writes `T?::class`).
     TypeMap.isMapped(t) && t.nullable && decl.kind != DeclKind.WIDGET && p.hasDefault -> ParamKind.DROP
     defaultProblem != null -> ParamKind.DROP
@@ -180,7 +194,7 @@ fun classify(decl: DeclInfo, unsupportedDefault: (String) -> String? = { null })
   }
   val case = when {
     kind != ParamKind.VALUE || !p.hasDefault -> DefaultCase.NONE
-    t.fq in TypeMap.hostState -> DefaultCase.LITERAL // a handle: always sent
+    t.fq in TypeMap.hostState || t.fq in TypeMap.remoteState -> DefaultCase.LITERAL // a handle: always sent
     isLiteralDefault(p.defaultText ?: error("${decl.spec}: ${p.name} has a default but no source text")) -> DefaultCase.LITERAL
     else -> DefaultCase.EXPRESSION
   }

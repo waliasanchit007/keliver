@@ -95,7 +95,10 @@ const val EDITOR_RENDER_PACKAGE = "dev.keliver.portal.compose.render"
 fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List<File>, factoryOwner: Lock? = null): Output {
   val api = ApiReader(classpath)
   val src = SourceReader(sources)
-  val decls = config.declarations.map { api.find(it).also(src::complete) }
+  // A widget parameter of a remote object's class is bound to its widget (MS4-43).
+  TypeMap.remoteState.clear()
+  TypeMap.remoteState += config.remoteObjects.map { it.substringBefore('|').substringBefore('#') }
+  val decls =config.declarations.map { api.find(it).also(src::complete) }
   val errorDecls = config.errors.map { (spec, message) -> api.find(spec).also(src::complete) to message }
   val defaults = DefaultsMirror(api, src, classpath, config.typeMessages)
   // Every *Defaults member a configured default names (this also registers the factory-made types),

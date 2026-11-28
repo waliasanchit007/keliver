@@ -99,39 +99,41 @@ public class PagerState(public val remote: RemoteObject) {
   }
 
   @Deprecated("Keliver: `PagerState.scroll` takes an argument type (`scrollPriority`: MutatePriority), which does not cross to the guest.", level = DeprecationLevel.ERROR)
-  public fun scroll(vararg args: Any?): Nothing = error("not remote")
+  public fun scroll(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 
   @Deprecated("Keliver: `PagerState.dispatchRawDelta` returns a value synchronously: the host's answer cannot be waited for in composition.", level = DeprecationLevel.ERROR)
-  public fun dispatchRawDelta(vararg args: Any?): Nothing = error("not remote")
+  public fun dispatchRawDelta(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 
   @Deprecated("Keliver: `PagerState.getOffsetDistanceInPages` returns a value synchronously: the host's answer cannot be waited for in composition.", level = DeprecationLevel.ERROR)
-  public fun getOffsetDistanceInPages(vararg args: Any?): Nothing = error("not remote")
+  public fun getOffsetDistanceInPages(vararg args: Any?, block: Any? = null): Nothing = error("not remote")
 }
 
 /**
  * Creates the proxy of a host `PagerState`, made on the host by `rememberPagerState` with these arguments. A lambda is sampled: its value is sent
  * whenever it changes.
- * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host
- * reported of `initialPage`, `initialPageOffsetFraction`'s fields, and passes them back as those arguments after a restore (so the fields are always observed).
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the newest values the host
+ * reported of `initialPage`, `initialPageOffsetFraction`'s fields (once the state has been still: a scroll reports nothing per frame unless the
+ * screen reads the field), and passes them back as those arguments after a restore. The fields read those values before the host's first report.
  */
 @Composable
 public fun rememberPagerState(initialPage: kotlin.Int = 0, initialPageOffsetFraction: kotlin.Float = 0f, pageCount: () -> kotlin.Int): PagerState {
   val pageCountLatest by rememberUpdatedState(pageCount)
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 1) {
+    RemoteObject(RemoteObject.nextId(), 1, "PagerState", listOf(2, 5)) {
       kotlinx.serialization.json.buildJsonObject {
-        put("initialPage", restore.saved?.get("initialPage") ?: kotlinx.serialization.json.JsonPrimitive(initialPage))
-        put("initialPageOffsetFraction", restore.saved?.get("initialPageOffsetFraction") ?: kotlinx.serialization.json.JsonPrimitive(initialPageOffsetFraction))
+        put("initialPage", peek(2) ?: kotlinx.serialization.json.JsonPrimitive(initialPage))
+        put("initialPageOffsetFraction", peek(5) ?: kotlinx.serialization.json.JsonPrimitive(initialPageOffsetFraction))
         put("pageCount", kotlinx.serialization.json.JsonPrimitive(pageCountLatest()))
       }
     }.also { r ->
-      r.read(2)
-      r.read(5)
+      r.seed(2, restore.saved?.get("initialPage") ?: kotlinx.serialization.json.JsonPrimitive(initialPage))
+      r.seed(5, restore.saved?.get("initialPageOffsetFraction") ?: kotlinx.serialization.json.JsonPrimitive(initialPageOffsetFraction))
+      restore.saved = null
       restore.live = {
         kotlinx.serialization.json.buildJsonObject {
-          r.read(2)?.let { put("initialPage", it) }
-          r.read(5)?.let { put("initialPageOffsetFraction", it) }
+          r.peek(2)?.let { put("initialPage", it) }
+          r.peek(5)?.let { put("initialPageOffsetFraction", it) }
         }
       }
     }

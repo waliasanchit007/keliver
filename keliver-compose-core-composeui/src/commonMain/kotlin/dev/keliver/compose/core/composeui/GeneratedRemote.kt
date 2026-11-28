@@ -6,6 +6,7 @@ package dev.keliver.compose.core.composeui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberUpdatedState
 import dev.keliver.compose.remote.RemoteObjectWire
 import dev.keliver.compose.remote.RemoteReport
@@ -28,7 +29,7 @@ import kotlinx.serialization.json.longOrNull
 
 /** Host dispatcher for `androidx.compose.foundation.pager.PagerState`: reads a field and runs a command on the real state, by tag. */
 internal object PagerStateRemote : RemoteDispatcher<androidx.compose.foundation.pager.PagerState> {
-  override fun read(state: androidx.compose.foundation.pager.PagerState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.foundation.pager.PagerState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.pageCount)
     2 -> kotlinx.serialization.json.JsonPrimitive(state.currentPage)
     3 -> kotlinx.serialization.json.JsonPrimitive(state.settledPage)
@@ -39,10 +40,10 @@ internal object PagerStateRemote : RemoteDispatcher<androidx.compose.foundation.
     8 -> kotlinx.serialization.json.JsonPrimitive(state.canScrollBackward)
     9 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledForward)
     10 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledBackward)
-    else -> error("unknown field $member")
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.foundation.pager.PagerState, member: Int, args: JsonObject): JsonElement = when (member) {
+  override suspend fun invoke(state: androidx.compose.foundation.pager.PagerState, member: Int, args: JsonObject): JsonElement? = when (member) {
     11 -> {
       state.scrollToPage(page = args.getValue("page").jsonPrimitive.int, pageOffsetFraction = args.getValue("pageOffsetFraction").jsonPrimitive.float)
       JsonNull
@@ -55,13 +56,13 @@ internal object PagerStateRemote : RemoteDispatcher<androidx.compose.foundation.
       state.animateScrollToPage(page = args.getValue("page").jsonPrimitive.int, pageOffsetFraction = args.getValue("pageOffsetFraction").jsonPrimitive.float)
       JsonNull
     }
-    else -> error("unknown command $member")
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.foundation.lazy.grid.LazyGridState`: reads a field and runs a command on the real state, by tag. */
 internal object LazyGridStateRemote : RemoteDispatcher<androidx.compose.foundation.lazy.grid.LazyGridState> {
-  override fun read(state: androidx.compose.foundation.lazy.grid.LazyGridState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.foundation.lazy.grid.LazyGridState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.firstVisibleItemIndex)
     2 -> kotlinx.serialization.json.JsonPrimitive(state.firstVisibleItemScrollOffset)
     3 -> kotlinx.serialization.json.JsonPrimitive(state.isScrollInProgress)
@@ -69,10 +70,10 @@ internal object LazyGridStateRemote : RemoteDispatcher<androidx.compose.foundati
     5 -> kotlinx.serialization.json.JsonPrimitive(state.canScrollBackward)
     6 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledForward)
     7 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledBackward)
-    else -> error("unknown field $member")
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.foundation.lazy.grid.LazyGridState, member: Int, args: JsonObject): JsonElement = when (member) {
+  override suspend fun invoke(state: androidx.compose.foundation.lazy.grid.LazyGridState, member: Int, args: JsonObject): JsonElement? = when (member) {
     8 -> {
       state.scrollToItem(index = args.getValue("index").jsonPrimitive.int, scrollOffset = args.getValue("scrollOffset").jsonPrimitive.int)
       JsonNull
@@ -85,13 +86,13 @@ internal object LazyGridStateRemote : RemoteDispatcher<androidx.compose.foundati
       state.animateScrollToItem(index = args.getValue("index").jsonPrimitive.int, scrollOffset = args.getValue("scrollOffset").jsonPrimitive.int)
       JsonNull
     }
-    else -> error("unknown command $member")
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState`: reads a field and runs a command on the real state, by tag. */
 internal object LazyStaggeredGridStateRemote : RemoteDispatcher<androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState> {
-  override fun read(state: androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.firstVisibleItemIndex)
     2 -> kotlinx.serialization.json.JsonPrimitive(state.firstVisibleItemScrollOffset)
     3 -> kotlinx.serialization.json.JsonPrimitive(state.canScrollForward)
@@ -99,10 +100,10 @@ internal object LazyStaggeredGridStateRemote : RemoteDispatcher<androidx.compose
     5 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledForward)
     6 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledBackward)
     7 -> kotlinx.serialization.json.JsonPrimitive(state.isScrollInProgress)
-    else -> error("unknown field $member")
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState, member: Int, args: JsonObject): JsonElement = when (member) {
+  override suspend fun invoke(state: androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState, member: Int, args: JsonObject): JsonElement? = when (member) {
     8 -> {
       state.scrollToItem(index = args.getValue("index").jsonPrimitive.int, scrollOffset = args.getValue("scrollOffset").jsonPrimitive.int)
       JsonNull
@@ -115,21 +116,21 @@ internal object LazyStaggeredGridStateRemote : RemoteDispatcher<androidx.compose
       state.requestScrollToItem(index = args.getValue("index").jsonPrimitive.int, scrollOffset = args.getValue("scrollOffset").jsonPrimitive.int)
       JsonNull
     }
-    else -> error("unknown command $member")
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.material3.SheetState`: reads a field and runs a command on the real state, by tag. */
 internal object SheetStateRemote : RemoteDispatcher<androidx.compose.material3.SheetState> {
-  override fun read(state: androidx.compose.material3.SheetState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.material3.SheetState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.isVisible)
     2 -> kotlinx.serialization.json.JsonPrimitive(state.isAnimationRunning)
     3 -> kotlinx.serialization.json.JsonPrimitive(state.hasExpandedState)
     4 -> kotlinx.serialization.json.JsonPrimitive(state.hasPartiallyExpandedState)
-    else -> error("unknown field $member")
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.material3.SheetState, member: Int, args: JsonObject): JsonElement = when (member) {
+  override suspend fun invoke(state: androidx.compose.material3.SheetState, member: Int, args: JsonObject): JsonElement? = when (member) {
     5 -> {
       state.expand()
       JsonNull
@@ -146,64 +147,88 @@ internal object SheetStateRemote : RemoteDispatcher<androidx.compose.material3.S
       state.hide()
       JsonNull
     }
-    else -> error("unknown command $member")
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.material3.DatePickerState`: reads a field and runs a command on the real state, by tag. */
 internal object DatePickerStateRemote : RemoteDispatcher<androidx.compose.material3.DatePickerState> {
-  override fun read(state: androidx.compose.material3.DatePickerState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.material3.DatePickerState, member: Int): JsonElement? = when (member) {
     1 -> state.selectedDateMillis?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull
-    2 -> kotlinx.serialization.json.JsonPrimitive(state.displayedMonthMillis)
-    else -> error("unknown field $member")
+    3 -> kotlinx.serialization.json.JsonPrimitive(state.displayedMonthMillis)
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.material3.DatePickerState, member: Int, args: JsonObject): JsonElement = when (member) {
-    else -> error("unknown command $member")
+  override suspend fun invoke(state: androidx.compose.material3.DatePickerState, member: Int, args: JsonObject): JsonElement? = when (member) {
+    2 -> {
+      state.selectedDateMillis = args.getValue("value").takeUnless { it is kotlinx.serialization.json.JsonNull }?.jsonPrimitive?.longOrNull
+      JsonNull
+    }
+    4 -> {
+      state.displayedMonthMillis = args.getValue("value").jsonPrimitive.long
+      JsonNull
+    }
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.material3.DateRangePickerState`: reads a field and runs a command on the real state, by tag. */
 internal object DateRangePickerStateRemote : RemoteDispatcher<androidx.compose.material3.DateRangePickerState> {
-  override fun read(state: androidx.compose.material3.DateRangePickerState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.material3.DateRangePickerState, member: Int): JsonElement? = when (member) {
     1 -> state.selectedStartDateMillis?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull
     2 -> state.selectedEndDateMillis?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull
     3 -> kotlinx.serialization.json.JsonPrimitive(state.displayedMonthMillis)
-    else -> error("unknown field $member")
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.material3.DateRangePickerState, member: Int, args: JsonObject): JsonElement = when (member) {
+  override suspend fun invoke(state: androidx.compose.material3.DateRangePickerState, member: Int, args: JsonObject): JsonElement? = when (member) {
     4 -> {
+      state.displayedMonthMillis = args.getValue("value").jsonPrimitive.long
+      JsonNull
+    }
+    5 -> {
       state.setSelection(startDateMillis = args.getValue("startDateMillis").takeUnless { it is kotlinx.serialization.json.JsonNull }?.jsonPrimitive?.longOrNull, endDateMillis = args.getValue("endDateMillis").takeUnless { it is kotlinx.serialization.json.JsonNull }?.jsonPrimitive?.longOrNull)
       JsonNull
     }
-    else -> error("unknown command $member")
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.material3.TimePickerState`: reads a field and runs a command on the real state, by tag. */
 internal object TimePickerStateRemote : RemoteDispatcher<androidx.compose.material3.TimePickerState> {
-  override fun read(state: androidx.compose.material3.TimePickerState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.material3.TimePickerState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.minute)
-    2 -> kotlinx.serialization.json.JsonPrimitive(state.hour)
-    3 -> kotlinx.serialization.json.JsonPrimitive(state.is24hour)
-    else -> error("unknown field $member")
+    3 -> kotlinx.serialization.json.JsonPrimitive(state.hour)
+    5 -> kotlinx.serialization.json.JsonPrimitive(state.is24hour)
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.material3.TimePickerState, member: Int, args: JsonObject): JsonElement = when (member) {
-    else -> error("unknown command $member")
+  override suspend fun invoke(state: androidx.compose.material3.TimePickerState, member: Int, args: JsonObject): JsonElement? = when (member) {
+    2 -> {
+      state.minute = args.getValue("value").jsonPrimitive.int
+      JsonNull
+    }
+    4 -> {
+      state.hour = args.getValue("value").jsonPrimitive.int
+      JsonNull
+    }
+    6 -> {
+      state.is24hour = args.getValue("value").jsonPrimitive.boolean
+      JsonNull
+    }
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.material3.TooltipState`: reads a field and runs a command on the real state, by tag. */
 internal object TooltipStateRemote : RemoteDispatcher<androidx.compose.material3.TooltipState> {
-  override fun read(state: androidx.compose.material3.TooltipState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.material3.TooltipState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.isVisible)
     2 -> kotlinx.serialization.json.JsonPrimitive(state.isPersistent)
-    else -> error("unknown field $member")
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.material3.TooltipState, member: Int, args: JsonObject): JsonElement = when (member) {
+  override suspend fun invoke(state: androidx.compose.material3.TooltipState, member: Int, args: JsonObject): JsonElement? = when (member) {
     3 -> {
       state.show()
       JsonNull
@@ -216,73 +241,101 @@ internal object TooltipStateRemote : RemoteDispatcher<androidx.compose.material3
       state.onDispose()
       JsonNull
     }
-    else -> error("unknown command $member")
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.material3.SwipeToDismissBoxState`: reads a field and runs a command on the real state, by tag. */
 internal object SwipeToDismissBoxStateRemote : RemoteDispatcher<androidx.compose.material3.SwipeToDismissBoxState> {
-  override fun read(state: androidx.compose.material3.SwipeToDismissBoxState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.material3.SwipeToDismissBoxState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.progress)
-    else -> error("unknown field $member")
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.material3.SwipeToDismissBoxState, member: Int, args: JsonObject): JsonElement = when (member) {
+  override suspend fun invoke(state: androidx.compose.material3.SwipeToDismissBoxState, member: Int, args: JsonObject): JsonElement? = when (member) {
     2 -> {
       state.reset()
       JsonNull
     }
-    else -> error("unknown command $member")
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.material3.SliderState`: reads a field and runs a command on the real state, by tag. */
 internal object SliderStateRemote : RemoteDispatcher<androidx.compose.material3.SliderState> {
-  override fun read(state: androidx.compose.material3.SliderState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.material3.SliderState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.steps)
     2 -> kotlinx.serialization.json.JsonPrimitive(state.value)
-    3 -> kotlinx.serialization.json.JsonPrimitive(state.shouldAutoSnap)
-    4 -> kotlinx.serialization.json.JsonPrimitive(state.coercedValueAsFraction)
-    5 -> kotlinx.serialization.json.JsonPrimitive(state.isDragging)
-    else -> error("unknown field $member")
+    4 -> kotlinx.serialization.json.JsonPrimitive(state.shouldAutoSnap)
+    6 -> kotlinx.serialization.json.JsonPrimitive(state.coercedValueAsFraction)
+    7 -> kotlinx.serialization.json.JsonPrimitive(state.isDragging)
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.material3.SliderState, member: Int, args: JsonObject): JsonElement = when (member) {
-    6 -> {
+  override suspend fun invoke(state: androidx.compose.material3.SliderState, member: Int, args: JsonObject): JsonElement? = when (member) {
+    3 -> {
+      state.value = args.getValue("value").jsonPrimitive.float
+      JsonNull
+    }
+    5 -> {
+      state.shouldAutoSnap = args.getValue("value").jsonPrimitive.boolean
+      JsonNull
+    }
+    8 -> {
       state.dispatchRawDelta(delta = args.getValue("delta").jsonPrimitive.float)
       JsonNull
     }
-    else -> error("unknown command $member")
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.material3.RangeSliderState`: reads a field and runs a command on the real state, by tag. */
 internal object RangeSliderStateRemote : RemoteDispatcher<androidx.compose.material3.RangeSliderState> {
-  override fun read(state: androidx.compose.material3.RangeSliderState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.material3.RangeSliderState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.steps)
     2 -> kotlinx.serialization.json.JsonPrimitive(state.activeRangeStart)
-    3 -> kotlinx.serialization.json.JsonPrimitive(state.activeRangeEnd)
-    else -> error("unknown field $member")
+    4 -> kotlinx.serialization.json.JsonPrimitive(state.activeRangeEnd)
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.material3.RangeSliderState, member: Int, args: JsonObject): JsonElement = when (member) {
-    else -> error("unknown command $member")
+  override suspend fun invoke(state: androidx.compose.material3.RangeSliderState, member: Int, args: JsonObject): JsonElement? = when (member) {
+    3 -> {
+      state.activeRangeStart = args.getValue("value").jsonPrimitive.float
+      JsonNull
+    }
+    5 -> {
+      state.activeRangeEnd = args.getValue("value").jsonPrimitive.float
+      JsonNull
+    }
+    else -> null
   }
 }
 
 /** Host dispatcher for `androidx.compose.material3.TopAppBarState`: reads a field and runs a command on the real state, by tag. */
 internal object TopAppBarStateRemote : RemoteDispatcher<androidx.compose.material3.TopAppBarState> {
-  override fun read(state: androidx.compose.material3.TopAppBarState, member: Int): JsonElement = when (member) {
+  override fun read(state: androidx.compose.material3.TopAppBarState, member: Int): JsonElement? = when (member) {
     1 -> kotlinx.serialization.json.JsonPrimitive(state.heightOffsetLimit)
-    2 -> kotlinx.serialization.json.JsonPrimitive(state.heightOffset)
-    3 -> kotlinx.serialization.json.JsonPrimitive(state.contentOffset)
-    4 -> kotlinx.serialization.json.JsonPrimitive(state.collapsedFraction)
-    5 -> kotlinx.serialization.json.JsonPrimitive(state.overlappedFraction)
-    else -> error("unknown field $member")
+    3 -> kotlinx.serialization.json.JsonPrimitive(state.heightOffset)
+    5 -> kotlinx.serialization.json.JsonPrimitive(state.contentOffset)
+    7 -> kotlinx.serialization.json.JsonPrimitive(state.collapsedFraction)
+    8 -> kotlinx.serialization.json.JsonPrimitive(state.overlappedFraction)
+    else -> null
   }
 
-  override suspend fun invoke(state: androidx.compose.material3.TopAppBarState, member: Int, args: JsonObject): JsonElement = when (member) {
-    else -> error("unknown command $member")
+  override suspend fun invoke(state: androidx.compose.material3.TopAppBarState, member: Int, args: JsonObject): JsonElement? = when (member) {
+    2 -> {
+      state.heightOffsetLimit = args.getValue("value").jsonPrimitive.float
+      JsonNull
+    }
+    4 -> {
+      state.heightOffset = args.getValue("value").jsonPrimitive.float
+      JsonNull
+    }
+    6 -> {
+      state.contentOffset = args.getValue("value").jsonPrimitive.float
+      JsonNull
+    }
+    else -> null
   }
 }
 
@@ -291,109 +344,109 @@ internal object GeneratedRemoteObjects {
   /** The real state for [wire], or null for a class this host does not know (a newer guest). */
   @Composable
   fun host(wire: RemoteObjectWire, report: (RemoteReport) -> Unit): Any? = when (wire.type) {
-    1 -> {
+    1 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.foundation.pager.rememberPagerState(
-          initialPage = wire.init.getValue("initialPage").jsonPrimitive.int,
-          initialPageOffsetFraction = wire.init.getValue("initialPageOffsetFraction").jsonPrimitive.float,
-          pageCount = { init.value.getValue("pageCount").jsonPrimitive.int }
+            initialPage = (wire.init["initialPage"] as? JsonPrimitive)?.intOrNull ?: 0,
+            initialPageOffsetFraction = (wire.init["initialPageOffsetFraction"] as? JsonPrimitive)?.floatOrNull ?: 0f,
+            pageCount = { (init.value["pageCount"] as? JsonPrimitive)?.intOrNull ?: 0 }
       )
       RemoteHost(wire, state, PagerStateRemote, report)
       state
     }
-    2 -> {
+    2 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
-          initialFirstVisibleItemIndex = wire.init.getValue("initialFirstVisibleItemIndex").jsonPrimitive.int,
-          initialFirstVisibleItemScrollOffset = wire.init.getValue("initialFirstVisibleItemScrollOffset").jsonPrimitive.int
+            initialFirstVisibleItemIndex = (wire.init["initialFirstVisibleItemIndex"] as? JsonPrimitive)?.intOrNull ?: 0,
+            initialFirstVisibleItemScrollOffset = (wire.init["initialFirstVisibleItemScrollOffset"] as? JsonPrimitive)?.intOrNull ?: 0
       )
       RemoteHost(wire, state, LazyGridStateRemote, report)
       state
     }
-    3 -> {
+    3 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState(
-          initialFirstVisibleItemIndex = wire.init.getValue("initialFirstVisibleItemIndex").jsonPrimitive.int,
-          initialFirstVisibleItemScrollOffset = wire.init.getValue("initialFirstVisibleItemScrollOffset").jsonPrimitive.int
+            initialFirstVisibleItemIndex = (wire.init["initialFirstVisibleItemIndex"] as? JsonPrimitive)?.intOrNull ?: 0,
+            initialFirstVisibleItemScrollOffset = (wire.init["initialFirstVisibleItemScrollOffset"] as? JsonPrimitive)?.intOrNull ?: 0
       )
       RemoteHost(wire, state, LazyStaggeredGridStateRemote, report)
       state
     }
-    4 -> {
+    4 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberModalBottomSheetState(
-          skipPartiallyExpanded = wire.init.getValue("skipPartiallyExpanded").jsonPrimitive.boolean
+            skipPartiallyExpanded = (wire.init["skipPartiallyExpanded"] as? JsonPrimitive)?.booleanOrNull ?: false
       )
       RemoteHost(wire, state, SheetStateRemote, report)
       state
     }
-    5 -> {
+    5 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberDatePickerState(
-          initialSelectedDateMillis = wire.init.getValue("initialSelectedDateMillis").takeUnless { it is kotlinx.serialization.json.JsonNull }?.jsonPrimitive?.longOrNull
+            initialSelectedDateMillis = (wire.init["initialSelectedDateMillis"] as? JsonPrimitive)?.longOrNull
       )
       RemoteHost(wire, state, DatePickerStateRemote, report)
       state
     }
-    6 -> {
+    6 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberDateRangePickerState(
-          initialSelectedStartDateMillis = wire.init.getValue("initialSelectedStartDateMillis").takeUnless { it is kotlinx.serialization.json.JsonNull }?.jsonPrimitive?.longOrNull,
-          initialSelectedEndDateMillis = wire.init.getValue("initialSelectedEndDateMillis").takeUnless { it is kotlinx.serialization.json.JsonNull }?.jsonPrimitive?.longOrNull
+            initialSelectedStartDateMillis = (wire.init["initialSelectedStartDateMillis"] as? JsonPrimitive)?.longOrNull,
+            initialSelectedEndDateMillis = (wire.init["initialSelectedEndDateMillis"] as? JsonPrimitive)?.longOrNull
       )
       RemoteHost(wire, state, DateRangePickerStateRemote, report)
       state
     }
-    7 -> {
+    7 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberTimePickerState(
-          initialHour = wire.init.getValue("initialHour").jsonPrimitive.int,
-          initialMinute = wire.init.getValue("initialMinute").jsonPrimitive.int
+            initialHour = (wire.init["initialHour"] as? JsonPrimitive)?.intOrNull ?: 0,
+            initialMinute = (wire.init["initialMinute"] as? JsonPrimitive)?.intOrNull ?: 0
       )
       RemoteHost(wire, state, TimePickerStateRemote, report)
       state
     }
-    8 -> {
+    8 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberTooltipState(
-          initialIsVisible = wire.init.getValue("initialIsVisible").jsonPrimitive.boolean,
-          isPersistent = wire.init.getValue("isPersistent").jsonPrimitive.boolean
+            initialIsVisible = (wire.init["initialIsVisible"] as? JsonPrimitive)?.booleanOrNull ?: false,
+            isPersistent = (wire.init["isPersistent"] as? JsonPrimitive)?.booleanOrNull ?: false
       )
       RemoteHost(wire, state, TooltipStateRemote, report)
       state
     }
-    9 -> {
+    9 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
-          
+            
       )
       RemoteHost(wire, state, SwipeToDismissBoxStateRemote, report)
       state
     }
-    10 -> {
+    10 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberSliderState(
-          value = wire.init.getValue("value").jsonPrimitive.float,
-          steps = wire.init.getValue("steps").jsonPrimitive.int
+            value = (wire.init["value"] as? JsonPrimitive)?.floatOrNull ?: 0f,
+            steps = (wire.init["steps"] as? JsonPrimitive)?.intOrNull ?: 0
       )
       RemoteHost(wire, state, SliderStateRemote, report)
       state
     }
-    11 -> {
+    11 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberRangeSliderState(
-          activeRangeStart = wire.init.getValue("activeRangeStart").jsonPrimitive.float,
-          activeRangeEnd = wire.init.getValue("activeRangeEnd").jsonPrimitive.float,
-          steps = wire.init.getValue("steps").jsonPrimitive.int
+            activeRangeStart = (wire.init["activeRangeStart"] as? JsonPrimitive)?.floatOrNull ?: 0f,
+            activeRangeEnd = (wire.init["activeRangeEnd"] as? JsonPrimitive)?.floatOrNull ?: 1f,
+            steps = (wire.init["steps"] as? JsonPrimitive)?.intOrNull ?: 0
       )
       RemoteHost(wire, state, RangeSliderStateRemote, report)
       state
     }
-    12 -> {
+    12 -> key(wire.id) {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberTopAppBarState(
-          initialHeightOffset = wire.init.getValue("initialHeightOffset").jsonPrimitive.float,
-          initialContentOffset = wire.init.getValue("initialContentOffset").jsonPrimitive.float
+            initialHeightOffset = (wire.init["initialHeightOffset"] as? JsonPrimitive)?.floatOrNull ?: 0f,
+            initialContentOffset = (wire.init["initialContentOffset"] as? JsonPrimitive)?.floatOrNull ?: 0f
       )
       RemoteHost(wire, state, TopAppBarStateRemote, report)
       state
