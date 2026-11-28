@@ -41,7 +41,8 @@ consumer.
 #      implementation("dev.keliver:keliver-guest:0.4.1")   // guest module
 
 # 3. If you build for iOS, add kotlin.native.cacheKind=none to your
-#    gradle.properties (CMP-8845 workaround).
+#    gradle.properties (CMP-8845 workaround; 0.4.x only: Kotlin 2.3.20
+#    removed the property, so from 0.5.0, on Kotlin 2.4, leave it out).
 
 # 4. Set up a TreehouseApp.Spec in your activity / view controller (Step 2).
 
@@ -328,7 +329,9 @@ consumer project, or builds will fail in confusing ways:
 
 ```properties
 # Workaround for Compose Multiplatform linker issue CMP-8845 — without
-# this, iOS link fails. Mandatory.
+# this, iOS link fails. Mandatory on 0.4.x (Kotlin 2.2). Kotlin 2.3.20
+# removed the property: from 0.5.0 (Kotlin 2.4) it does nothing but warn,
+# so leave it out there.
 kotlin.native.cacheKind=none
 
 # Keliver's presenter relies on this being off; turning it on breaks
