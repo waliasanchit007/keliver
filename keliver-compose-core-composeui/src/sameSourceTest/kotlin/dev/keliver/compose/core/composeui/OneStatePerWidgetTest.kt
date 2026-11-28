@@ -77,7 +77,8 @@ class OneStatePerWidgetTest {
 
   @Test fun aRequiredValueAndAValueWithADefault() = runComposeUiTest {
     val runs = Runs()
-    val text = ComposeUiGenText2().apply {
+    // Material 3's Text: one entry since core's fresh lock (MS4-06), no hidden predecessor.
+    val text = ComposeUiGenText1().apply {
       modifier = CountingModifier(1, runs)
       text("a")
     }
