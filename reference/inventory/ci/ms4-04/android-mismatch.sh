@@ -29,6 +29,12 @@ if grep -qx "$MS4_PROBE_ON" "$MS4_MAIN"; then
         && ok "S2: the probe's signed bundle loaded (codeLoadSuccess)" || bad "S2: the probe's bundle did not load"
       # The host ignored the modifier, not the widgets, nor the rest of the tree.
       drive title Stockroom S2; fold "S2: with the unknown modifier ignored, the screen still shows Stockroom" $?
+      # The title is v2's too; the probe's own texts are only in this bundle, and they are the
+      # widgets that carry the unknown modifier (drive.py keeps each screen it read as S2-NN-title.xml).
+      MS4_DUMP="$(ls "$EV"/S2-*-title.xml 2>/dev/null | tail -1)"
+      [ -n "$MS4_DUMP" ] && grep -q 'text="Schema mismatch probe"' "$MS4_DUMP" && grep -q 'text="Schema mismatch probe, again"' "$MS4_DUMP" \
+        && ok "S2: the probe's bundle is on screen, with both texts that carry the unknown modifier drawn" \
+        || bad "S2: the probe's two texts are not on screen (${MS4_DUMP:-no S2 screen dump})"
       # S3: one report on the device, for the probe's bundle, with the category as its reason.
       MS4_LINES="$(tr -d '\r' < "$EV/logcat-prod-mismatch.txt" | grep "$HOST_TAG: report: schema-mismatch ")"
       MS4_N="$(printf '%s' "$MS4_LINES" | grep -c 'report: schema-mismatch ')"

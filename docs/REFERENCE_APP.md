@@ -87,7 +87,7 @@ apart from the CI harness.**
     `ci/ms4-04/android-mismatch.sh`): the guest's probe (`SCHEMA_MISMATCH_PROBE`
     in `device/Main.kt`, off in every other bundle) is switched on and published
     as the next version. Two of its texts carry one modifier sent with a tag no
-    schema has. The host must load it, still show Stockroom, log exactly one
+    schema has. The host must load it, still show Stockroom and draw both texts, log exactly one
     `report: schema-mismatch` for that sequence, and the relay must count exactly
     one (`GET /reports`, outcome and reason). The probe is switched off again.
   The rows after P7, the development route (the zip's generic host is on the 0.4
