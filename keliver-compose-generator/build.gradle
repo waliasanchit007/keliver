@@ -150,12 +150,35 @@ def generateEditorRender = tasks.register('generateComposeApiEditorRender', Java
 // (the values owner's lock is the one ordering the groups share).
 generateTasks.eachWithIndex { task, i -> if (i > 0) task.configure { mustRunAfter(generateTasks[i - 1]) } }
 
+// The shared `values` lock's own run (MS4-42, G1): the call records the guest builds (the guest's
+// mirrors in keliver-compose-calls, the host's replay in keliver-compose-calls-composeui, the editor's
+// kinds), from values.json. Its lock is values.lock.json: the one lock every group shares for values.
+def valuesArgs = { List extra ->
+  [
+    '--values',
+    '--config', file('values.json').absolutePath,
+    '--lock', file('values.lock.json').absolutePath,
+    '--classpath', configurations.composeApi.asPath,
+    '--sources', configurations.composeSources.asPath,
+    '--out-guest', rootProject.file('keliver-compose-calls/src/commonMain/kotlin').absolutePath,
+    '--out-host', rootProject.file('keliver-compose-calls-composeui/src/commonMain/kotlin').absolutePath,
+    '--out-editor', file('values.editor.json').absolutePath,
+    '--out-report', file('values.report.md').absolutePath,
+  ] + extra
+}
+def generateValues = tasks.register('generateComposeApiValues', JavaExec) {
+  description = 'Regenerate the call records (guest mirrors, host replay, editor kinds) and the shared values lock from Compose'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.keliver.compose.generator.MainKt'
+  args = valuesArgs([])
+}
+
 // The aggregate stays what CI and the docs run; each group's own task is generateComposeApi<Group>
 // (generateComposeApiCore, ...Coil, ...Gatea), writing and checking only that group's files.
 tasks.register('generateComposeApi') {
   group = 'build'
-  description = 'Regenerate every generated group (the product\'s core and coil, and the prototype), the root schema and the editor dispatcher from Compose'
-  dependsOn(generateTasks + [generateRoot, generateEditorRender])
+  description = 'Regenerate every generated group (the product\'s core and coil, and the prototype), the shared values, the root schema and the editor dispatcher from Compose'
+  dependsOn(generateTasks + [generateValues, generateRoot, generateEditorRender])
 }
 
 // GeneratorTest reads the same Compose API (and, for default texts, its sources) the generator does.
@@ -191,8 +214,15 @@ def checkEditorRender = tasks.register('checkComposeApiEditorRender', JavaExec) 
   args = editorRenderArgs(['--check'])
 }
 
+def checkValues = tasks.register('checkComposeApiValues', JavaExec) {
+  description = 'Fails when the checked-in call records or the shared values lock differ from a fresh generation, or the lock changed other than by appends'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.keliver.compose.generator.MainKt'
+  args = valuesArgs(['--check'])
+}
+
 tasks.register('checkComposeApi') {
   group = 'verification'
-  description = 'Fails when any generated group\'s (or the root\'s, or the editor dispatcher\'s) checked-in sources or lock differ from a fresh generation, or a lock changed other than by appends'
-  dependsOn(checkTasks + [checkRoot, checkEditorRender])
+  description = 'Fails when any generated group\'s (or the shared values\', or the root\'s, or the editor dispatcher\'s) checked-in sources or lock differ from a fresh generation, or a lock changed other than by appends'
+  dependsOn(checkTasks + [checkValues, checkRoot, checkEditorRender])
 }

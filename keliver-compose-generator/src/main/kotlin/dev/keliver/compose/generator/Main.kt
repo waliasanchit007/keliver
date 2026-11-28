@@ -128,7 +128,7 @@ fun main(argv: Array<String>) {
   val check = "--check" in args
   if ("--root" in args) return root(File(arg("--root")), File(arg("--out-schema")), check)
   if ("--editor-dispatcher" in args) return editorDispatcherMain(arg("--editor-dispatcher").split(',').filter { it.isNotEmpty() }, File(arg("--out-editor-render")), check)
-  val problems = runGroup(args)
+  val problems = if ("--values" in args) runValues(args).problems else runGroup(args)
   if (problems.isNotEmpty()) {
     System.err.println(
       if (check) {

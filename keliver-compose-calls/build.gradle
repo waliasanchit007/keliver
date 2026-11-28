@@ -1,0 +1,45 @@
+// G1, call records (docs/MS4_PLAN.md, MS4-42): the guest's mirrors of Compose's value types. A value
+// built here crosses as the call that built it ({"call":<tag>,"args":{…}}); the host's generated replay
+// (keliver-compose-calls-composeui) makes the same call on Compose. GeneratedCalls.kt in each package
+// is written by :keliver-compose-generator:generateComposeApiValues from values.json and the shared
+// values lock (values.lock.json); the runtime (CallRecord, CallValue) and the geometry types are
+// hand-written. The mirrors live under dev.keliver.calls.* until MS4-13 deletes the hand mirrors of
+// the same names in keliver-compose-values and moves the root to dev.keliver.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  // wasmJs: the editor's canvas builds values with these mirrors in the browser.
+  targets(Common + WasmJs.Browser)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        // The hand codecs that stay (Color, Dp, TextUnit), the serialization they use, and Compose's runtime.
+        api projects.keliverComposeValues
+        api libs.kotlinx.serialization.json
+        api libs.jetbrains.compose.runtime
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}
+
+// GeneratedCalls.kt is compared byte for byte by checkComposeApiValues: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/GeneratedCalls.kt")
+    }
+  }
+}

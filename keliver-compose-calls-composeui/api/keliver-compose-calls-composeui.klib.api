@@ -1,0 +1,15 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-compose-calls-composeui>
+final object dev.keliver.calls.composeui/GeneratedReplay { // dev.keliver.calls.composeui/GeneratedReplay|null[0]
+    final fun replay(kotlinx.serialization.json/JsonElement): kotlin/Any // dev.keliver.calls.composeui/GeneratedReplay.replay|replay(kotlinx.serialization.json.JsonElement){}[0]
+}
+
+final val dev.keliver.calls.composeui/dev_keliver_calls_composeui_GeneratedReplay$stableprop // dev.keliver.calls.composeui/dev_keliver_calls_composeui_GeneratedReplay$stableprop|#static{}dev_keliver_calls_composeui_GeneratedReplay$stableprop[0]
+
+final fun dev.keliver.calls.composeui/dev_keliver_calls_composeui_GeneratedReplay$stableprop_getter(): kotlin/Int // dev.keliver.calls.composeui/dev_keliver_calls_composeui_GeneratedReplay$stableprop_getter|dev_keliver_calls_composeui_GeneratedReplay$stableprop_getter(){}[0]
