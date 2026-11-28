@@ -29,6 +29,7 @@ import kotlin.test.assertTrue
 class PerGroupTest {
   private val classpath = System.getProperty("keliver.composeApi") ?: error("the test task passes keliver.composeApi")
   private val sources = System.getProperty("keliver.composeSources") ?: error("the test task passes keliver.composeSources")
+  private val input = System.getProperty("keliver.composeInput") ?: error("the test task passes keliver.composeInput")
 
   /** One scratch tree: where each group's modules and the shared roots go, and its own lock copies. */
   private class Tree(val dir: File) {
@@ -60,7 +61,7 @@ class PerGroupTest {
   }
 
   private fun run(tree: Tree, group: String, check: Boolean = false): List<String> =
-    runGroup(tree.args(group, check) + listOf("--classpath", classpath, "--sources", sources))
+    runGroup(tree.args(group, check) + listOf("--classpath", classpath, "--sources", sources, "--input", input))
 
   private fun newTree() = Tree(Files.createTempDirectory("per-group").toFile().also { it.deleteOnExit() })
 

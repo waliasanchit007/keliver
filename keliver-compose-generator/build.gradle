@@ -165,6 +165,7 @@ tasks.named('test') {
   doFirst {
     systemProperty 'keliver.composeApi', configurations.composeApi.asPath
     systemProperty 'keliver.composeSources', configurations.composeSources.asPath
+    systemProperty 'keliver.composeInput', composeInputVersions
   }
 }
 

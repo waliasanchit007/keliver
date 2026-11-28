@@ -6,6 +6,15 @@ the per-type hand work in MS4b and MS4c, and that per-group configs and locks le
 in parallel. Design references: [`COMPOSE_GENERATOR_DESIGN.md`](COMPOSE_GENERATOR_DESIGN.md) §5, §6,
 §9, §10, §20–22.
 
+**Update 2026-11-28 (MS4-41, G0):** the generator classes (`GenericIndex`, `GenericSurvey`,
+`GenericEmit`, `SourceReader.defaultsOf`) and this document are in main; the spike module
+`keliver-compose-generic-spike`, its `generateGenericSpike` task and the test that checked its output in
+stay on #312's branch. §3's items 1, 2 and 5 are done: each group's stale check covers only its own
+files; the editor interpreter is one `GeneratedEditorRender_<Group>.kt` per group plus a generated
+dispatcher (`Generated.kt`, `generateComposeApiEditorRender`); every group has
+`generateComposeApi<Group>` and `checkComposeApi<Group>`, and `generateComposeApi`/`checkComposeApi`
+remain the aggregates. The values files keep one owner (core, `--factories-lock` for the others).
+
 **Short answer:**
 - The mechanisms work. Each is proven on real Compose 1.12.2 metadata, sources and a real Compose
   host (JVM).
