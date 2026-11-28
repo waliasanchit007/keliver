@@ -119,6 +119,8 @@ internal data class ParsedProtocolWidget(
   override val documentation: String? = null,
   override val traits: List<ProtocolTrait> = emptyList(),
   override val internalComposable: Boolean = false,
+  override val replayable: Boolean = false,
+  override val scrolls: Boolean = false,
 ) : ProtocolWidget
 
 @Serializable
@@ -130,6 +132,8 @@ internal data class ParsedProtocolProperty(
   override val defaultExpression: String? = null,
   override val deprecation: ParsedDeprecation? = null,
   override val documentation: String? = null,
+  override val frameRule: FramePropertyRule? = null,
+  override val containsString: Boolean = false,
 ) : ProtocolProperty
 
 @Serializable
@@ -169,6 +173,8 @@ internal data class ParsedProtocolModifier(
   override val deprecation: ParsedDeprecation? = null,
   override val documentation: String? = null,
   override val properties: List<ParsedProtocolModifierProperty> = emptyList(),
+  override val replayable: Boolean = false,
+  override val scrolls: Boolean = false,
 ) : ProtocolModifier
 
 @Serializable
@@ -179,4 +185,6 @@ internal data class ParsedProtocolModifierProperty(
   override val defaultExpression: String? = null,
   override val deprecation: ParsedDeprecation? = null,
   override val documentation: String? = null,
+  override val frameRule: FramePropertyRule? = null,
+  override val containsString: Boolean = false,
 ) : Property
