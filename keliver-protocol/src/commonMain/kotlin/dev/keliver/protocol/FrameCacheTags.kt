@@ -26,7 +26,7 @@ package dev.keliver.protocol
  * one stays here. `FrameCacheTagsTest` locks the values.
  */
 public object FrameCacheTags {
-  /** `CachedFrame(policy, ready, paneTitle)` on a screen's root. Value: an object. */
+  /** `Modifier.cachedFrame(policy, ready, paneTitle)` on a screen's root. Value: an object. */
   public const val CACHED_FRAME: Int = -4_600_001
 
   /** `Modifier.cached()`: the node keeps its text in a `Shell` frame. No value. */

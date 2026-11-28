@@ -6,6 +6,10 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-protocol>
+open annotation class dev.keliver.protocol/KeliverFrameMarksApi : kotlin/Annotation { // dev.keliver.protocol/KeliverFrameMarksApi|null[0]
+    constructor <init>() // dev.keliver.protocol/KeliverFrameMarksApi.<init>|<init>(){}[0]
+}
+
 abstract fun interface dev.keliver.protocol/ChangesSink { // dev.keliver.protocol/ChangesSink|null[0]
     abstract fun sendChanges(kotlin.collections/List<dev.keliver.protocol/Change>) // dev.keliver.protocol/ChangesSink.sendChanges|sendChanges(kotlin.collections.List<dev.keliver.protocol.Change>){}[0]
 }
@@ -127,25 +131,6 @@ sealed interface dev.keliver.protocol/ChildrenChange : dev.keliver.protocol/Chan
 
 sealed interface dev.keliver.protocol/ValueChange : dev.keliver.protocol/Change // dev.keliver.protocol/ValueChange|null[0]
 
-final class dev.keliver.protocol/CachedFrameMark { // dev.keliver.protocol/CachedFrameMark|null[0]
-    constructor <init>(kotlin/String, kotlin/Long, kotlin/Boolean, kotlin/String) // dev.keliver.protocol/CachedFrameMark.<init>|<init>(kotlin.String;kotlin.Long;kotlin.Boolean;kotlin.String){}[0]
-
-    final val content // dev.keliver.protocol/CachedFrameMark.content|{}content[0]
-        final fun <get-content>(): kotlin/String // dev.keliver.protocol/CachedFrameMark.content.<get-content>|<get-content>(){}[0]
-    final val maxAgeMillis // dev.keliver.protocol/CachedFrameMark.maxAgeMillis|{}maxAgeMillis[0]
-        final fun <get-maxAgeMillis>(): kotlin/Long // dev.keliver.protocol/CachedFrameMark.maxAgeMillis.<get-maxAgeMillis>|<get-maxAgeMillis>(){}[0]
-    final val paneTitle // dev.keliver.protocol/CachedFrameMark.paneTitle|{}paneTitle[0]
-        final fun <get-paneTitle>(): kotlin/String // dev.keliver.protocol/CachedFrameMark.paneTitle.<get-paneTitle>|<get-paneTitle>(){}[0]
-    final val ready // dev.keliver.protocol/CachedFrameMark.ready|{}ready[0]
-        final fun <get-ready>(): kotlin/Boolean // dev.keliver.protocol/CachedFrameMark.ready.<get-ready>|<get-ready>(){}[0]
-
-    final fun toString(): kotlin/String // dev.keliver.protocol/CachedFrameMark.toString|toString(){}[0]
-
-    final object Companion { // dev.keliver.protocol/CachedFrameMark.Companion|null[0]
-        final fun read(kotlinx.serialization.json/JsonElement): dev.keliver.protocol/CachedFrameMark? // dev.keliver.protocol/CachedFrameMark.Companion.read|read(kotlinx.serialization.json.JsonElement){}[0]
-    }
-}
-
 final class dev.keliver.protocol/Create : dev.keliver.protocol/Change { // dev.keliver.protocol/Create|null[0]
     final val id // dev.keliver.protocol/Create.id|{}id[0]
         final fun <get-id>(): dev.keliver.protocol/Id // dev.keliver.protocol/Create.id.<get-id>|<get-id>(){}[0]
@@ -197,23 +182,6 @@ final class dev.keliver.protocol/Event { // dev.keliver.protocol/Event|null[0]
 
         final fun invoke(dev.keliver.protocol/Id, dev.keliver.protocol/EventTag, kotlin.collections/List<kotlinx.serialization.json/JsonElement> = ...): dev.keliver.protocol/Event // dev.keliver.protocol/Event.Companion.invoke|invoke(dev.keliver.protocol.Id;dev.keliver.protocol.EventTag;kotlin.collections.List<kotlinx.serialization.json.JsonElement>){}[0]
         final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.protocol/Event> // dev.keliver.protocol/Event.Companion.serializer|serializer(){}[0]
-    }
-}
-
-final class dev.keliver.protocol/FrameMarks { // dev.keliver.protocol/FrameMarks|null[0]
-    constructor <init>(dev.keliver.protocol/CachedFrameMark?, kotlin/Boolean, kotlin/Boolean) // dev.keliver.protocol/FrameMarks.<init>|<init>(dev.keliver.protocol.CachedFrameMark?;kotlin.Boolean;kotlin.Boolean){}[0]
-
-    final val cached // dev.keliver.protocol/FrameMarks.cached|{}cached[0]
-        final fun <get-cached>(): kotlin/Boolean // dev.keliver.protocol/FrameMarks.cached.<get-cached>|<get-cached>(){}[0]
-    final val cachedFrame // dev.keliver.protocol/FrameMarks.cachedFrame|{}cachedFrame[0]
-        final fun <get-cachedFrame>(): dev.keliver.protocol/CachedFrameMark? // dev.keliver.protocol/FrameMarks.cachedFrame.<get-cachedFrame>|<get-cachedFrame>(){}[0]
-    final val notCached // dev.keliver.protocol/FrameMarks.notCached|{}notCached[0]
-        final fun <get-notCached>(): kotlin/Boolean // dev.keliver.protocol/FrameMarks.notCached.<get-notCached>|<get-notCached>(){}[0]
-
-    final fun toString(): kotlin/String // dev.keliver.protocol/FrameMarks.toString|toString(){}[0]
-
-    final object Companion { // dev.keliver.protocol/FrameMarks.Companion|null[0]
-        final fun read(kotlin.collections/List<dev.keliver.protocol/ModifierElement>): dev.keliver.protocol/FrameMarks? // dev.keliver.protocol/FrameMarks.Companion.read|read(kotlin.collections.List<dev.keliver.protocol.ModifierElement>){}[0]
     }
 }
 

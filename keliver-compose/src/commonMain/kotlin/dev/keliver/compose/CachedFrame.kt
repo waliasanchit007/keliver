@@ -151,14 +151,14 @@ internal class CachedFrameMarker(
 }
 
 @OptIn(ExperimentalKeliverHostFeaturesApi::class)
-internal object CachedMarker :FrameCacheMarker() {
+internal object CachedMarker : FrameCacheMarker() {
   override val tag: Int get() = CACHED_TAG
   override val fields: Map<String, Any?> get() = emptyMap()
   override fun toString(): String = "Cached"
 }
 
 @OptIn(ExperimentalKeliverHostFeaturesApi::class)
-internal object NotCachedMarker :FrameCacheMarker() {
+internal object NotCachedMarker : FrameCacheMarker() {
   override val tag: Int get() = NOT_CACHED_TAG
   override val fields: Map<String, Any?> get() = emptyMap()
   override fun toString(): String = "NotCached"

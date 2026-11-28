@@ -39,7 +39,7 @@ internal class Nf5Stack(private val variant: Variant) : ThreewayStack {
   }
 
   @Composable
-  override fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
+  override fun Show(keys: List<Any>, next: Any?, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
     BackHandler(enabled = keys.size > 1) { onBack() }
     val list = keys[0]
     val top = keys.getOrNull(1)

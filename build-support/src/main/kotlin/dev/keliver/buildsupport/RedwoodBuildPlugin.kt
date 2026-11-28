@@ -688,6 +688,8 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
           "dev.keliver.RedwoodCodegenApi",
           // The yoga module is an implementation detail of our layouts.
           "dev.keliver.yoga.RedwoodYogaApi",
+          // NF5's cached-frame marker reader: its shape is expected to change.
+          "dev.keliver.protocol.KeliverFrameMarksApi",
         )
       }
     }

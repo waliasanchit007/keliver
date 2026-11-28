@@ -229,7 +229,7 @@ cold start
 This is the rule that makes I1 and I11 hold. The recorder is the only writer.
 
 **What is recorded:**
-- Only the subtree under the node that carries the `CachedFrame` marker. Not the whole content.
+- Only the subtree under the node that carries the `Modifier.cachedFrame(…)` marker. Not the whole content.
 - Inside it, only what is shown. Every hidden child of a retained container (NF1's retained entries
   below the top) and every prepared entry of (B) is pruned. The pruning uses the host's explicit
   entry state (section 3.6), not the children's order.
@@ -393,7 +393,7 @@ on iOS), so most of the host side is common code.
   opens. Its semantics are one node, "Loading", polite live region, no actions. (I3)
 - **Accessibility at the swap.** When the guest's tree replaces the frame, the screen reader's
   focus is on the "Loading" node, which disappears. So the swap announces the new pane. On Android
-  the guest's content root carries `paneTitle` (the `CachedFrame`'s `paneTitle`) from the swap's
+  the guest's content root carries `paneTitle` (the `Modifier.cachedFrame(…)`'s `paneTitle`) from the swap's
   frame on; a new pane title makes the platform send a window-state change, which TalkBack
   announces. That does not promise to move TalkBack's focus, so the screen's heading is made the
   first node in the pane's traversal order, and the test checks that order, not focus movement
@@ -1080,7 +1080,7 @@ the frame goes in that frame; a host test binding with a non-null `StateSnapshot
 
 ### I2. Data freshness is the guest's choice
 
-- **Off by default.** A screen without `CachedFrame` is never stored.
+- **Off by default.** A screen without `Modifier.cachedFrame(…)` is never stored.
 - **Two levels, no default.** `Shell` (an allowlist: only `cached()` texts survive) and `Whole`.
   For money and personal data: `Shell`. The docs show it.
 - **What `Shell` does not hide, stated plainly: `Shell` removes strings; the structure and every

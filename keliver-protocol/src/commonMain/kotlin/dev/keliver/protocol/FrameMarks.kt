@@ -30,7 +30,8 @@ import kotlinx.serialization.json.longOrNull
  * A marker that cannot be read (a newer guest's, or malformed) is dropped and the node is simply
  * unmarked: a frame is then never recorded, which is the safe side (I1).
  */
-public class FrameMarks(
+@KeliverFrameMarksApi
+public class FrameMarks internal constructor(
   /** The `cachedFrame` marker on this node, if any. */
   public val cachedFrame: CachedFrameMark?,
   /** `Modifier.cached()` is on this node. */
@@ -62,7 +63,8 @@ public class FrameMarks(
   }
 }
 
-public class CachedFrameMark(
+@KeliverFrameMarksApi
+public class CachedFrameMark internal constructor(
   /** `"shell"` or `"whole"`. */
   public val content: String,
   public val maxAgeMillis: Long,

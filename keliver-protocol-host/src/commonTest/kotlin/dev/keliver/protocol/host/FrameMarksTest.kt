@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:OptIn(RedwoodCodegenApi::class, RedwoodLeakApi::class)
+@file:OptIn(RedwoodCodegenApi::class, RedwoodLeakApi::class, KeliverFrameMarksApi::class)
 
 package dev.keliver.protocol.host
 
@@ -32,6 +32,7 @@ import dev.keliver.protocol.Create
 import dev.keliver.protocol.FrameCacheTags
 import dev.keliver.protocol.FrameMarks
 import dev.keliver.protocol.Id
+import dev.keliver.protocol.KeliverFrameMarksApi
 import dev.keliver.protocol.ModifierChange
 import dev.keliver.protocol.ModifierElement
 import dev.keliver.protocol.ModifierTag
@@ -179,7 +180,9 @@ private object FakeWidgetProtocol : WidgetHostProtocol {
   override val childrenTags: IntArray? = null
 }
 
-private class FakeNode(id: Id) : ProtocolNode<String>(id), Widget<String> {
+private class FakeNode(id: Id) :
+  ProtocolNode<String>(id),
+  Widget<String> {
   override val widgetTag get() = WidgetTag(1)
   override val widgetName get() = "Fake"
   override val widget: Widget<String> get() = this

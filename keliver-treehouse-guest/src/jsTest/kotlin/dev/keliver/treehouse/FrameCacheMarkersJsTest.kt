@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:OptIn(RedwoodCodegenApi::class, ExperimentalKeliverHostFeaturesApi::class)
+@file:OptIn(RedwoodCodegenApi::class, ExperimentalKeliverHostFeaturesApi::class, KeliverFrameMarksApi::class)
 @file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 
 package dev.keliver.treehouse
@@ -32,6 +32,7 @@ import dev.keliver.compose.NotCachedMarker
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.FrameMarks
 import dev.keliver.protocol.Id
+import dev.keliver.protocol.KeliverFrameMarksApi
 import dev.keliver.protocol.ModifierChange
 import dev.keliver.protocol.ModifierTag
 import dev.keliver.protocol.RedwoodVersion
