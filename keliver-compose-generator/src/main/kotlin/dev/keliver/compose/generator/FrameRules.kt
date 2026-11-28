@@ -87,19 +87,23 @@ class FrameRuleEmitter(private val config: Config, private val generated: List<P
 
   private val used = sortedSetOf<String>()
 
-  init {
-    if (rules != null) {
-      val specs = generated.map { it.decl.spec }.toSet()
-      val params = generated.associate { it.decl.spec to it.params.map { c -> c.param.name }.toSet() }
-      for (e in rules.exceptions) {
-        val matches = when {
-          e.spec != null && e.spec !in specs -> false
-          e.param == null -> true
-          e.spec != null -> e.param in params.getValue(e.spec)
-          else -> params.values.any { e.param in it }
-        }
-        require(matches) { "${config.group}.json frameRules: this exception matches no generated parameter: ${e.spec ?: "*"}#${e.param ?: ""}" }
+  /**
+   * Fails when an exception of the config matches no generated declaration or parameter of the
+   * whole group (a Compose change renamed it, or the declaration left the config): an exception
+   * that classifies nothing would hide that. Called once per generation, with every declaration.
+   */
+  fun checkExceptions() {
+    val rules = rules ?: return
+    val specs = generated.map { it.decl.spec }.toSet()
+    val params = generated.associate { it.decl.spec to it.params.map { c -> c.param.name }.toSet() }
+    for (e in rules.exceptions) {
+      val matches = when {
+        e.spec != null && e.spec !in specs -> false
+        e.param == null -> true
+        e.spec != null -> e.param in params.getValue(e.spec)
+        else -> params.values.any { e.param in it }
       }
+      require(matches) { "${config.group}.json frameRules: this exception matches no generated parameter: ${e.spec ?: "*"}#${e.param ?: ""}" }
     }
   }
 

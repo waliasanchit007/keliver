@@ -117,6 +117,7 @@ fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List
     val made = factories.filter { it.error == null }.map { "${it.decl.owner}.${it.decl.name}" }.distinct()
     require(made.isEmpty()) { "${config.group}: a group with a base cannot name *Defaults factories yet: $made" }
   }
+  FrameRuleEmitter(config, plans.filterIsInstance<Plan.Generated>()).checkExceptions()
   val e = Emitter(config, plans, factories, defaults, api::supertypes)
   return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.values(), e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)))
 }
