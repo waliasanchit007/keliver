@@ -1068,15 +1068,12 @@ their required checks pass (Standing constraints, below).
   - L2: MS4-04, `schema-mismatch` reports, pulled forward because MS4-43 waits for G0.
 - **Issues opened:** #324 (the RenderThread redraws for about 7 s after a tap), #325 (the reference
   app's local-maven P4/V2 flake), #326 (ios-host's T3 tap test, intermittent on main too).
-- **Owner:**
-  - R1's bar (both the reveal's first draw and its first queued buffer within native + 16.7 ms),
-    then the A12 R1 session;
-  - MS4-03's sizes against Q11: iOS +4.91 MB against +3 MB, measured against an app with no
-    Keliver, so an upper bound; measure on Q11's own baseline before raising the budget or cutting;
-    stripping the fork's `libquickjs.so` (1.6 MB of debug information per ABI) needs a
-    `1.28.0-keliver.2` release;
-  - still open from 2026-11-26: R0's frame-end reading, Q17, Q18, Q3, MS4-01's names, the iPhone
-    trust step (about 2026-11-29), and nikhil's login.
+- **The owner's answers of 2026-11-28:** R1's bar as ruled (both the reveal's first draw and its
+  first queued buffer within native + 16.7 ms), so the A12 R1 session runs next; Q17 is (iii); Q11's
+  iOS budget is raised to +5 MB (MS4-03 measured +4.91); go to build and publish the Zipline fork's
+  `1.28.0-keliver.2` with `libquickjs.so` stripped (1.6 MB of debug information per ABI).
+- **Owner, still open:** R0's frame-end reading, Q18, Q3, MS4-01's names, the iPhone trust step
+  (about 2026-11-29), and nikhil's login.
 
 **2026-11-26 (MS4 and NF5's Track A start; R0 reachable in principle).**
 - **The owner's answers of 2026-11-26:**

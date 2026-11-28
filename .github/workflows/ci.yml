@@ -412,7 +412,7 @@ jobs:
       # here passed. It sits right after the last step that links for the iOS simulator, not at
       # the end of the job: the steps below run JS, wasm and JVM tests only and never touch these
       # directories, so the caches are final here, and a later failure or the job's timeout
-      # (main's run takes 85-100 minutes) does not throw away a set that cost a cold link to
+      # (runs have reached 150 minutes) does not throw away a set that cost a cold link to
       # build. A new step that links for the simulator goes above this one.
       - name: Kotlin/Native compiler caches (iOS simulator), save from main
         if: steps.kn.outputs.dir != '' && github.ref == 'refs/heads/main' && steps.kn-restore.outputs.cache-hit != 'true'

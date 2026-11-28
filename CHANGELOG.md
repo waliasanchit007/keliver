@@ -88,8 +88,8 @@ New:
   a screen's named states next to it: a typed route plus an HTTP fixture set. The
   relay lists them at `GET /states` (`docs/PORTAL_USAGE.md`, "Named states") (#226).
   `@ScreenState` has BINARY retention by design: a device will find states through a
-  generated registry, since Kotlin/JS has no runtime annotation reflection. Opening a
-  state is not built yet (#233).
+  generated registry, since Kotlin/JS has no runtime annotation reflection. The
+  registry and `open()` came in #323; opening a state on a device is ED3's (#233).
 - `keliver-http-fixtures` (new module; jvm, iOS, js, wasmJs; Android uses the JVM
   artifact): the relay's HTTP fixture matching rules, shared so hosts can replay fixtures
   too (#224). `HttpFixtureSet`, `HttpFixtureEntry` and `HttpFixtureSelection.Match`/`Miss`
@@ -192,13 +192,6 @@ New:
   wasm guests can use them); `open(screen, name, fixtureSets)` gives the state's `NamedState`,
   failing with a sealed `ScreenStateException`: `UnknownScreenStateException`,
   `MissingScreenStateFixturesException` or `StaleScreenStateRegistryException` (#323).
-- Portal: `keliver.portal.json` `screenStateRegistry` (`out`, `packageName`, `valName`): the
-  relay writes the app's registry before each preview build, from the same screen files and
-  reader as `GET /states`; `ScreenStateRegistryKt <app-dir> --check` fails when it is stale
-  (#323).
-- Portal: `GET /states` reports a `@ScreenState` function the generated registry cannot call
-  (`private`, `suspend`, generic or `@Composable`, a return type other than `NamedState`, or an
-  annotation that might ask callers to opt in) as a problem instead of listing it (#323).
 
 Changed:
 
@@ -273,6 +266,13 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
   or class, a qualified or foreign `NamedState`, an unimported annotation) instead of
   skipping them, matches the annotation by import, full name or same-file typealias, and
   re-parses only changed screen files (#233).
+- Portal: `keliver.portal.json` `screenStateRegistry` (`out`, `packageName`, `valName`): the
+  relay writes the app's registry before each preview build, from the same screen files and
+  reader as `GET /states`; `ScreenStateRegistryKt <app-dir> --check` fails when it is stale
+  (#323).
+- Portal: `GET /states` reports a `@ScreenState` function the generated registry cannot call
+  (`private`, `suspend`, generic or `@Composable`, a return type other than `NamedState`, or an
+  annotation that might ask callers to opt in) as a problem instead of listing it (#323).
 - On the 0.4 line, apps that `keliver-init` creates get the bundle's own Gradle 9.0.0 wrapper
   (`scripts/templates/app-wrapper`), the version the 0.4 line's AGP 8.12.0 needs, not the
   repository's Gradle (#234). Apps on 0.5.x get Gradle 9.7.1 and AGP 9.3.3 (next item, #299).
