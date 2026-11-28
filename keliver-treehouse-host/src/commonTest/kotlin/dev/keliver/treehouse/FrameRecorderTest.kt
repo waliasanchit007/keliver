@@ -21,7 +21,6 @@ import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
-import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import dev.keliver.Modifier
@@ -166,7 +165,7 @@ class FrameRecorderTest {
     assertThat(recorder.recording).isNull()
     recorder.feed(ready(true))
 
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
     assertThat(reasons.written).hasSize(1)
     val hit = store.read(CACHE, baseKey) as FrameRead.Hit
     assertThat(textOf(hit.frame, nodeId = 2)).isEqualTo("hello")
@@ -201,7 +200,7 @@ class FrameRecorderTest {
   @Test fun markedAndReadyInTheFirstBatchWrites() {
     val recorder = recorder()
     recorder.feed(screen(ready = true))
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
   }
 
   // ---- the first-batch and structure rules
@@ -295,7 +294,7 @@ class FrameRecorderTest {
     recorder.feed(screen(ready = false))
     sink.sendEvent(FakeEvent(2, 9)) // a viewport report
     recorder.feed(ready(true))
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
   }
 
   @Test fun condition4AnEventOfAnotherTagOnAReportingWidgetIsInput() {
@@ -311,7 +310,7 @@ class FrameRecorderTest {
     val recorder = recorder()
     recorder.feed(screen(ready = true))
     recorder.inputSeen()
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
     assertThat(reasons.skipped).hasSize(0)
   }
 
@@ -325,7 +324,7 @@ class FrameRecorderTest {
     val recorder = recorder()
     hostWidgets[3] = FakeScroller(atOrigin = true)
     recorder.feed(scrollerBatch())
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
   }
 
   @Test fun condition5AScrolledScrollerBlocks() {
@@ -362,7 +361,7 @@ class FrameRecorderTest {
         modifier(3, marker(8), marker(dev.keliver.protocol.FrameCacheTags.NOT_CACHED)),
       ),
     )
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
   }
 
   @Test fun condition6ANotReplayableWidgetBlocks() {
@@ -392,7 +391,7 @@ class FrameRecorderTest {
     recorder.feed(screen(ready = false))
     recorder.feed(listOf(prop(2, TestSchema.TEXT, 7, JsonPrimitive(false))))
     recorder.feed(ready(true))
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
   }
 
   @Test fun theFirstFailedConditionIsTheReason() {
@@ -424,7 +423,7 @@ class FrameRecorderTest {
     val recorder = recorder(store)
     hostWidgets[2] = FakeText(mapOf(1 to listOf(TextLine(10f, 2), TextLine(12f, 3))))
     recorder.feed(screen(ready = true, content = "shell"))
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
     val hit = store.read(CACHE, baseKey) as FrameRead.Hit
     val text = textOf(hit.frame, nodeId = 2)
     assertThat(text.split('\n').map { it.length }).isEqualTo(listOf(2, 3))
@@ -448,7 +447,7 @@ class FrameRecorderTest {
   @Test fun wholeNeedsNoTextLines() {
     val recorder = recorder()
     recorder.feed(screen(ready = true, content = "whole"))
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
   }
 
   // ---- widgetsUnder (the real adapter)
@@ -473,7 +472,7 @@ class FrameRecorderTest {
       listener = reasons,
     )
     recorder.feed(scrollerBatch())
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
   }
 
   // ---- I11's navigation test

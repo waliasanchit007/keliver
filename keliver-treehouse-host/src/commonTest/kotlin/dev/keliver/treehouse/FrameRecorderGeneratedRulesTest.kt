@@ -19,8 +19,8 @@ package dev.keliver.treehouse
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
+import assertk.assertions.isTrue
 import dev.keliver.Modifier
 import dev.keliver.compose.gatea.protocol.host.KeliverComposeGateAFrameRules as Generated
 import dev.keliver.protocol.Change
@@ -96,7 +96,7 @@ class FrameRecorderGeneratedRulesTest {
     val tag = Generated.replayableWidgets.first { it !in Generated.scrollingWidgets }
     val recorder = recorder(emptyMap())
     feed(recorder, *markedRoot(tag))
-    assertThat(recorder.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(recorder.recording is FrameRecording.Written).isTrue()
   }
 
   @Test fun aTagTheSchemaDoesNotListIsRefused() {
@@ -119,6 +119,6 @@ class FrameRecorderGeneratedRulesTest {
 
     val atOrigin = recorder(mapOf(1 to OriginWidget(atOrigin = true)))
     feed(atOrigin, *markedRoot(tag))
-    assertThat(atOrigin.recording).isInstanceOf<FrameRecording.Written>()
+    assertThat(atOrigin.recording is FrameRecording.Written).isTrue()
   }
 }
