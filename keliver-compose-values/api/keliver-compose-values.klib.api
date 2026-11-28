@@ -573,6 +573,19 @@ final class dev.keliver.compose.material3/IconButtonColors : dev.keliver.compose
     }
 }
 
+final class dev.keliver.compose.material3/TimePickerColors : dev.keliver.compose.wire/DefaultsValue { // dev.keliver.compose.material3/TimePickerColors|null[0]
+    constructor <init>(dev.keliver.compose.wire/DefaultsCall) // dev.keliver.compose.material3/TimePickerColors.<init>|<init>(dev.keliver.compose.wire.DefaultsCall){}[0]
+
+    final object Codec : dev.keliver.compose.wire/DefaultsValueCodec<dev.keliver.compose.material3/TimePickerColors> // dev.keliver.compose.material3/TimePickerColors.Codec|null[0]
+
+    final object Companion { // dev.keliver.compose.material3/TimePickerColors.Companion|null[0]
+        final val ExplicitNull // dev.keliver.compose.material3/TimePickerColors.Companion.ExplicitNull|{}ExplicitNull[0]
+            final fun <get-ExplicitNull>(): dev.keliver.compose.material3/TimePickerColors // dev.keliver.compose.material3/TimePickerColors.Companion.ExplicitNull.<get-ExplicitNull>|<get-ExplicitNull>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.compose.material3/TimePickerColors> // dev.keliver.compose.material3/TimePickerColors.Companion.serializer|serializer(){}[0]
+    }
+}
+
 final class dev.keliver.compose.material3/TopAppBarColors : dev.keliver.compose.wire/DefaultsValue { // dev.keliver.compose.material3/TopAppBarColors|null[0]
     constructor <init>(dev.keliver.compose.wire/DefaultsCall) // dev.keliver.compose.material3/TopAppBarColors.<init>|<init>(dev.keliver.compose.wire.DefaultsCall){}[0]
 
@@ -583,6 +596,167 @@ final class dev.keliver.compose.material3/TopAppBarColors : dev.keliver.compose.
             final fun <get-ExplicitNull>(): dev.keliver.compose.material3/TopAppBarColors // dev.keliver.compose.material3/TopAppBarColors.Companion.ExplicitNull.<get-ExplicitNull>|<get-ExplicitNull>(){}[0]
 
         final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.compose.material3/TopAppBarColors> // dev.keliver.compose.material3/TopAppBarColors.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.compose.remote/RemoteCommand { // dev.keliver.compose.remote/RemoteCommand|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int, kotlinx.serialization.json/JsonObject) // dev.keliver.compose.remote/RemoteCommand.<init>|<init>(kotlin.Int;kotlin.Int;kotlinx.serialization.json.JsonObject){}[0]
+
+    final val args // dev.keliver.compose.remote/RemoteCommand.args|{}args[0]
+        final fun <get-args>(): kotlinx.serialization.json/JsonObject // dev.keliver.compose.remote/RemoteCommand.args.<get-args>|<get-args>(){}[0]
+    final val member // dev.keliver.compose.remote/RemoteCommand.member|{}member[0]
+        final fun <get-member>(): kotlin/Int // dev.keliver.compose.remote/RemoteCommand.member.<get-member>|<get-member>(){}[0]
+    final val seq // dev.keliver.compose.remote/RemoteCommand.seq|{}seq[0]
+        final fun <get-seq>(): kotlin/Int // dev.keliver.compose.remote/RemoteCommand.seq.<get-seq>|<get-seq>(){}[0]
+
+    final fun component1(): kotlin/Int // dev.keliver.compose.remote/RemoteCommand.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // dev.keliver.compose.remote/RemoteCommand.component2|component2(){}[0]
+    final fun component3(): kotlinx.serialization.json/JsonObject // dev.keliver.compose.remote/RemoteCommand.component3|component3(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlinx.serialization.json/JsonObject = ...): dev.keliver.compose.remote/RemoteCommand // dev.keliver.compose.remote/RemoteCommand.copy|copy(kotlin.Int;kotlin.Int;kotlinx.serialization.json.JsonObject){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.compose.remote/RemoteCommand.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.compose.remote/RemoteCommand.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.compose.remote/RemoteCommand.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.compose.remote/RemoteCommand> { // dev.keliver.compose.remote/RemoteCommand.$serializer|null[0]
+        final val descriptor // dev.keliver.compose.remote/RemoteCommand.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.compose.remote/RemoteCommand.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.compose.remote/RemoteCommand.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.compose.remote/RemoteCommand // dev.keliver.compose.remote/RemoteCommand.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.compose.remote/RemoteCommand) // dev.keliver.compose.remote/RemoteCommand.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.compose.remote.RemoteCommand){}[0]
+    }
+
+    final object Companion { // dev.keliver.compose.remote/RemoteCommand.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.compose.remote/RemoteCommand> // dev.keliver.compose.remote/RemoteCommand.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.compose.remote/RemoteCommandException : kotlin/RuntimeException { // dev.keliver.compose.remote/RemoteCommandException|null[0]
+    constructor <init>(kotlin/String) // dev.keliver.compose.remote/RemoteCommandException.<init>|<init>(kotlin.String){}[0]
+}
+
+final class dev.keliver.compose.remote/RemoteObject { // dev.keliver.compose.remote/RemoteObject|null[0]
+    constructor <init>(kotlin/String, kotlin/Int, kotlin/String = ..., kotlin.collections/List<kotlin/Int> = ..., kotlin/Function1<dev.keliver.compose.remote/RemoteObject, kotlinx.serialization.json/JsonObject> = ...) // dev.keliver.compose.remote/RemoteObject.<init>|<init>(kotlin.String;kotlin.Int;kotlin.String;kotlin.collections.List<kotlin.Int>;kotlin.Function1<dev.keliver.compose.remote.RemoteObject,kotlinx.serialization.json.JsonObject>){}[0]
+
+    final val id // dev.keliver.compose.remote/RemoteObject.id|{}id[0]
+        final fun <get-id>(): kotlin/String // dev.keliver.compose.remote/RemoteObject.id.<get-id>|<get-id>(){}[0]
+    final val name // dev.keliver.compose.remote/RemoteObject.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.keliver.compose.remote/RemoteObject.name.<get-name>|<get-name>(){}[0]
+    final val type // dev.keliver.compose.remote/RemoteObject.type|{}type[0]
+        final fun <get-type>(): kotlin/Int // dev.keliver.compose.remote/RemoteObject.type.<get-type>|<get-type>(){}[0]
+    final val wire // dev.keliver.compose.remote/RemoteObject.wire|{}wire[0]
+        final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.remote/RemoteObject.wire.<get-wire>|<get-wire>(){}[0]
+
+    final fun assign(kotlin/Int, kotlinx.serialization.json/JsonElement, kotlin/Int, kotlinx.serialization.json/JsonObject) // dev.keliver.compose.remote/RemoteObject.assign|assign(kotlin.Int;kotlinx.serialization.json.JsonElement;kotlin.Int;kotlinx.serialization.json.JsonObject){}[0]
+    final fun bind(androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.remote/RemoteObject.bind|bind(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.remote/RemoteObject.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
+    final fun peek(kotlin/Int): kotlinx.serialization.json/JsonElement? // dev.keliver.compose.remote/RemoteObject.peek|peek(kotlin.Int){}[0]
+    final fun read(kotlin/Int): kotlinx.serialization.json/JsonElement? // dev.keliver.compose.remote/RemoteObject.read|read(kotlin.Int){}[0]
+    final fun seed(kotlin/Int, kotlinx.serialization.json/JsonElement) // dev.keliver.compose.remote/RemoteObject.seed|seed(kotlin.Int;kotlinx.serialization.json.JsonElement){}[0]
+    final fun send(kotlin/Int, kotlinx.serialization.json/JsonObject) // dev.keliver.compose.remote/RemoteObject.send|send(kotlin.Int;kotlinx.serialization.json.JsonObject){}[0]
+    final suspend fun call(kotlin/Int, kotlinx.serialization.json/JsonObject): kotlinx.serialization.json/JsonElement // dev.keliver.compose.remote/RemoteObject.call|call(kotlin.Int;kotlinx.serialization.json.JsonObject){}[0]
+
+    final object Companion { // dev.keliver.compose.remote/RemoteObject.Companion|null[0]
+        final fun nextId(): kotlin/String // dev.keliver.compose.remote/RemoteObject.Companion.nextId|nextId(){}[0]
+    }
+}
+
+final class dev.keliver.compose.remote/RemoteObjectWire { // dev.keliver.compose.remote/RemoteObjectWire|null[0]
+    constructor <init>(kotlin/String, kotlin/Int, kotlinx.serialization.json/JsonObject, kotlin.collections/List<kotlin/Int>, kotlin.collections/List<dev.keliver.compose.remote/RemoteCommand>, kotlin.collections/List<kotlin/Int> = ...) // dev.keliver.compose.remote/RemoteObjectWire.<init>|<init>(kotlin.String;kotlin.Int;kotlinx.serialization.json.JsonObject;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<dev.keliver.compose.remote.RemoteCommand>;kotlin.collections.List<kotlin.Int>){}[0]
+
+    final val commands // dev.keliver.compose.remote/RemoteObjectWire.commands|{}commands[0]
+        final fun <get-commands>(): kotlin.collections/List<dev.keliver.compose.remote/RemoteCommand> // dev.keliver.compose.remote/RemoteObjectWire.commands.<get-commands>|<get-commands>(){}[0]
+    final val id // dev.keliver.compose.remote/RemoteObjectWire.id|{}id[0]
+        final fun <get-id>(): kotlin/String // dev.keliver.compose.remote/RemoteObjectWire.id.<get-id>|<get-id>(){}[0]
+    final val init // dev.keliver.compose.remote/RemoteObjectWire.init|{}init[0]
+        final fun <get-init>(): kotlinx.serialization.json/JsonObject // dev.keliver.compose.remote/RemoteObjectWire.init.<get-init>|<get-init>(){}[0]
+    final val observed // dev.keliver.compose.remote/RemoteObjectWire.observed|{}observed[0]
+        final fun <get-observed>(): kotlin.collections/List<kotlin/Int> // dev.keliver.compose.remote/RemoteObjectWire.observed.<get-observed>|<get-observed>(){}[0]
+    final val restore // dev.keliver.compose.remote/RemoteObjectWire.restore|{}restore[0]
+        final fun <get-restore>(): kotlin.collections/List<kotlin/Int> // dev.keliver.compose.remote/RemoteObjectWire.restore.<get-restore>|<get-restore>(){}[0]
+    final val type // dev.keliver.compose.remote/RemoteObjectWire.type|{}type[0]
+        final fun <get-type>(): kotlin/Int // dev.keliver.compose.remote/RemoteObjectWire.type.<get-type>|<get-type>(){}[0]
+
+    final fun component1(): kotlin/String // dev.keliver.compose.remote/RemoteObjectWire.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // dev.keliver.compose.remote/RemoteObjectWire.component2|component2(){}[0]
+    final fun component3(): kotlinx.serialization.json/JsonObject // dev.keliver.compose.remote/RemoteObjectWire.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/List<kotlin/Int> // dev.keliver.compose.remote/RemoteObjectWire.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/List<dev.keliver.compose.remote/RemoteCommand> // dev.keliver.compose.remote/RemoteObjectWire.component5|component5(){}[0]
+    final fun component6(): kotlin.collections/List<kotlin/Int> // dev.keliver.compose.remote/RemoteObjectWire.component6|component6(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Int = ..., kotlinx.serialization.json/JsonObject = ..., kotlin.collections/List<kotlin/Int> = ..., kotlin.collections/List<dev.keliver.compose.remote/RemoteCommand> = ..., kotlin.collections/List<kotlin/Int> = ...): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.remote/RemoteObjectWire.copy|copy(kotlin.String;kotlin.Int;kotlinx.serialization.json.JsonObject;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<dev.keliver.compose.remote.RemoteCommand>;kotlin.collections.List<kotlin.Int>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.compose.remote/RemoteObjectWire.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.compose.remote/RemoteObjectWire.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.compose.remote/RemoteObjectWire.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.compose.remote/RemoteObjectWire> { // dev.keliver.compose.remote/RemoteObjectWire.$serializer|null[0]
+        final val descriptor // dev.keliver.compose.remote/RemoteObjectWire.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.compose.remote/RemoteObjectWire.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.compose.remote/RemoteObjectWire.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.remote/RemoteObjectWire.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.compose.remote/RemoteObjectWire) // dev.keliver.compose.remote/RemoteObjectWire.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.compose.remote.RemoteObjectWire){}[0]
+    }
+
+    final object Companion { // dev.keliver.compose.remote/RemoteObjectWire.Companion|null[0]
+        final val $childSerializers // dev.keliver.compose.remote/RemoteObjectWire.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.compose.remote/RemoteObjectWire> // dev.keliver.compose.remote/RemoteObjectWire.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.compose.remote/RemoteReport { // dev.keliver.compose.remote/RemoteReport|null[0]
+    constructor <init>(kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> = ..., kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> = ..., kotlin.collections/Map<kotlin/Int, kotlin/String> = ..., kotlin.collections/List<kotlin/Int> = ..., kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> = ...) // dev.keliver.compose.remote/RemoteReport.<init>|<init>(kotlin.collections.Map<kotlin.Int,kotlinx.serialization.json.JsonElement>;kotlin.collections.Map<kotlin.Int,kotlinx.serialization.json.JsonElement>;kotlin.collections.Map<kotlin.Int,kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.Map<kotlin.Int,kotlinx.serialization.json.JsonElement>){}[0]
+
+    final val cancelled // dev.keliver.compose.remote/RemoteReport.cancelled|{}cancelled[0]
+        final fun <get-cancelled>(): kotlin.collections/List<kotlin/Int> // dev.keliver.compose.remote/RemoteReport.cancelled.<get-cancelled>|<get-cancelled>(){}[0]
+    final val done // dev.keliver.compose.remote/RemoteReport.done|{}done[0]
+        final fun <get-done>(): kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> // dev.keliver.compose.remote/RemoteReport.done.<get-done>|<get-done>(){}[0]
+    final val failed // dev.keliver.compose.remote/RemoteReport.failed|{}failed[0]
+        final fun <get-failed>(): kotlin.collections/Map<kotlin/Int, kotlin/String> // dev.keliver.compose.remote/RemoteReport.failed.<get-failed>|<get-failed>(){}[0]
+    final val fields // dev.keliver.compose.remote/RemoteReport.fields|{}fields[0]
+        final fun <get-fields>(): kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> // dev.keliver.compose.remote/RemoteReport.fields.<get-fields>|<get-fields>(){}[0]
+    final val settled // dev.keliver.compose.remote/RemoteReport.settled|{}settled[0]
+        final fun <get-settled>(): kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> // dev.keliver.compose.remote/RemoteReport.settled.<get-settled>|<get-settled>(){}[0]
+
+    final fun component1(): kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> // dev.keliver.compose.remote/RemoteReport.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> // dev.keliver.compose.remote/RemoteReport.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/Map<kotlin/Int, kotlin/String> // dev.keliver.compose.remote/RemoteReport.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/List<kotlin/Int> // dev.keliver.compose.remote/RemoteReport.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> // dev.keliver.compose.remote/RemoteReport.component5|component5(){}[0]
+    final fun copy(kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> = ..., kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> = ..., kotlin.collections/Map<kotlin/Int, kotlin/String> = ..., kotlin.collections/List<kotlin/Int> = ..., kotlin.collections/Map<kotlin/Int, kotlinx.serialization.json/JsonElement> = ...): dev.keliver.compose.remote/RemoteReport // dev.keliver.compose.remote/RemoteReport.copy|copy(kotlin.collections.Map<kotlin.Int,kotlinx.serialization.json.JsonElement>;kotlin.collections.Map<kotlin.Int,kotlinx.serialization.json.JsonElement>;kotlin.collections.Map<kotlin.Int,kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.Map<kotlin.Int,kotlinx.serialization.json.JsonElement>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.compose.remote/RemoteReport.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.compose.remote/RemoteReport.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.compose.remote/RemoteReport.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.compose.remote/RemoteReport> { // dev.keliver.compose.remote/RemoteReport.$serializer|null[0]
+        final val descriptor // dev.keliver.compose.remote/RemoteReport.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.compose.remote/RemoteReport.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.compose.remote/RemoteReport.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.compose.remote/RemoteReport // dev.keliver.compose.remote/RemoteReport.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.remote/RemoteReport.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.compose.remote.RemoteReport){}[0]
+    }
+
+    final object Companion { // dev.keliver.compose.remote/RemoteReport.Companion|null[0]
+        final val $childSerializers // dev.keliver.compose.remote/RemoteReport.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.compose.remote/RemoteReport> // dev.keliver.compose.remote/RemoteReport.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.compose.remote/RemoteRestore { // dev.keliver.compose.remote/RemoteRestore|null[0]
+    constructor <init>() // dev.keliver.compose.remote/RemoteRestore.<init>|<init>(){}[0]
+
+    final var live // dev.keliver.compose.remote/RemoteRestore.live|{}live[0]
+        final fun <get-live>(): kotlin/Function0<kotlinx.serialization.json/JsonObject>? // dev.keliver.compose.remote/RemoteRestore.live.<get-live>|<get-live>(){}[0]
+        final fun <set-live>(kotlin/Function0<kotlinx.serialization.json/JsonObject>?) // dev.keliver.compose.remote/RemoteRestore.live.<set-live>|<set-live>(kotlin.Function0<kotlinx.serialization.json.JsonObject>?){}[0]
+    final var saved // dev.keliver.compose.remote/RemoteRestore.saved|{}saved[0]
+        final fun <get-saved>(): kotlinx.serialization.json/JsonObject? // dev.keliver.compose.remote/RemoteRestore.saved.<get-saved>|<get-saved>(){}[0]
+        final fun <set-saved>(kotlinx.serialization.json/JsonObject?) // dev.keliver.compose.remote/RemoteRestore.saved.<set-saved>|<set-saved>(kotlinx.serialization.json.JsonObject?){}[0]
+
+    final object Companion { // dev.keliver.compose.remote/RemoteRestore.Companion|null[0]
+        final val Saver // dev.keliver.compose.remote/RemoteRestore.Companion.Saver|{}Saver[0]
+            final fun <get-Saver>(): androidx.compose.runtime.saveable/Saver<dev.keliver.compose.remote/RemoteRestore, kotlin/String> // dev.keliver.compose.remote/RemoteRestore.Companion.Saver.<get-Saver>|<get-Saver>(){}[0]
     }
 }
 
@@ -1603,6 +1777,11 @@ final object dev.keliver.compose.material3/Shapes { // dev.keliver.compose.mater
         final fun <get-small>(): dev.keliver.compose.ui.graphics/Shape // dev.keliver.compose.material3/Shapes.small.<get-small>|<get-small>(){}[0]
 }
 
+final object dev.keliver.compose.material3/TimePickerDefaults { // dev.keliver.compose.material3/TimePickerDefaults|null[0]
+    final fun colors(androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.compose.material3/TimePickerColors // dev.keliver.compose.material3/TimePickerDefaults.colors|colors(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    final fun colors(dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.graphics/Color, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int, kotlin/Int): dev.keliver.compose.material3/TimePickerColors // dev.keliver.compose.material3/TimePickerDefaults.colors|colors(dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.graphics.Color;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+}
+
 final object dev.keliver.compose.material3/TopAppBarDefaults { // dev.keliver.compose.material3/TopAppBarDefaults|null[0]
     final val TopAppBarExpandedHeight // dev.keliver.compose.material3/TopAppBarDefaults.TopAppBarExpandedHeight|{}TopAppBarExpandedHeight[0]
         final fun <get-TopAppBarExpandedHeight>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.material3/TopAppBarDefaults.TopAppBarExpandedHeight.<get-TopAppBarExpandedHeight>|<get-TopAppBarExpandedHeight>(){}[0]
@@ -1852,10 +2031,22 @@ final val dev.keliver.compose.material3/dev_keliver_compose_material3_LocalConte
 final val dev.keliver.compose.material3/dev_keliver_compose_material3_LocalTextStyle$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_LocalTextStyle$stableprop|#static{}dev_keliver_compose_material3_LocalTextStyle$stableprop[0]
 final val dev.keliver.compose.material3/dev_keliver_compose_material3_MaterialTheme$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_MaterialTheme$stableprop|#static{}dev_keliver_compose_material3_MaterialTheme$stableprop[0]
 final val dev.keliver.compose.material3/dev_keliver_compose_material3_Shapes$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_Shapes$stableprop|#static{}dev_keliver_compose_material3_Shapes$stableprop[0]
+final val dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerColors$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerColors$stableprop|#static{}dev_keliver_compose_material3_TimePickerColors$stableprop[0]
+final val dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerColors_Codec$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerColors_Codec$stableprop|#static{}dev_keliver_compose_material3_TimePickerColors_Codec$stableprop[0]
+final val dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerDefaults$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerDefaults$stableprop|#static{}dev_keliver_compose_material3_TimePickerDefaults$stableprop[0]
 final val dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarColors$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarColors$stableprop|#static{}dev_keliver_compose_material3_TopAppBarColors$stableprop[0]
 final val dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarColors_Codec$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarColors_Codec$stableprop|#static{}dev_keliver_compose_material3_TopAppBarColors_Codec$stableprop[0]
 final val dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarDefaults$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarDefaults$stableprop|#static{}dev_keliver_compose_material3_TopAppBarDefaults$stableprop[0]
 final val dev.keliver.compose.material3/dev_keliver_compose_material3_Typography$stableprop // dev.keliver.compose.material3/dev_keliver_compose_material3_Typography$stableprop|#static{}dev_keliver_compose_material3_Typography$stableprop[0]
+final val dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommand$stableprop // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommand$stableprop|#static{}dev_keliver_compose_remote_RemoteCommand$stableprop[0]
+final val dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommandException$stableprop // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommandException$stableprop|#static{}dev_keliver_compose_remote_RemoteCommandException$stableprop[0]
+final val dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommand_$serializer$stableprop // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommand_$serializer$stableprop|#static{}dev_keliver_compose_remote_RemoteCommand_$serializer$stableprop[0]
+final val dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObject$stableprop // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObject$stableprop|#static{}dev_keliver_compose_remote_RemoteObject$stableprop[0]
+final val dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObjectWire$stableprop // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObjectWire$stableprop|#static{}dev_keliver_compose_remote_RemoteObjectWire$stableprop[0]
+final val dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObjectWire_$serializer$stableprop // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObjectWire_$serializer$stableprop|#static{}dev_keliver_compose_remote_RemoteObjectWire_$serializer$stableprop[0]
+final val dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteReport$stableprop // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteReport$stableprop|#static{}dev_keliver_compose_remote_RemoteReport$stableprop[0]
+final val dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteReport_$serializer$stableprop // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteReport_$serializer$stableprop|#static{}dev_keliver_compose_remote_RemoteReport_$serializer$stableprop[0]
+final val dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteRestore$stableprop // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteRestore$stableprop|#static{}dev_keliver_compose_remote_RemoteRestore$stableprop[0]
 final val dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_ColorPainter$stableprop // dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_ColorPainter$stableprop|#static{}dev_keliver_compose_ui_graphics_painter_ColorPainter$stableprop[0]
 final val dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_Painter$stableprop // dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_Painter$stableprop|#static{}dev_keliver_compose_ui_graphics_painter_Painter$stableprop[0]
 final val dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_PainterCodec$stableprop // dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_PainterCodec$stableprop|#static{}dev_keliver_compose_ui_graphics_painter_PainterCodec$stableprop[0]
@@ -2047,10 +2238,22 @@ final fun dev.keliver.compose.material3/dev_keliver_compose_material3_LocalConte
 final fun dev.keliver.compose.material3/dev_keliver_compose_material3_LocalTextStyle$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_LocalTextStyle$stableprop_getter|dev_keliver_compose_material3_LocalTextStyle$stableprop_getter(){}[0]
 final fun dev.keliver.compose.material3/dev_keliver_compose_material3_MaterialTheme$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_MaterialTheme$stableprop_getter|dev_keliver_compose_material3_MaterialTheme$stableprop_getter(){}[0]
 final fun dev.keliver.compose.material3/dev_keliver_compose_material3_Shapes$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_Shapes$stableprop_getter|dev_keliver_compose_material3_Shapes$stableprop_getter(){}[0]
+final fun dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerColors$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerColors$stableprop_getter|dev_keliver_compose_material3_TimePickerColors$stableprop_getter(){}[0]
+final fun dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerColors_Codec$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerColors_Codec$stableprop_getter|dev_keliver_compose_material3_TimePickerColors_Codec$stableprop_getter(){}[0]
+final fun dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerDefaults$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_TimePickerDefaults$stableprop_getter|dev_keliver_compose_material3_TimePickerDefaults$stableprop_getter(){}[0]
 final fun dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarColors$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarColors$stableprop_getter|dev_keliver_compose_material3_TopAppBarColors$stableprop_getter(){}[0]
 final fun dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarColors_Codec$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarColors_Codec$stableprop_getter|dev_keliver_compose_material3_TopAppBarColors_Codec$stableprop_getter(){}[0]
 final fun dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarDefaults$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_TopAppBarDefaults$stableprop_getter|dev_keliver_compose_material3_TopAppBarDefaults$stableprop_getter(){}[0]
 final fun dev.keliver.compose.material3/dev_keliver_compose_material3_Typography$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_Typography$stableprop_getter|dev_keliver_compose_material3_Typography$stableprop_getter(){}[0]
+final fun dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommand$stableprop_getter(): kotlin/Int // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommand$stableprop_getter|dev_keliver_compose_remote_RemoteCommand$stableprop_getter(){}[0]
+final fun dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommandException$stableprop_getter(): kotlin/Int // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommandException$stableprop_getter|dev_keliver_compose_remote_RemoteCommandException$stableprop_getter(){}[0]
+final fun dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommand_$serializer$stableprop_getter(): kotlin/Int // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteCommand_$serializer$stableprop_getter|dev_keliver_compose_remote_RemoteCommand_$serializer$stableprop_getter(){}[0]
+final fun dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObject$stableprop_getter(): kotlin/Int // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObject$stableprop_getter|dev_keliver_compose_remote_RemoteObject$stableprop_getter(){}[0]
+final fun dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObjectWire$stableprop_getter(): kotlin/Int // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObjectWire$stableprop_getter|dev_keliver_compose_remote_RemoteObjectWire$stableprop_getter(){}[0]
+final fun dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObjectWire_$serializer$stableprop_getter(): kotlin/Int // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteObjectWire_$serializer$stableprop_getter|dev_keliver_compose_remote_RemoteObjectWire_$serializer$stableprop_getter(){}[0]
+final fun dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteReport$stableprop_getter(): kotlin/Int // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteReport$stableprop_getter|dev_keliver_compose_remote_RemoteReport$stableprop_getter(){}[0]
+final fun dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteReport_$serializer$stableprop_getter(): kotlin/Int // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteReport_$serializer$stableprop_getter|dev_keliver_compose_remote_RemoteReport_$serializer$stableprop_getter(){}[0]
+final fun dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteRestore$stableprop_getter(): kotlin/Int // dev.keliver.compose.remote/dev_keliver_compose_remote_RemoteRestore$stableprop_getter|dev_keliver_compose_remote_RemoteRestore$stableprop_getter(){}[0]
 final fun dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_ColorPainter$stableprop_getter(): kotlin/Int // dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_ColorPainter$stableprop_getter|dev_keliver_compose_ui_graphics_painter_ColorPainter$stableprop_getter(){}[0]
 final fun dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_Painter$stableprop_getter(): kotlin/Int // dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_Painter$stableprop_getter|dev_keliver_compose_ui_graphics_painter_Painter$stableprop_getter(){}[0]
 final fun dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_PainterCodec$stableprop_getter(): kotlin/Int // dev.keliver.compose.ui.graphics.painter/dev_keliver_compose_ui_graphics_painter_PainterCodec$stableprop_getter|dev_keliver_compose_ui_graphics_painter_PainterCodec$stableprop_getter(){}[0]

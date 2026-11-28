@@ -242,6 +242,12 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="6" name="content" />
   </widget>
+  <widget tag="30" type="dev.keliver.compose.core.GenTimeInput1">
+    <property tag="1" name="state" type="dev.keliver.compose.remote.RemoteObjectWire" />
+    <property tag="3" name="colors" type="dev.keliver.compose.material3.TimePickerColors?" />
+    <event tag="4" name="stateReport" params="dev.keliver.compose.remote.RemoteReport" nullable="true" />
+    <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
+  </widget>
   <widget tag="500" type="dev.keliver.compose.core.ExtraShimmer">
     <property tag="1" name="shape" type="dev.keliver.compose.ui.graphics.Shape" />
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />

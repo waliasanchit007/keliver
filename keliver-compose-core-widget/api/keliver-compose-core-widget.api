@@ -281,6 +281,13 @@ public abstract interface class dev/keliver/compose/core/widget/GenTextButton1 :
 	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
 }
 
+public abstract interface class dev/keliver/compose/core/widget/GenTimeInput1 : dev/keliver/widget/Widget {
+	public abstract fun colors (Ldev/keliver/compose/material3/TimePickerColors;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun state (Ldev/keliver/compose/remote/RemoteObjectWire;)V
+	public abstract fun stateReport (Lkotlin/jvm/functions/Function1;)V
+}
+
 public abstract interface class dev/keliver/compose/core/widget/GenTopAppBar1 : dev/keliver/widget/Widget {
 	public abstract fun colors (Ldev/keliver/compose/material3/TopAppBarColors;)V
 	public abstract fun expandedHeight-WSn74bM (Ldev/keliver/compose/ui/unit/Dp;)V
@@ -347,6 +354,7 @@ public abstract interface class dev/keliver/compose/core/widget/KeliverComposeCo
 	public abstract fun GenText1 ()Ldev/keliver/compose/core/widget/GenText1;
 	public abstract fun GenText2 ()Ldev/keliver/compose/core/widget/GenText2;
 	public abstract fun GenTextButton1 ()Ldev/keliver/compose/core/widget/GenTextButton1;
+	public abstract fun GenTimeInput1 ()Ldev/keliver/compose/core/widget/GenTimeInput1;
 	public abstract fun GenTopAppBar1 ()Ldev/keliver/compose/core/widget/GenTopAppBar1;
 	public abstract fun GenVerticalScroll1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenVerticalScroll1;)V
 	public abstract fun GenWidth1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenWidth1;)V

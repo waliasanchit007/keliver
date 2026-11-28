@@ -329,6 +329,13 @@ abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenTextButto
     abstract fun shape(dev.keliver.compose.ui.graphics/Shape?) // dev.keliver.compose.core.widget/GenTextButton1.shape|shape(dev.keliver.compose.ui.graphics.Shape?){}[0]
 }
 
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenTimeInput1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenTimeInput1|null[0]
+    abstract fun colors(dev.keliver.compose.material3/TimePickerColors?) // dev.keliver.compose.core.widget/GenTimeInput1.colors|colors(dev.keliver.compose.material3.TimePickerColors?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenTimeInput1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun state(dev.keliver.compose.remote/RemoteObjectWire) // dev.keliver.compose.core.widget/GenTimeInput1.state|state(dev.keliver.compose.remote.RemoteObjectWire){}[0]
+    abstract fun stateReport(kotlin/Function1<dev.keliver.compose.remote/RemoteReport, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenTimeInput1.stateReport|stateReport(kotlin.Function1<dev.keliver.compose.remote.RemoteReport,kotlin.Unit>?){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenTopAppBar1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenTopAppBar1|null[0]
     abstract val actions // dev.keliver.compose.core.widget/GenTopAppBar1.actions|{}actions[0]
         abstract fun <get-actions>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenTopAppBar1.actions.<get-actions>|<get-actions>(){}[0]
@@ -399,6 +406,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/KeliverCompo
     abstract fun GenText1(): dev.keliver.compose.core.widget/GenText1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenText1|GenText1(){}[0]
     abstract fun GenText2(): dev.keliver.compose.core.widget/GenText2<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenText2|GenText2(){}[0]
     abstract fun GenTextButton1(): dev.keliver.compose.core.widget/GenTextButton1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenTextButton1|GenTextButton1(){}[0]
+    abstract fun GenTimeInput1(): dev.keliver.compose.core.widget/GenTimeInput1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenTimeInput1|GenTimeInput1(){}[0]
     abstract fun GenTopAppBar1(): dev.keliver.compose.core.widget/GenTopAppBar1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenTopAppBar1|GenTopAppBar1(){}[0]
     abstract fun GenVerticalScroll1(#A, dev.keliver.compose.core.modifier/GenVerticalScroll1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenVerticalScroll1|GenVerticalScroll1(1:0;dev.keliver.compose.core.modifier.GenVerticalScroll1){}[0]
     abstract fun GenWidth1(#A, dev.keliver.compose.core.modifier/GenWidth1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenWidth1|GenWidth1(1:0;dev.keliver.compose.core.modifier.GenWidth1){}[0]

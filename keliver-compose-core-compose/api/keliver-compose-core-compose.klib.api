@@ -101,10 +101,10 @@ final class dev.keliver.compose.foundation.lazy.grid/LazyGridState { // dev.keli
     final val wire // dev.keliver.compose.foundation.lazy.grid/LazyGridState.wire|{}wire[0]
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.foundation.lazy.grid/LazyGridState.wire.<get-wire>|<get-wire>(){}[0]
 
-    final fun dispatchRawDelta(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.foundation.lazy.grid/LazyGridState.dispatchRawDelta|dispatchRawDelta(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun dispatchRawDelta(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.foundation.lazy.grid/LazyGridState.dispatchRawDelta|dispatchRawDelta(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.foundation.lazy.grid/LazyGridState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
     final fun requestScrollToItem(kotlin/Int, kotlin/Int = ...) // dev.keliver.compose.foundation.lazy.grid/LazyGridState.requestScrollToItem|requestScrollToItem(kotlin.Int;kotlin.Int){}[0]
-    final fun scroll(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.foundation.lazy.grid/LazyGridState.scroll|scroll(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun scroll(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.foundation.lazy.grid/LazyGridState.scroll|scroll(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final suspend fun animateScrollToItem(kotlin/Int, kotlin/Int = ...) // dev.keliver.compose.foundation.lazy.grid/LazyGridState.animateScrollToItem|animateScrollToItem(kotlin.Int;kotlin.Int){}[0]
     final suspend fun scrollToItem(kotlin/Int, kotlin/Int = ...) // dev.keliver.compose.foundation.lazy.grid/LazyGridState.scrollToItem|scrollToItem(kotlin.Int;kotlin.Int){}[0]
 }
@@ -137,10 +137,10 @@ final class dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridS
     final val wire // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.wire|{}wire[0]
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.wire.<get-wire>|<get-wire>(){}[0]
 
-    final fun dispatchRawDelta(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.dispatchRawDelta|dispatchRawDelta(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun dispatchRawDelta(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.dispatchRawDelta|dispatchRawDelta(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
     final fun requestScrollToItem(kotlin/Int, kotlin/Int = ...) // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.requestScrollToItem|requestScrollToItem(kotlin.Int;kotlin.Int){}[0]
-    final fun scroll(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.scroll|scroll(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun scroll(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.scroll|scroll(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final suspend fun animateScrollToItem(kotlin/Int, kotlin/Int = ...) // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.animateScrollToItem|animateScrollToItem(kotlin.Int;kotlin.Int){}[0]
     final suspend fun scrollToItem(kotlin/Int, kotlin/Int = ...) // dev.keliver.compose.foundation.lazy.staggeredgrid/LazyStaggeredGridState.scrollToItem|scrollToItem(kotlin.Int;kotlin.Int){}[0]
 }
@@ -191,11 +191,11 @@ final class dev.keliver.compose.foundation.pager/PagerState { // dev.keliver.com
     final val wire // dev.keliver.compose.foundation.pager/PagerState.wire|{}wire[0]
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.foundation.pager/PagerState.wire.<get-wire>|<get-wire>(){}[0]
 
-    final fun dispatchRawDelta(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.foundation.pager/PagerState.dispatchRawDelta|dispatchRawDelta(kotlin.Array<out|kotlin.Any?>...){}[0]
-    final fun getOffsetDistanceInPages(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.foundation.pager/PagerState.getOffsetDistanceInPages|getOffsetDistanceInPages(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun dispatchRawDelta(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.foundation.pager/PagerState.dispatchRawDelta|dispatchRawDelta(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
+    final fun getOffsetDistanceInPages(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.foundation.pager/PagerState.getOffsetDistanceInPages|getOffsetDistanceInPages(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.foundation.pager/PagerState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
     final fun requestScrollToPage(kotlin/Int, kotlin/Float = ...) // dev.keliver.compose.foundation.pager/PagerState.requestScrollToPage|requestScrollToPage(kotlin.Int;kotlin.Float){}[0]
-    final fun scroll(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.foundation.pager/PagerState.scroll|scroll(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun scroll(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.foundation.pager/PagerState.scroll|scroll(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final suspend fun animateScrollToPage(kotlin/Int, kotlin/Float = ...) // dev.keliver.compose.foundation.pager/PagerState.animateScrollToPage|animateScrollToPage(kotlin.Int;kotlin.Float){}[0]
     final suspend fun scrollToPage(kotlin/Int, kotlin/Float = ...) // dev.keliver.compose.foundation.pager/PagerState.scrollToPage|scrollToPage(kotlin.Int;kotlin.Float){}[0]
 }
@@ -246,20 +246,23 @@ final class dev.keliver.compose.material3/DatePickerState { // dev.keliver.compo
 
     final val displayMode // dev.keliver.compose.material3/DatePickerState.displayMode|{}displayMode[0]
         final fun <get-displayMode>(): kotlin/Nothing // dev.keliver.compose.material3/DatePickerState.displayMode.<get-displayMode>|<get-displayMode>(){}[0]
-    final val displayedMonthMillis // dev.keliver.compose.material3/DatePickerState.displayedMonthMillis|{}displayedMonthMillis[0]
-        final fun <get-displayedMonthMillis>(): kotlin/Long // dev.keliver.compose.material3/DatePickerState.displayedMonthMillis.<get-displayedMonthMillis>|<get-displayedMonthMillis>(){}[0]
     final val locale // dev.keliver.compose.material3/DatePickerState.locale|{}locale[0]
         final fun <get-locale>(): kotlin/Nothing // dev.keliver.compose.material3/DatePickerState.locale.<get-locale>|<get-locale>(){}[0]
     final val remote // dev.keliver.compose.material3/DatePickerState.remote|{}remote[0]
         final fun <get-remote>(): dev.keliver.compose.remote/RemoteObject // dev.keliver.compose.material3/DatePickerState.remote.<get-remote>|<get-remote>(){}[0]
     final val selectableDates // dev.keliver.compose.material3/DatePickerState.selectableDates|{}selectableDates[0]
         final fun <get-selectableDates>(): kotlin/Nothing // dev.keliver.compose.material3/DatePickerState.selectableDates.<get-selectableDates>|<get-selectableDates>(){}[0]
-    final val selectedDateMillis // dev.keliver.compose.material3/DatePickerState.selectedDateMillis|{}selectedDateMillis[0]
-        final fun <get-selectedDateMillis>(): kotlin/Long? // dev.keliver.compose.material3/DatePickerState.selectedDateMillis.<get-selectedDateMillis>|<get-selectedDateMillis>(){}[0]
     final val wire // dev.keliver.compose.material3/DatePickerState.wire|{}wire[0]
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.material3/DatePickerState.wire.<get-wire>|<get-wire>(){}[0]
     final val yearRange // dev.keliver.compose.material3/DatePickerState.yearRange|{}yearRange[0]
         final fun <get-yearRange>(): kotlin/Nothing // dev.keliver.compose.material3/DatePickerState.yearRange.<get-yearRange>|<get-yearRange>(){}[0]
+
+    final var displayedMonthMillis // dev.keliver.compose.material3/DatePickerState.displayedMonthMillis|{}displayedMonthMillis[0]
+        final fun <get-displayedMonthMillis>(): kotlin/Long // dev.keliver.compose.material3/DatePickerState.displayedMonthMillis.<get-displayedMonthMillis>|<get-displayedMonthMillis>(){}[0]
+        final fun <set-displayedMonthMillis>(kotlin/Long) // dev.keliver.compose.material3/DatePickerState.displayedMonthMillis.<set-displayedMonthMillis>|<set-displayedMonthMillis>(kotlin.Long){}[0]
+    final var selectedDateMillis // dev.keliver.compose.material3/DatePickerState.selectedDateMillis|{}selectedDateMillis[0]
+        final fun <get-selectedDateMillis>(): kotlin/Long? // dev.keliver.compose.material3/DatePickerState.selectedDateMillis.<get-selectedDateMillis>|<get-selectedDateMillis>(){}[0]
+        final fun <set-selectedDateMillis>(kotlin/Long?) // dev.keliver.compose.material3/DatePickerState.selectedDateMillis.<set-selectedDateMillis>|<set-selectedDateMillis>(kotlin.Long?){}[0]
 
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.material3/DatePickerState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
 }
@@ -269,8 +272,6 @@ final class dev.keliver.compose.material3/DateRangePickerState { // dev.keliver.
 
     final val displayMode // dev.keliver.compose.material3/DateRangePickerState.displayMode|{}displayMode[0]
         final fun <get-displayMode>(): kotlin/Nothing // dev.keliver.compose.material3/DateRangePickerState.displayMode.<get-displayMode>|<get-displayMode>(){}[0]
-    final val displayedMonthMillis // dev.keliver.compose.material3/DateRangePickerState.displayedMonthMillis|{}displayedMonthMillis[0]
-        final fun <get-displayedMonthMillis>(): kotlin/Long // dev.keliver.compose.material3/DateRangePickerState.displayedMonthMillis.<get-displayedMonthMillis>|<get-displayedMonthMillis>(){}[0]
     final val locale // dev.keliver.compose.material3/DateRangePickerState.locale|{}locale[0]
         final fun <get-locale>(): kotlin/Nothing // dev.keliver.compose.material3/DateRangePickerState.locale.<get-locale>|<get-locale>(){}[0]
     final val remote // dev.keliver.compose.material3/DateRangePickerState.remote|{}remote[0]
@@ -286,6 +287,10 @@ final class dev.keliver.compose.material3/DateRangePickerState { // dev.keliver.
     final val yearRange // dev.keliver.compose.material3/DateRangePickerState.yearRange|{}yearRange[0]
         final fun <get-yearRange>(): kotlin/Nothing // dev.keliver.compose.material3/DateRangePickerState.yearRange.<get-yearRange>|<get-yearRange>(){}[0]
 
+    final var displayedMonthMillis // dev.keliver.compose.material3/DateRangePickerState.displayedMonthMillis|{}displayedMonthMillis[0]
+        final fun <get-displayedMonthMillis>(): kotlin/Long // dev.keliver.compose.material3/DateRangePickerState.displayedMonthMillis.<get-displayedMonthMillis>|<get-displayedMonthMillis>(){}[0]
+        final fun <set-displayedMonthMillis>(kotlin/Long) // dev.keliver.compose.material3/DateRangePickerState.displayedMonthMillis.<set-displayedMonthMillis>|<set-displayedMonthMillis>(kotlin.Long){}[0]
+
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.material3/DateRangePickerState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
     final fun setSelection(kotlin/Long?, kotlin/Long?) // dev.keliver.compose.material3/DateRangePickerState.setSelection|setSelection(kotlin.Long?;kotlin.Long?){}[0]
 }
@@ -295,10 +300,6 @@ final class dev.keliver.compose.material3/FabPosition // dev.keliver.compose.mat
 final class dev.keliver.compose.material3/RangeSliderState { // dev.keliver.compose.material3/RangeSliderState|null[0]
     constructor <init>(dev.keliver.compose.remote/RemoteObject) // dev.keliver.compose.material3/RangeSliderState.<init>|<init>(dev.keliver.compose.remote.RemoteObject){}[0]
 
-    final val activeRangeEnd // dev.keliver.compose.material3/RangeSliderState.activeRangeEnd|{}activeRangeEnd[0]
-        final fun <get-activeRangeEnd>(): kotlin/Float // dev.keliver.compose.material3/RangeSliderState.activeRangeEnd.<get-activeRangeEnd>|<get-activeRangeEnd>(){}[0]
-    final val activeRangeStart // dev.keliver.compose.material3/RangeSliderState.activeRangeStart|{}activeRangeStart[0]
-        final fun <get-activeRangeStart>(): kotlin/Float // dev.keliver.compose.material3/RangeSliderState.activeRangeStart.<get-activeRangeStart>|<get-activeRangeStart>(){}[0]
     final val onValueChangeFinished // dev.keliver.compose.material3/RangeSliderState.onValueChangeFinished|{}onValueChangeFinished[0]
         final fun <get-onValueChangeFinished>(): kotlin/Nothing // dev.keliver.compose.material3/RangeSliderState.onValueChangeFinished.<get-onValueChangeFinished>|<get-onValueChangeFinished>(){}[0]
     final val remote // dev.keliver.compose.material3/RangeSliderState.remote|{}remote[0]
@@ -309,6 +310,13 @@ final class dev.keliver.compose.material3/RangeSliderState { // dev.keliver.comp
         final fun <get-valueRange>(): kotlin/Nothing // dev.keliver.compose.material3/RangeSliderState.valueRange.<get-valueRange>|<get-valueRange>(){}[0]
     final val wire // dev.keliver.compose.material3/RangeSliderState.wire|{}wire[0]
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.material3/RangeSliderState.wire.<get-wire>|<get-wire>(){}[0]
+
+    final var activeRangeEnd // dev.keliver.compose.material3/RangeSliderState.activeRangeEnd|{}activeRangeEnd[0]
+        final fun <get-activeRangeEnd>(): kotlin/Float // dev.keliver.compose.material3/RangeSliderState.activeRangeEnd.<get-activeRangeEnd>|<get-activeRangeEnd>(){}[0]
+        final fun <set-activeRangeEnd>(kotlin/Float) // dev.keliver.compose.material3/RangeSliderState.activeRangeEnd.<set-activeRangeEnd>|<set-activeRangeEnd>(kotlin.Float){}[0]
+    final var activeRangeStart // dev.keliver.compose.material3/RangeSliderState.activeRangeStart|{}activeRangeStart[0]
+        final fun <get-activeRangeStart>(): kotlin/Float // dev.keliver.compose.material3/RangeSliderState.activeRangeStart.<get-activeRangeStart>|<get-activeRangeStart>(){}[0]
+        final fun <set-activeRangeStart>(kotlin/Float) // dev.keliver.compose.material3/RangeSliderState.activeRangeStart.<set-activeRangeStart>|<set-activeRangeStart>(kotlin.Float){}[0]
 
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.material3/RangeSliderState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
 }
@@ -334,7 +342,7 @@ final class dev.keliver.compose.material3/SheetState { // dev.keliver.compose.ma
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.material3/SheetState.wire.<get-wire>|<get-wire>(){}[0]
 
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.material3/SheetState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
-    final fun requireOffset(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.material3/SheetState.requireOffset|requireOffset(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun requireOffset(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.material3/SheetState.requireOffset|requireOffset(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final suspend fun expand() // dev.keliver.compose.material3/SheetState.expand|expand(){}[0]
     final suspend fun hide() // dev.keliver.compose.material3/SheetState.hide|hide(){}[0]
     final suspend fun partialExpand() // dev.keliver.compose.material3/SheetState.partialExpand|partialExpand(){}[0]
@@ -354,19 +362,22 @@ final class dev.keliver.compose.material3/SliderState { // dev.keliver.compose.m
         final fun <get-onValueChangeFinished>(): kotlin/Nothing // dev.keliver.compose.material3/SliderState.onValueChangeFinished.<get-onValueChangeFinished>|<get-onValueChangeFinished>(){}[0]
     final val remote // dev.keliver.compose.material3/SliderState.remote|{}remote[0]
         final fun <get-remote>(): dev.keliver.compose.remote/RemoteObject // dev.keliver.compose.material3/SliderState.remote.<get-remote>|<get-remote>(){}[0]
-    final val shouldAutoSnap // dev.keliver.compose.material3/SliderState.shouldAutoSnap|{}shouldAutoSnap[0]
-        final fun <get-shouldAutoSnap>(): kotlin/Boolean // dev.keliver.compose.material3/SliderState.shouldAutoSnap.<get-shouldAutoSnap>|<get-shouldAutoSnap>(){}[0]
     final val steps // dev.keliver.compose.material3/SliderState.steps|{}steps[0]
         final fun <get-steps>(): kotlin/Int // dev.keliver.compose.material3/SliderState.steps.<get-steps>|<get-steps>(){}[0]
-    final val value // dev.keliver.compose.material3/SliderState.value|{}value[0]
-        final fun <get-value>(): kotlin/Float // dev.keliver.compose.material3/SliderState.value.<get-value>|<get-value>(){}[0]
     final val valueRange // dev.keliver.compose.material3/SliderState.valueRange|{}valueRange[0]
         final fun <get-valueRange>(): kotlin/Nothing // dev.keliver.compose.material3/SliderState.valueRange.<get-valueRange>|<get-valueRange>(){}[0]
     final val wire // dev.keliver.compose.material3/SliderState.wire|{}wire[0]
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.material3/SliderState.wire.<get-wire>|<get-wire>(){}[0]
 
+    final var shouldAutoSnap // dev.keliver.compose.material3/SliderState.shouldAutoSnap|{}shouldAutoSnap[0]
+        final fun <get-shouldAutoSnap>(): kotlin/Boolean // dev.keliver.compose.material3/SliderState.shouldAutoSnap.<get-shouldAutoSnap>|<get-shouldAutoSnap>(){}[0]
+        final fun <set-shouldAutoSnap>(kotlin/Boolean) // dev.keliver.compose.material3/SliderState.shouldAutoSnap.<set-shouldAutoSnap>|<set-shouldAutoSnap>(kotlin.Boolean){}[0]
+    final var value // dev.keliver.compose.material3/SliderState.value|{}value[0]
+        final fun <get-value>(): kotlin/Float // dev.keliver.compose.material3/SliderState.value.<get-value>|<get-value>(){}[0]
+        final fun <set-value>(kotlin/Float) // dev.keliver.compose.material3/SliderState.value.<set-value>|<set-value>(kotlin.Float){}[0]
+
     final fun dispatchRawDelta(kotlin/Float) // dev.keliver.compose.material3/SliderState.dispatchRawDelta|dispatchRawDelta(kotlin.Float){}[0]
-    final fun drag(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.material3/SliderState.drag|drag(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun drag(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.material3/SliderState.drag|drag(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.material3/SliderState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
 }
 
@@ -388,28 +399,32 @@ final class dev.keliver.compose.material3/SwipeToDismissBoxState { // dev.kelive
     final val wire // dev.keliver.compose.material3/SwipeToDismissBoxState.wire|{}wire[0]
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.material3/SwipeToDismissBoxState.wire.<get-wire>|<get-wire>(){}[0]
 
-    final fun dismiss(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.material3/SwipeToDismissBoxState.dismiss|dismiss(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun dismiss(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.material3/SwipeToDismissBoxState.dismiss|dismiss(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.material3/SwipeToDismissBoxState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
-    final fun requireOffset(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.material3/SwipeToDismissBoxState.requireOffset|requireOffset(kotlin.Array<out|kotlin.Any?>...){}[0]
-    final fun snapTo(kotlin/Array<out kotlin/Any?>...): kotlin/Nothing // dev.keliver.compose.material3/SwipeToDismissBoxState.snapTo|snapTo(kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun requireOffset(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.material3/SwipeToDismissBoxState.requireOffset|requireOffset(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
+    final fun snapTo(kotlin/Array<out kotlin/Any?>..., kotlin/Any? = ...): kotlin/Nothing // dev.keliver.compose.material3/SwipeToDismissBoxState.snapTo|snapTo(kotlin.Array<out|kotlin.Any?>...;kotlin.Any?){}[0]
     final suspend fun reset() // dev.keliver.compose.material3/SwipeToDismissBoxState.reset|reset(){}[0]
 }
 
 final class dev.keliver.compose.material3/TimePickerState { // dev.keliver.compose.material3/TimePickerState|null[0]
     constructor <init>(dev.keliver.compose.remote/RemoteObject) // dev.keliver.compose.material3/TimePickerState.<init>|<init>(dev.keliver.compose.remote.RemoteObject){}[0]
 
-    final val hour // dev.keliver.compose.material3/TimePickerState.hour|{}hour[0]
-        final fun <get-hour>(): kotlin/Int // dev.keliver.compose.material3/TimePickerState.hour.<get-hour>|<get-hour>(){}[0]
-    final val is24hour // dev.keliver.compose.material3/TimePickerState.is24hour|{}is24hour[0]
-        final fun <get-is24hour>(): kotlin/Boolean // dev.keliver.compose.material3/TimePickerState.is24hour.<get-is24hour>|<get-is24hour>(){}[0]
-    final val minute // dev.keliver.compose.material3/TimePickerState.minute|{}minute[0]
-        final fun <get-minute>(): kotlin/Int // dev.keliver.compose.material3/TimePickerState.minute.<get-minute>|<get-minute>(){}[0]
     final val remote // dev.keliver.compose.material3/TimePickerState.remote|{}remote[0]
         final fun <get-remote>(): dev.keliver.compose.remote/RemoteObject // dev.keliver.compose.material3/TimePickerState.remote.<get-remote>|<get-remote>(){}[0]
     final val selection // dev.keliver.compose.material3/TimePickerState.selection|{}selection[0]
         final fun <get-selection>(): kotlin/Nothing // dev.keliver.compose.material3/TimePickerState.selection.<get-selection>|<get-selection>(){}[0]
     final val wire // dev.keliver.compose.material3/TimePickerState.wire|{}wire[0]
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.material3/TimePickerState.wire.<get-wire>|<get-wire>(){}[0]
+
+    final var hour // dev.keliver.compose.material3/TimePickerState.hour|{}hour[0]
+        final fun <get-hour>(): kotlin/Int // dev.keliver.compose.material3/TimePickerState.hour.<get-hour>|<get-hour>(){}[0]
+        final fun <set-hour>(kotlin/Int) // dev.keliver.compose.material3/TimePickerState.hour.<set-hour>|<set-hour>(kotlin.Int){}[0]
+    final var is24hour // dev.keliver.compose.material3/TimePickerState.is24hour|{}is24hour[0]
+        final fun <get-is24hour>(): kotlin/Boolean // dev.keliver.compose.material3/TimePickerState.is24hour.<get-is24hour>|<get-is24hour>(){}[0]
+        final fun <set-is24hour>(kotlin/Boolean) // dev.keliver.compose.material3/TimePickerState.is24hour.<set-is24hour>|<set-is24hour>(kotlin.Boolean){}[0]
+    final var minute // dev.keliver.compose.material3/TimePickerState.minute|{}minute[0]
+        final fun <get-minute>(): kotlin/Int // dev.keliver.compose.material3/TimePickerState.minute.<get-minute>|<get-minute>(){}[0]
+        final fun <set-minute>(kotlin/Int) // dev.keliver.compose.material3/TimePickerState.minute.<set-minute>|<set-minute>(kotlin.Int){}[0]
 
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.material3/TimePickerState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
 }
@@ -441,18 +456,22 @@ final class dev.keliver.compose.material3/TopAppBarState { // dev.keliver.compos
 
     final val collapsedFraction // dev.keliver.compose.material3/TopAppBarState.collapsedFraction|{}collapsedFraction[0]
         final fun <get-collapsedFraction>(): kotlin/Float // dev.keliver.compose.material3/TopAppBarState.collapsedFraction.<get-collapsedFraction>|<get-collapsedFraction>(){}[0]
-    final val contentOffset // dev.keliver.compose.material3/TopAppBarState.contentOffset|{}contentOffset[0]
-        final fun <get-contentOffset>(): kotlin/Float // dev.keliver.compose.material3/TopAppBarState.contentOffset.<get-contentOffset>|<get-contentOffset>(){}[0]
-    final val heightOffset // dev.keliver.compose.material3/TopAppBarState.heightOffset|{}heightOffset[0]
-        final fun <get-heightOffset>(): kotlin/Float // dev.keliver.compose.material3/TopAppBarState.heightOffset.<get-heightOffset>|<get-heightOffset>(){}[0]
-    final val heightOffsetLimit // dev.keliver.compose.material3/TopAppBarState.heightOffsetLimit|{}heightOffsetLimit[0]
-        final fun <get-heightOffsetLimit>(): kotlin/Float // dev.keliver.compose.material3/TopAppBarState.heightOffsetLimit.<get-heightOffsetLimit>|<get-heightOffsetLimit>(){}[0]
     final val overlappedFraction // dev.keliver.compose.material3/TopAppBarState.overlappedFraction|{}overlappedFraction[0]
         final fun <get-overlappedFraction>(): kotlin/Float // dev.keliver.compose.material3/TopAppBarState.overlappedFraction.<get-overlappedFraction>|<get-overlappedFraction>(){}[0]
     final val remote // dev.keliver.compose.material3/TopAppBarState.remote|{}remote[0]
         final fun <get-remote>(): dev.keliver.compose.remote/RemoteObject // dev.keliver.compose.material3/TopAppBarState.remote.<get-remote>|<get-remote>(){}[0]
     final val wire // dev.keliver.compose.material3/TopAppBarState.wire|{}wire[0]
         final fun <get-wire>(): dev.keliver.compose.remote/RemoteObjectWire // dev.keliver.compose.material3/TopAppBarState.wire.<get-wire>|<get-wire>(){}[0]
+
+    final var contentOffset // dev.keliver.compose.material3/TopAppBarState.contentOffset|{}contentOffset[0]
+        final fun <get-contentOffset>(): kotlin/Float // dev.keliver.compose.material3/TopAppBarState.contentOffset.<get-contentOffset>|<get-contentOffset>(){}[0]
+        final fun <set-contentOffset>(kotlin/Float) // dev.keliver.compose.material3/TopAppBarState.contentOffset.<set-contentOffset>|<set-contentOffset>(kotlin.Float){}[0]
+    final var heightOffset // dev.keliver.compose.material3/TopAppBarState.heightOffset|{}heightOffset[0]
+        final fun <get-heightOffset>(): kotlin/Float // dev.keliver.compose.material3/TopAppBarState.heightOffset.<get-heightOffset>|<get-heightOffset>(){}[0]
+        final fun <set-heightOffset>(kotlin/Float) // dev.keliver.compose.material3/TopAppBarState.heightOffset.<set-heightOffset>|<set-heightOffset>(kotlin.Float){}[0]
+    final var heightOffsetLimit // dev.keliver.compose.material3/TopAppBarState.heightOffsetLimit|{}heightOffsetLimit[0]
+        final fun <get-heightOffsetLimit>(): kotlin/Float // dev.keliver.compose.material3/TopAppBarState.heightOffsetLimit.<get-heightOffsetLimit>|<get-heightOffsetLimit>(){}[0]
+        final fun <set-heightOffsetLimit>(kotlin/Float) // dev.keliver.compose.material3/TopAppBarState.heightOffsetLimit.<set-heightOffsetLimit>|<set-heightOffsetLimit>(kotlin.Float){}[0]
 
     final fun onHostReport(dev.keliver.compose.remote/RemoteReport) // dev.keliver.compose.material3/TopAppBarState.onHostReport|onHostReport(dev.keliver.compose.remote.RemoteReport){}[0]
 }
@@ -609,7 +628,6 @@ final fun (dev.keliver/Modifier).dev.keliver.compose.ui.draw/shadow(dev.keliver.
 final fun (dev.keliver/Modifier).dev.keliver.compose.ui.input.pointer/pointerInput(kotlin/Any?, kotlin.coroutines/SuspendFunction1<dev.keliver.compose.ui.input.pointer/PointerInputScope, kotlin/Unit>): dev.keliver/Modifier // dev.keliver.compose.ui.input.pointer/pointerInput|pointerInput@dev.keliver.Modifier(kotlin.Any?;kotlin.coroutines.SuspendFunction1<dev.keliver.compose.ui.input.pointer.PointerInputScope,kotlin.Unit>){}[0]
 final fun dev.keliver.compose.animation/AnimatedVisibility(kotlin/Boolean, dev.keliver/Modifier?, dev.keliver.compose.animation/EnterTransition?, dev.keliver.compose.animation/ExitTransition?, kotlin/String?, kotlin/Function3<dev.keliver.compose.animation/AnimatedVisibilityScope, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.animation/AnimatedVisibility|AnimatedVisibility(kotlin.Boolean;dev.keliver.Modifier?;dev.keliver.compose.animation.EnterTransition?;dev.keliver.compose.animation.ExitTransition?;kotlin.String?;kotlin.Function3<dev.keliver.compose.animation.AnimatedVisibilityScope,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.core.compose/ExtraLazyItem(kotlin/String?, dev.keliver/Modifier?, kotlin/Function3<dev.keliver.compose.core.compose/GenLazyItemScope, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/ExtraLazyItem|ExtraLazyItem(kotlin.String?;dev.keliver.Modifier?;kotlin.Function3<dev.keliver.compose.core.compose.GenLazyItemScope,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun dev.keliver.compose.core.compose/ExtraRemoteObject(dev.keliver.compose.remote/RemoteObjectWire, kotlin/Function1<dev.keliver.compose.remote/RemoteReport, kotlin/Unit>, dev.keliver/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/ExtraRemoteObject|ExtraRemoteObject(dev.keliver.compose.remote.RemoteObjectWire;kotlin.Function1<dev.keliver.compose.remote.RemoteReport,kotlin.Unit>;dev.keliver.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.core.compose/ExtraRetained(kotlin/Int, kotlin/Function1<kotlin/String, kotlin/Unit>, dev.keliver/Modifier?, kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/ExtraRetained|ExtraRetained(kotlin.Int;kotlin.Function1<kotlin.String,kotlin.Unit>;dev.keliver.Modifier?;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.core.compose/ExtraRetainedEntry(kotlin/String, kotlin/Boolean, dev.keliver/Modifier?, kotlin/Function3<dev.keliver.compose.core.compose/GenBoxScope, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/ExtraRetainedEntry|ExtraRetainedEntry(kotlin.String;kotlin.Boolean;dev.keliver.Modifier?;kotlin.Function3<dev.keliver.compose.core.compose.GenBoxScope,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.core.compose/ExtraShimmer(dev.keliver.compose.ui.graphics/Shape, kotlin/Function1<kotlin/Int, kotlin/Unit>?, dev.keliver/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/ExtraShimmer|ExtraShimmer(dev.keliver.compose.ui.graphics.Shape;kotlin.Function1<kotlin.Int,kotlin.Unit>?;dev.keliver.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
@@ -639,8 +657,8 @@ final fun dev.keliver.compose.core.compose/GenSurface2(kotlin/Function0<kotlin/U
 final fun dev.keliver.compose.core.compose/GenText1(kotlin/String, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.unit/TextUnit, dev.keliver.compose.ui.text.font/FontStyle?, dev.keliver.compose.ui.text.font/FontWeight?, dev.keliver.compose.ui.text.font/FontFamily?, dev.keliver.compose.ui.unit/TextUnit, dev.keliver.compose.ui.text.style/TextDecoration?, dev.keliver.compose.ui.text.style/TextAlign?, dev.keliver.compose.ui.unit/TextUnit, dev.keliver.compose.ui.text.style/TextOverflow, kotlin/Boolean, kotlin/Int, kotlin/Int, dev.keliver.compose.ui.text/TextStyle?, kotlin/Function1<kotlin/Int, kotlin/Unit>?, dev.keliver/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/GenText1|GenText1(kotlin.String;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.unit.TextUnit;dev.keliver.compose.ui.text.font.FontStyle?;dev.keliver.compose.ui.text.font.FontWeight?;dev.keliver.compose.ui.text.font.FontFamily?;dev.keliver.compose.ui.unit.TextUnit;dev.keliver.compose.ui.text.style.TextDecoration?;dev.keliver.compose.ui.text.style.TextAlign?;dev.keliver.compose.ui.unit.TextUnit;dev.keliver.compose.ui.text.style.TextOverflow;kotlin.Boolean;kotlin.Int;kotlin.Int;dev.keliver.compose.ui.text.TextStyle?;kotlin.Function1<kotlin.Int,kotlin.Unit>?;dev.keliver.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.core.compose/GenText2(kotlin/String, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.unit/TextUnit, dev.keliver.compose.ui.text.font/FontStyle?, dev.keliver.compose.ui.text.font/FontWeight?, dev.keliver.compose.ui.text.font/FontFamily?, dev.keliver.compose.ui.unit/TextUnit, dev.keliver.compose.ui.text.style/TextDecoration?, dev.keliver.compose.ui.text.style/TextAlign?, dev.keliver.compose.ui.unit/TextUnit, dev.keliver.compose.ui.text.style/TextOverflow, kotlin/Boolean, kotlin/Int, kotlin/Int, dev.keliver.compose.ui.text/TextStyle?, kotlin/Function1<kotlin/Int, kotlin/Unit>?, dev.keliver/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/GenText2|GenText2(kotlin.String;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.unit.TextUnit;dev.keliver.compose.ui.text.font.FontStyle?;dev.keliver.compose.ui.text.font.FontWeight?;dev.keliver.compose.ui.text.font.FontFamily?;dev.keliver.compose.ui.unit.TextUnit;dev.keliver.compose.ui.text.style.TextDecoration?;dev.keliver.compose.ui.text.style.TextAlign?;dev.keliver.compose.ui.unit.TextUnit;dev.keliver.compose.ui.text.style.TextOverflow;kotlin.Boolean;kotlin.Int;kotlin.Int;dev.keliver.compose.ui.text.TextStyle?;kotlin.Function1<kotlin.Int,kotlin.Unit>?;dev.keliver.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.core.compose/GenTextButton1(kotlin/Function0<kotlin/Unit>?, kotlin/Boolean, dev.keliver.compose.ui.graphics/Shape?, dev.keliver.compose.material3/ButtonColors?, dev.keliver.compose.material3/ButtonElevation?, dev.keliver.compose.foundation/BorderStroke?, dev.keliver.compose.foundation.layout/PaddingValues?, kotlin/Function3<dev.keliver.compose.core.compose/GenRowScope, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, kotlin/Function1<kotlin/Int, kotlin/Unit>?, dev.keliver/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/GenTextButton1|GenTextButton1(kotlin.Function0<kotlin.Unit>?;kotlin.Boolean;dev.keliver.compose.ui.graphics.Shape?;dev.keliver.compose.material3.ButtonColors?;dev.keliver.compose.material3.ButtonElevation?;dev.keliver.compose.foundation.BorderStroke?;dev.keliver.compose.foundation.layout.PaddingValues?;kotlin.Function3<dev.keliver.compose.core.compose.GenRowScope,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;kotlin.Function1<kotlin.Int,kotlin.Unit>?;dev.keliver.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun dev.keliver.compose.core.compose/GenTimeInput1(dev.keliver.compose.remote/RemoteObjectWire, kotlin/Function1<dev.keliver.compose.remote/RemoteReport, kotlin/Unit>?, dev.keliver.compose.material3/TimePickerColors?, kotlin/Function1<kotlin/Int, kotlin/Unit>?, dev.keliver/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/GenTimeInput1|GenTimeInput1(dev.keliver.compose.remote.RemoteObjectWire;kotlin.Function1<dev.keliver.compose.remote.RemoteReport,kotlin.Unit>?;dev.keliver.compose.material3.TimePickerColors?;kotlin.Function1<kotlin.Int,kotlin.Unit>?;dev.keliver.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.core.compose/GenTopAppBar1(kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, kotlin/Function3<dev.keliver.compose.core.compose/GenRowScope, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, dev.keliver.compose.ui.unit/Dp?, dev.keliver.compose.material3/TopAppBarColors?, kotlin/Function1<kotlin/Int, kotlin/Unit>?, dev.keliver/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.core.compose/GenTopAppBar1|GenTopAppBar1(kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;kotlin.Function3<dev.keliver.compose.core.compose.GenRowScope,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;dev.keliver.compose.ui.unit.Dp?;dev.keliver.compose.material3.TopAppBarColors?;kotlin.Function1<kotlin.Int,kotlin.Unit>?;dev.keliver.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun dev.keliver.compose.extras/RemoteObjectBinding(dev.keliver.compose.remote/RemoteObject, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.compose.extras/RemoteObjectBinding|RemoteObjectBinding(dev.keliver.compose.remote.RemoteObject;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun dev.keliver.compose.extras/Shimmer(dev.keliver/Modifier?, dev.keliver.compose.ui.graphics/Shape?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.extras/Shimmer|Shimmer(dev.keliver.Modifier?;dev.keliver.compose.ui.graphics.Shape?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.foundation.gestures/dev_keliver_compose_foundation_gestures_FlingBehavior$stableprop_getter(): kotlin/Int // dev.keliver.compose.foundation.gestures/dev_keliver_compose_foundation_gestures_FlingBehavior$stableprop_getter|dev_keliver_compose_foundation_gestures_FlingBehavior$stableprop_getter(){}[0]
 final fun dev.keliver.compose.foundation.interaction/dev_keliver_compose_foundation_interaction_MutableInteractionSource$stableprop_getter(): kotlin/Int // dev.keliver.compose.foundation.interaction/dev_keliver_compose_foundation_interaction_MutableInteractionSource$stableprop_getter|dev_keliver_compose_foundation_interaction_MutableInteractionSource$stableprop_getter(){}[0]
@@ -705,6 +723,7 @@ final fun dev.keliver.compose.material3/Text(kotlin/String, dev.keliver/Modifier
 final fun dev.keliver.compose.material3/Text(kotlin/String, dev.keliver/Modifier?, dev.keliver.compose.ui.graphics/Color, dev.keliver.compose.ui.unit/TextUnit?, dev.keliver.compose.ui.text.font/FontStyle?, dev.keliver.compose.ui.text.font/FontWeight?, dev.keliver.compose.ui.text.font/FontFamily?, dev.keliver.compose.ui.unit/TextUnit?, dev.keliver.compose.ui.text.style/TextDecoration?, dev.keliver.compose.ui.text.style/TextAlign?, dev.keliver.compose.ui.unit/TextUnit?, dev.keliver.compose.ui.text.style/TextOverflow?, kotlin/Boolean, kotlin/Int, kotlin/Int, dev.keliver.compose.ui.text/TextStyle?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int, kotlin/Int) // dev.keliver.compose.material3/Text|Text(kotlin.String;dev.keliver.Modifier?;dev.keliver.compose.ui.graphics.Color;dev.keliver.compose.ui.unit.TextUnit?;dev.keliver.compose.ui.text.font.FontStyle?;dev.keliver.compose.ui.text.font.FontWeight?;dev.keliver.compose.ui.text.font.FontFamily?;dev.keliver.compose.ui.unit.TextUnit?;dev.keliver.compose.ui.text.style.TextDecoration?;dev.keliver.compose.ui.text.style.TextAlign?;dev.keliver.compose.ui.unit.TextUnit?;dev.keliver.compose.ui.text.style.TextOverflow?;kotlin.Boolean;kotlin.Int;kotlin.Int;dev.keliver.compose.ui.text.TextStyle?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.material3/TextButton(kotlin/Function0<kotlin/Unit>, dev.keliver/Modifier?, kotlin/Boolean, dev.keliver.compose.ui.graphics/Shape?, dev.keliver.compose.material3/ButtonColors?, dev.keliver.compose.material3/ButtonElevation?, dev.keliver.compose.foundation/BorderStroke?, dev.keliver.compose.foundation.layout/PaddingValues?, dev.keliver.compose.foundation.interaction/MutableInteractionSource?, kotlin/Function3<dev.keliver.compose.foundation.layout/RowScope, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.material3/TextButton|TextButton(kotlin.Function0<kotlin.Unit>;dev.keliver.Modifier?;kotlin.Boolean;dev.keliver.compose.ui.graphics.Shape?;dev.keliver.compose.material3.ButtonColors?;dev.keliver.compose.material3.ButtonElevation?;dev.keliver.compose.foundation.BorderStroke?;dev.keliver.compose.foundation.layout.PaddingValues?;dev.keliver.compose.foundation.interaction.MutableInteractionSource?;kotlin.Function3<dev.keliver.compose.foundation.layout.RowScope,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.material3/TextButton(kotlin/Function0<kotlin/Unit>, dev.keliver/Modifier?, kotlin/Boolean, dev.keliver.compose.ui.graphics/Shape?, dev.keliver.compose.material3/ButtonColors?, dev.keliver.compose.material3/ButtonElevation?, dev.keliver.compose.foundation/BorderStroke?, dev.keliver.compose.foundation.layout/PaddingValues?, kotlin/Function3<dev.keliver.compose.foundation.layout/RowScope, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.material3/TextButton|TextButton(kotlin.Function0<kotlin.Unit>;dev.keliver.Modifier?;kotlin.Boolean;dev.keliver.compose.ui.graphics.Shape?;dev.keliver.compose.material3.ButtonColors?;dev.keliver.compose.material3.ButtonElevation?;dev.keliver.compose.foundation.BorderStroke?;dev.keliver.compose.foundation.layout.PaddingValues?;kotlin.Function3<dev.keliver.compose.foundation.layout.RowScope,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun dev.keliver.compose.material3/TimeInput(dev.keliver.compose.material3/TimePickerState, dev.keliver/Modifier?, dev.keliver.compose.material3/TimePickerColors?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.material3/TimeInput|TimeInput(dev.keliver.compose.material3.TimePickerState;dev.keliver.Modifier?;dev.keliver.compose.material3.TimePickerColors?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.material3/TopAppBar(kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, dev.keliver/Modifier?, kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function3<dev.keliver.compose.foundation.layout/RowScope, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, dev.keliver.compose.ui.unit/Dp, dev.keliver.compose.foundation.layout/WindowInsets?, dev.keliver.compose.material3/TopAppBarColors?, dev.keliver.compose.material3/TopAppBarScrollBehavior?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.material3/TopAppBar|TopAppBar(kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;dev.keliver.Modifier?;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function3<dev.keliver.compose.foundation.layout.RowScope,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;dev.keliver.compose.ui.unit.Dp;dev.keliver.compose.foundation.layout.WindowInsets?;dev.keliver.compose.material3.TopAppBarColors?;dev.keliver.compose.material3.TopAppBarScrollBehavior?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.material3/TopAppBar(kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, dev.keliver/Modifier?, kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function3<dev.keliver.compose.foundation.layout/RowScope, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, dev.keliver.compose.ui.unit/Dp, dev.keliver.compose.material3/TopAppBarColors?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose.material3/TopAppBar|TopAppBar(kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;dev.keliver.Modifier?;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function3<dev.keliver.compose.foundation.layout.RowScope,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;dev.keliver.compose.ui.unit.Dp;dev.keliver.compose.material3.TopAppBarColors?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose.material3/dev_keliver_compose_material3_DatePickerState$stableprop_getter(): kotlin/Int // dev.keliver.compose.material3/dev_keliver_compose_material3_DatePickerState$stableprop_getter|dev_keliver_compose_material3_DatePickerState$stableprop_getter(){}[0]

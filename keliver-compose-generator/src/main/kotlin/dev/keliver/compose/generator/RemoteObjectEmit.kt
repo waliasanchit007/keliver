@@ -178,7 +178,8 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
     val all = index.packageFunctions[pkg].orEmpty().filter { it.fn.name == fname && isComposable(it.fn) && !index.isHidden(it.facade, it.fn) }
     val usable = all.filter { pf -> paramsOf(pkg, null, fname, pf.fn.valueParameters, true).unsupported == null }
     require(usable.isNotEmpty()) {
-      "$fq: no composable `$fname` in $pkg whose parameters cross (found ${all.size}). Name the factory in ${config.group}.json: `$fq#<function>`"
+      val why = all.mapNotNull { paramsOf(pkg, null, fname, it.fn.valueParameters, true).unsupported }.distinct()
+      "$fq: no composable `$fname` in $pkg whose parameters cross (found ${all.size}${if (why.isEmpty()) "" else ": it takes " + why.joinToString("; ")}). Name the factory in ${config.group}.json: `$fq#<function>`"
     }
     // Several overloads: the one that sends the most parameters, then the one with the most (a
     // deprecated older one has fewer); a tie is the config author's to settle.

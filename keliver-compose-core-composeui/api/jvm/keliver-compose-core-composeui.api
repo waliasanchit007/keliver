@@ -10,7 +10,6 @@ public final class dev/keliver/compose/core/composeui/ComposeUiKeliverComposeCor
 	public fun ExtraLazyItem ()Ldev/keliver/compose/core/widget/ExtraLazyItem;
 	public synthetic fun ExtraPress (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/ExtraPress;)V
 	public fun ExtraPress (Lkotlin/jvm/functions/Function3;Ldev/keliver/compose/core/modifier/ExtraPress;)V
-	public fun ExtraRemoteObject ()Ldev/keliver/compose/core/widget/ExtraRemoteObject;
 	public fun ExtraRetained ()Ldev/keliver/compose/core/widget/ExtraRetained;
 	public fun ExtraRetainedEntry ()Ldev/keliver/compose/core/widget/ExtraRetainedEntry;
 	public fun ExtraShimmer ()Ldev/keliver/compose/core/widget/ExtraShimmer;
@@ -88,6 +87,7 @@ public final class dev/keliver/compose/core/composeui/ComposeUiKeliverComposeCor
 	public fun GenText1 ()Ldev/keliver/compose/core/widget/GenText1;
 	public fun GenText2 ()Ldev/keliver/compose/core/widget/GenText2;
 	public fun GenTextButton1 ()Ldev/keliver/compose/core/widget/GenTextButton1;
+	public fun GenTimeInput1 ()Ldev/keliver/compose/core/widget/GenTimeInput1;
 	public fun GenTopAppBar1 ()Ldev/keliver/compose/core/widget/GenTopAppBar1;
 	public synthetic fun GenVerticalScroll1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenVerticalScroll1;)V
 	public fun GenVerticalScroll1 (Lkotlin/jvm/functions/Function3;Ldev/keliver/compose/core/modifier/GenVerticalScroll1;)V
@@ -123,16 +123,6 @@ public final class dev/keliver/compose/core/composeui/PressSignalTiming {
 	public final fun getScrollDelayMillis ()J
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-}
-
-public final class dev/keliver/compose/core/composeui/RemoteKt {
-	public static final fun getLocalRemoteObjects ()Landroidx/compose/runtime/ProvidableCompositionLocal;
-}
-
-public final class dev/keliver/compose/core/composeui/RemoteObjects {
-	public static final field $stable I
-	public fun <init> ()V
-	public final fun get (Ljava/lang/String;)Ljava/lang/Object;
 }
 
 public final class dev/keliver/compose/core/composeui/RetainedKt {
