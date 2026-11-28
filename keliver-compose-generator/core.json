@@ -111,7 +111,7 @@
     "Filled.History", "Filled.Receipt", "Filled.Warning", "Filled.KeyboardArrowRight", "Filled.Search", "Filled.Info"
   ],
   "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry", "RemoteObject"],
-  "remoteObjects": ["androidx.compose.foundation.pager.PagerState"],
+  "remoteObjects": ["androidx.compose.foundation.pager.PagerState|initialPage=currentPage,initialPageOffsetFraction=currentPageOffsetFraction"],
   "scrollContainers": [
     "androidx.compose.foundation.horizontalScroll(state,enabled,flingBehavior,reverseScrolling)",
     "androidx.compose.foundation.horizontalScroll(state,overscrollEffect,enabled,flingBehavior,reverseScrolling)",

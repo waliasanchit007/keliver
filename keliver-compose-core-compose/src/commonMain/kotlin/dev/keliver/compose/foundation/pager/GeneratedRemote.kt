@@ -8,9 +8,11 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import dev.keliver.compose.remote.RemoteObject
 import dev.keliver.compose.remote.RemoteObjectWire
 import dev.keliver.compose.remote.RemoteReport
+import dev.keliver.compose.remote.RemoteRestore
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -107,18 +109,30 @@ public class PagerState(public val remote: RemoteObject) {
 }
 
 /**
- * Creates the proxy of a host `PagerState`, made on the host by `rememberPagerState` with these arguments (so the host's state
- * is saved and restored by Compose's own saver). A lambda is sampled: its value is sent whenever it changes.
+ * Creates the proxy of a host `PagerState`, made on the host by `rememberPagerState` with these arguments. A lambda is sampled: its value is sent
+ * whenever it changes.
+ * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host
+ * reported of `initialPage`, `initialPageOffsetFraction`'s fields, and passes them back as those arguments after a restore (so the fields are always observed).
  */
 @Composable
 public fun rememberPagerState(initialPage: kotlin.Int = 0, initialPageOffsetFraction: kotlin.Float = 0f, pageCount: () -> kotlin.Int): PagerState {
   val pageCountLatest by rememberUpdatedState(pageCount)
+  val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
     RemoteObject(RemoteObject.nextId(), 1) {
       kotlinx.serialization.json.buildJsonObject {
-        put("initialPage", kotlinx.serialization.json.JsonPrimitive(initialPage))
-        put("initialPageOffsetFraction", kotlinx.serialization.json.JsonPrimitive(initialPageOffsetFraction))
+        put("initialPage", restore.saved?.get("initialPage") ?: kotlinx.serialization.json.JsonPrimitive(initialPage))
+        put("initialPageOffsetFraction", restore.saved?.get("initialPageOffsetFraction") ?: kotlinx.serialization.json.JsonPrimitive(initialPageOffsetFraction))
         put("pageCount", kotlinx.serialization.json.JsonPrimitive(pageCountLatest()))
+      }
+    }.also { r ->
+      r.read(2)
+      r.read(5)
+      restore.live = {
+        kotlinx.serialization.json.buildJsonObject {
+          r.read(2)?.let { put("initialPage", it) }
+          r.read(5)?.let { put("initialPageOffsetFraction", it) }
+        }
       }
     }
   }

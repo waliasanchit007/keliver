@@ -228,8 +228,11 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
     val registry = mutableListOf<String>()
     val simpleNames = mutableSetOf<String>()
     for (spec in specs) {
-      val fq = spec.substringBefore('#')
-      val factoryName = spec.substringAfter('#', "").ifEmpty { null }
+      val head = spec.substringBefore('|')
+      val fq = head.substringBefore('#')
+      val factoryName = head.substringAfter('#', "").ifEmpty { null }
+      // `|initialPage=currentPage,…`: the factory arguments the saved state restores, each from the field that holds it.
+      val restore = spec.substringAfter('|', "").split(',').filter { it.isNotEmpty() }.associate { it.substringBefore('=') to it.substringAfter('=') }
       val k: KmClass = index.classes[fq] ?: error("$spec: $fq is not on the classpath")
       require(k.visibility == Visibility.PUBLIC) { "$fq is not public" }
       require(simpleNames.add(simple(fq))) { "two remote objects named ${simple(fq)}: the host's dispatcher names are their simple names" }
@@ -245,7 +248,13 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
       val commands = commandsOf(fq)
       val g = guest.getOrPut(guestPackage(pkg)) { StringBuilder() }
       guestClass(g, fq, sn, entry.tag, members, tag)
-      guestFactory(g, fq, sn, entry.tag, factory, pkg)
+      val restoreTags = restore.mapValues { (param, field) ->
+        val m = members.firstOrNull { it.kind == Member.Kind.OBSERVED && it.name == field } ?: error("$spec: restore `$param=$field`: $sn has no observed field `$field`")
+        val p = factory.valueParameters.firstOrNull { it.name == param && crosses(it.type) } ?: error("$spec: restore `$param=$field`: ${factory.name} has no crossing parameter `$param`")
+        require(typeKey(p.type) == typeKey(propertyType(fq, field))) { "$spec: restore `$param=$field`: the types differ (${typeKey(p.type)} and ${typeKey(propertyType(fq, field))})" }
+        tag(m)
+      }
+      guestFactory(g, fq, sn, entry.tag, factory, pkg, restoreTags)
       hostBodies += hostDispatcher(fq, sn, members, tag, commands)
       registry += hostFactory(fq, sn, entry.tag, factory, pkg)
     }
@@ -274,9 +283,11 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
     "androidx.compose.runtime.getValue",
     "androidx.compose.runtime.remember",
     "androidx.compose.runtime.rememberUpdatedState",
+    "androidx.compose.runtime.saveable.rememberSaveable",
     "dev.keliver.compose.remote.RemoteObject",
     "dev.keliver.compose.remote.RemoteObjectWire",
     "dev.keliver.compose.remote.RemoteReport",
+    "dev.keliver.compose.remote.RemoteRestore",
     "kotlinx.serialization.json.booleanOrNull",
     "kotlinx.serialization.json.contentOrNull",
     "kotlinx.serialization.json.doubleOrNull",
@@ -323,22 +334,35 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
     g.append("}\n\n")
   }
 
-  private fun guestFactory(g: StringBuilder, fq: String, sn: String, typeTag: Int, f: KmFunction, pkg: String) {
+  private fun guestFactory(g: StringBuilder, fq: String, sn: String, typeTag: Int, f: KmFunction, pkg: String, restore: Map<String, Int>) {
     val ps = paramsOf(pkg, null, f.name, f.valueParameters, true)
     val params = ps.sent.joinToString(", ") { p ->
       val t = if (isSupplier(p.type)) "() -> ${guestTypeOf(p.type.arguments.single().type!!)}" else guestTypeOf(p.type)
       "${p.name}: $t" + (ps.defaults[p.name]?.let { " = $it" } ?: "")
     }
-    g.append("/**\n * Creates the proxy of a host `$sn`, made on the host by `${f.name}` with these arguments (so the host's state\n * is saved and restored by Compose's own saver). A lambda is sampled: its value is sent whenever it changes.\n */\n")
-    g.append("@Composable\npublic fun ${f.name}($params): $sn {\n")
+    g.append("/**\n * Creates the proxy of a host `$sn`, made on the host by `${f.name}` with these arguments. A lambda is sampled: its value is sent\n * whenever it changes.")
+    if (restore.isNotEmpty()) {
+      g.append("\n * Process death: the host's state dies with the process, so this saves (as the guest's own saved state) the last values the host\n * reported of ${restore.keys.joinToString { "`$it`" }}'s fields, and passes them back as those arguments after a restore (so the fields are always observed).")
+    }
+    g.append("\n */\n@Composable\npublic fun ${f.name}($params): $sn {\n")
     for (p in ps.sent.filter { isSupplier(it.type) }) g.append("  val ${p.name}Latest by rememberUpdatedState(${p.name})\n")
+    if (restore.isNotEmpty()) g.append("  val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }\n")
     g.append("  val remote = remember {\n    RemoteObject(RemoteObject.nextId(), $typeTag) {\n      kotlinx.serialization.json.buildJsonObject {\n")
     for (p in ps.sent) {
       val v = if (isSupplier(p.type)) "${p.name}Latest()" else p.name
       val t = if (isSupplier(p.type)) p.type.arguments.single().type!! else p.type
-      g.append("        put(\"${p.name}\", ${encodeGuest(t, v)})\n")
+      val value = encodeGuest(t, v)
+      g.append(if (p.name in restore) "        put(\"${p.name}\", restore.saved?.get(\"${p.name}\") ?: $value)\n" else "        put(\"${p.name}\", $value)\n")
     }
-    g.append("      }\n    }\n  }\n  return remember(remote) { $sn(remote) }\n}\n\n")
+    g.append("      }\n    }")
+    if (restore.isNotEmpty()) {
+      g.append(".also { r ->\n")
+      for (tag in restore.values) g.append("      r.read($tag)\n")
+      g.append("      restore.live = {\n        kotlinx.serialization.json.buildJsonObject {\n")
+      for ((p, tag) in restore) g.append("          r.read($tag)?.let { put(\"$p\", it) }\n")
+      g.append("        }\n      }\n    }")
+    }
+    g.append("\n  }\n  return remember(remote) { $sn(remote) }\n}\n\n")
   }
 
   private val hostImports = listOf(

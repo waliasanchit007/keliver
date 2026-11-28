@@ -17,8 +17,10 @@ package dev.keliver.compose.remote
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.saveable.Saver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
@@ -130,5 +132,26 @@ public class RemoteObject(
 
     /** A name no other object of this guest has. */
     public fun nextId(): String = "r${++counter}"
+  }
+}
+
+/**
+ * What a remote object's guest factory saves for process death. The host's state dies with the
+ * process, but the guest's saved state (its `SaveableStateRegistry`, which the host app persists) does
+ * not, so the factory saves the values of the state's restorable fields ([live]: the host's last
+ * report of each, `currentPage` for a pager) and, after a restore, passes them back as the host
+ * factory's arguments (`initialPage`): the host creates its state already where it was. [saved] holds
+ * what the last save kept, until the host has reported.
+ */
+public class RemoteRestore {
+  public var saved: JsonObject? = null
+  public var live: (() -> JsonObject)? = null
+
+  public companion object {
+    /** The factory's `rememberSaveable` saver: a JSON text of the restorable fields. */
+    public val Saver: Saver<RemoteRestore, String> = Saver(
+      save = { r -> JsonObject(r.saved.orEmpty() + r.live?.invoke().orEmpty()).toString() },
+      restore = { text -> RemoteRestore().also { it.saved = Json.parseToJsonElement(text) as JsonObject } },
+    )
   }
 }

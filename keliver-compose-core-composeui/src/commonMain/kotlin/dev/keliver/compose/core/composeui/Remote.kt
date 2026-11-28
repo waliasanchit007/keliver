@@ -67,7 +67,7 @@ internal fun <S> RemoteHost(wire: RemoteObjectWire, state: S, dispatcher: Remote
   val observed = wire.observed
   LaunchedEffect(observed) {
     snapshotFlow { observed.associateWith { dispatcher.read(state, it) } }
-      .collect { currentReport(RemoteReport(fields = it)) }
+      .collect { if (it.isNotEmpty()) currentReport(RemoteReport(fields = it)) }
   }
 }
 
