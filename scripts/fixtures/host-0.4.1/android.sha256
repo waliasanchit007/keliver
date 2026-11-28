@@ -10,7 +10,7 @@ cb9e986b7d3f5504b0b87daa2068395e8541b658bd23fa6344b6dae7f9872682  ./src/debug/ko
 82a6564112bc37029d3b015453401525faa10b0729c2f72d3032a5f4c13bad51  ./src/main/assets/keliver/portal_ed25519.pub
 61eb13d91ea6782d3e3e7451bdbf35de3bf515e229e6c3c9c1288fddce49e7eb  ./src/main/kotlin/com/example/demo/host/AndroidSqlHost.kt
 b0d02f05ff7f3551095decf7cc419a00b824e0c1e152ffa979d16ec74f5f85be  ./src/main/kotlin/com/example/demo/host/Bridges.kt
-c27a42eaa4ee509880a3bd8165e3745e4153191c9004a6850563e7b2b7160377  ./src/main/kotlin/com/example/demo/host/BundleIndex.kt
+49287e558cbfb51045b16a47a4636378e1ec16178fc197ded3cdc641539377dc  ./src/main/kotlin/com/example/demo/host/BundleIndex.kt
 4e4e5496150e443a057a211ec1107787cb3bf453e521dc690abe2d1dcc0e7029  ./src/main/kotlin/com/example/demo/host/CallGates.kt
 d490c30eae957bb66113bfd5bd7672df4e1796f61b6a69d063770bab1a673a40  ./src/main/kotlin/com/example/demo/host/CrashRollback.kt
 aa89f477d89c0b4b810e5978e54d60427a0455993f045e950d380e310b984e30  ./src/main/kotlin/com/example/demo/host/ExternalLinkPolicy.kt
@@ -18,8 +18,8 @@ aa89f477d89c0b4b810e5978e54d60427a0455993f045e950d380e310b984e30  ./src/main/kot
 6aa7ae8774b679f8e643f995b591e329fdc78ae42d074373fc4d358c7eeb8df7  ./src/main/kotlin/com/example/demo/host/HostApp.kt
 6d863fd88d069d7eb4a767bc7ddef103bb34b1cc513d4625e6cbc380574a2375  ./src/main/kotlin/com/example/demo/host/HostFeatures.kt
 d49af96bd55252eac27c3f9e730d15f237ef8773682a280e775118e9531a1147  ./src/main/kotlin/com/example/demo/host/HostPrefetch.kt
-1053f870ffd4d5ce68cdb27074479e8a98c1b02a6a25084168ff21dcefd5d031  ./src/main/kotlin/com/example/demo/host/KeliverHost.kt
-009958176a82ff60736fd3261d32efa5c655ca46be8f8e91afd7a5ef7b925451  ./src/main/kotlin/com/example/demo/host/KeliverLine.kt
+9c97f8cf07bf6081d725120bfa8bb29e99c3e25748a146ac62d21b0bd3d0d6fd  ./src/main/kotlin/com/example/demo/host/KeliverHost.kt
+9c291edbaa85237ccc2cb02f7b750cfb106b8fbec5881bba3dca3421c8b83fae  ./src/main/kotlin/com/example/demo/host/KeliverLine.kt
 59feb964d9f4084edb2056c8e1414177f5c864f5aad2e7ee1739da64f8643585  ./src/main/kotlin/com/example/demo/host/KeliverRoute.kt
 c745e10f6520203031a23f13a9d3ad21f1feee9f2d7c84aec341080380ea6240  ./src/main/kotlin/com/example/demo/host/KeliverScreen.kt
 6a0dec49e48417739172f71e390dd018dea6fba0b1a86f2fa3276b5ec0109942  ./src/main/kotlin/com/example/demo/host/KeliverScreenHost.kt
