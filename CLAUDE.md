@@ -133,7 +133,7 @@ host must refuse production mode).
 *Zipline fork* (`dev.keliver.zipline:<upstream name>:<RELEASE_VERSION>` on Maven
 Central, NF2's QuickJS 2026 engine; the version is `RELEASE_VERSION` in
 `keliver-compose-gatea-profile/engine/zipline-fork/apply.sh`, e.g.
-`1.28.0-keliver.1`): tag **`zipline-fork-vX`** on `main` (matches neither `v*`
+`1.28.0-keliver.2`, the next release, with `libquickjs.so` stripped; `.1` stays the published one): tag **`zipline-fork-vX`** on `main` (matches neither `v*`
 nor `portal-tools-v*`), then dispatch `zipline-fork.yml` from `main` with the
 tag, `publish` ticked and the version typed out. It uploads in **review mode**:
 nothing is released until someone compares the Portal's deployment with the
