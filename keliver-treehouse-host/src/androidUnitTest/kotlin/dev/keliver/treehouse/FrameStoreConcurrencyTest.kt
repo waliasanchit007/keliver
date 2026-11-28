@@ -77,9 +77,12 @@ class FrameStoreConcurrencyTest {
 
     val a = writer("A")
     val b = writer("B")
-    reader.start(); a.start(); b.start()
+    reader.start()
+    a.start()
+    b.start()
     start.countDown()
-    a.join(); b.join()
+    a.join()
+    b.join()
     stop.set(true)
     reader.join()
 

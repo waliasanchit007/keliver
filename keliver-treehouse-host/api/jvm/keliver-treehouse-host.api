@@ -141,6 +141,141 @@ public final class dev/keliver/treehouse/FrameFoldRules {
 	public final fun getUrlWidgetProperties ()Ljava/util/Map;
 }
 
+public final class dev/keliver/treehouse/FrameKey {
+	public fun <init> (Ldev/keliver/treehouse/FrameRelease;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ldev/keliver/treehouse/FrameRelease;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun copy (Ldev/keliver/treehouse/FrameRelease;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ldev/keliver/treehouse/FrameKey;
+	public static synthetic fun copy$default (Ldev/keliver/treehouse/FrameKey;Ldev/keliver/treehouse/FrameRelease;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/treehouse/FrameKey;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConfiguration ()Ljava/lang/String;
+	public final fun getEngine ()Ljava/lang/String;
+	public final fun getRelease ()Ldev/keliver/treehouse/FrameRelease;
+	public final fun getRoute ()Ljava/lang/String;
+	public final fun getSchemaHash ()Ljava/lang/String;
+	public final fun getVariant ()Ljava/lang/String;
+	public final fun getWidgetVersion ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/treehouse/FrameMiss : java/lang/Enum {
+	public static final field Absent Ldev/keliver/treehouse/FrameMiss;
+	public static final field Closed Ldev/keliver/treehouse/FrameMiss;
+	public static final field Corrupt Ldev/keliver/treehouse/FrameMiss;
+	public static final field Expired Ldev/keliver/treehouse/FrameMiss;
+	public static final field Format Ldev/keliver/treehouse/FrameMiss;
+	public static final field Io Ldev/keliver/treehouse/FrameMiss;
+	public static final field KeyMismatch Ldev/keliver/treehouse/FrameMiss;
+	public static final field UnknownContent Ldev/keliver/treehouse/FrameMiss;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/treehouse/FrameMiss;
+	public static fun values ()[Ldev/keliver/treehouse/FrameMiss;
+}
+
+public abstract interface class dev/keliver/treehouse/FrameRead {
+}
+
+public final class dev/keliver/treehouse/FrameRead$Hit : dev/keliver/treehouse/FrameRead {
+	public fun <init> (Ldev/keliver/treehouse/StoredFrame;)V
+	public final fun getFrame ()Ldev/keliver/treehouse/StoredFrame;
+}
+
+public final class dev/keliver/treehouse/FrameRead$Miss : dev/keliver/treehouse/FrameRead {
+	public fun <init> (Ldev/keliver/treehouse/FrameMiss;)V
+	public final fun getReason ()Ldev/keliver/treehouse/FrameMiss;
+}
+
+public final class dev/keliver/treehouse/FrameReject : java/lang/Enum {
+	public static final field Closed Ldev/keliver/treehouse/FrameReject;
+	public static final field Io Ldev/keliver/treehouse/FrameReject;
+	public static final field SessionChanged Ldev/keliver/treehouse/FrameReject;
+	public static final field TooLarge Ldev/keliver/treehouse/FrameReject;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/treehouse/FrameReject;
+	public static fun values ()[Ldev/keliver/treehouse/FrameReject;
+}
+
+public final class dev/keliver/treehouse/FrameRelease {
+	public static final field Companion Ldev/keliver/treehouse/FrameRelease$Companion;
+	public fun <init> (JLjava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (JLjava/lang/String;Ljava/lang/String;)Ldev/keliver/treehouse/FrameRelease;
+	public static synthetic fun copy$default (Ldev/keliver/treehouse/FrameRelease;JLjava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/treehouse/FrameRelease;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getManifestSha256 ()Ljava/lang/String;
+	public final fun getModuleDigest ()Ljava/lang/String;
+	public final fun getSequence ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/treehouse/FrameRelease$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/treehouse/FrameRelease$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/treehouse/FrameRelease;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/treehouse/FrameRelease;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/treehouse/FrameRelease$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/treehouse/FrameStore {
+	public static final field KEY_BYTES I
+	public static final field NO_ACCOUNTS Ljava/lang/String;
+	public static final field OFF_MARKER Ljava/lang/String;
+	public static final field SIGNED_OUT Ljava/lang/String;
+	public fun <init> (Lokio/FileSystem;Lokio/Path;Ljava/lang/String;Ldev/keliver/treehouse/FrameStoreClock;Lkotlin/jvm/functions/Function1;Ldev/keliver/treehouse/FrameStoreLimits;)V
+	public synthetic fun <init> (Lokio/FileSystem;Lokio/Path;Ljava/lang/String;Ldev/keliver/treehouse/FrameStoreClock;Lkotlin/jvm/functions/Function1;Ldev/keliver/treehouse/FrameStoreLimits;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun clear (Ljava/lang/String;)V
+	public final fun clearAll ()V
+	public final fun clearRoute (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun declareNoAccounts ()V
+	public final fun read (Ljava/lang/String;Ldev/keliver/treehouse/FrameKey;)Ldev/keliver/treehouse/FrameRead;
+	public final fun session (Ljava/lang/String;)V
+	public final fun setOff (Ljava/lang/String;Z)V
+	public final fun variantChanged (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun write-v9A3WVw (Ljava/lang/String;Ldev/keliver/treehouse/FrameKey;Ljava/util/List;Ldev/keliver/treehouse/FrameFoldContent;J)Ldev/keliver/treehouse/FrameWrite;
+}
+
+public abstract interface class dev/keliver/treehouse/FrameStoreClock {
+	public abstract fun bootMillis ()J
+	public abstract fun wallMillis ()J
+}
+
+public final class dev/keliver/treehouse/FrameStoreLimits {
+	public fun <init> ()V
+	public fun <init> (IJJ)V
+	public synthetic fun <init> (IJJILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getMaxCacheNameBytes ()J
+	public final fun getMaxDecodedBytes ()J
+	public final fun getMaxFrameBytes ()I
+}
+
+public abstract interface class dev/keliver/treehouse/FrameWrite {
+}
+
+public final class dev/keliver/treehouse/FrameWrite$Rejected : dev/keliver/treehouse/FrameWrite {
+	public fun <init> (Ldev/keliver/treehouse/FrameReject;)V
+	public final fun getReason ()Ldev/keliver/treehouse/FrameReject;
+}
+
+public final class dev/keliver/treehouse/FrameWrite$Stored : dev/keliver/treehouse/FrameWrite {
+	public fun <init> (I)V
+	public final fun getBytes ()I
+}
+
 public abstract interface class dev/keliver/treehouse/HiddenEntryPolicy {
 	public static final field Companion Ldev/keliver/treehouse/HiddenEntryPolicy$Companion;
 	public abstract fun isHidden (Ldev/keliver/treehouse/FoldNode;ILdev/keliver/treehouse/FoldNode;I)Z
@@ -170,6 +305,14 @@ public final class dev/keliver/treehouse/MissingSerializerException : java/lang/
 public abstract interface class dev/keliver/treehouse/StateStore {
 	public abstract fun get (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun put (Ljava/lang/String;Ldev/keliver/treehouse/StateSnapshot;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class dev/keliver/treehouse/StoredFrame {
+	public synthetic fun <init> (Ljava/util/List;Ldev/keliver/treehouse/FrameFoldContent;JJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getContent ()Ldev/keliver/treehouse/FrameFoldContent;
+	public final fun getCreatedAtMillis ()J
+	public final fun getMaxAgeMillis ()J
+	public final fun getSnapshot-mlyyLFU ()Ljava/util/List;
 }
 
 public abstract interface class dev/keliver/treehouse/TextLineShapes {

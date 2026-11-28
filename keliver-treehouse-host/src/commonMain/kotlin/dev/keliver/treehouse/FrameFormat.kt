@@ -24,6 +24,7 @@ import okio.Buffer
 import okio.GzipSink
 import okio.GzipSource
 import okio.buffer
+import okio.use
 
 /**
  * The release identity of the app that recorded a frame (docs/SHOW_BEFORE_COMPUTE.md 2.8): the

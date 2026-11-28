@@ -21,6 +21,36 @@ final enum class dev.keliver.treehouse/FrameFoldContent : kotlin/Enum<dev.kelive
     final fun values(): kotlin/Array<dev.keliver.treehouse/FrameFoldContent> // dev.keliver.treehouse/FrameFoldContent.values|values#static(){}[0]
 }
 
+final enum class dev.keliver.treehouse/FrameMiss : kotlin/Enum<dev.keliver.treehouse/FrameMiss> { // dev.keliver.treehouse/FrameMiss|null[0]
+    enum entry Absent // dev.keliver.treehouse/FrameMiss.Absent|null[0]
+    enum entry Closed // dev.keliver.treehouse/FrameMiss.Closed|null[0]
+    enum entry Corrupt // dev.keliver.treehouse/FrameMiss.Corrupt|null[0]
+    enum entry Expired // dev.keliver.treehouse/FrameMiss.Expired|null[0]
+    enum entry Format // dev.keliver.treehouse/FrameMiss.Format|null[0]
+    enum entry Io // dev.keliver.treehouse/FrameMiss.Io|null[0]
+    enum entry KeyMismatch // dev.keliver.treehouse/FrameMiss.KeyMismatch|null[0]
+    enum entry UnknownContent // dev.keliver.treehouse/FrameMiss.UnknownContent|null[0]
+
+    final val entries // dev.keliver.treehouse/FrameMiss.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.keliver.treehouse/FrameMiss> // dev.keliver.treehouse/FrameMiss.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.keliver.treehouse/FrameMiss // dev.keliver.treehouse/FrameMiss.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.keliver.treehouse/FrameMiss> // dev.keliver.treehouse/FrameMiss.values|values#static(){}[0]
+}
+
+final enum class dev.keliver.treehouse/FrameReject : kotlin/Enum<dev.keliver.treehouse/FrameReject> { // dev.keliver.treehouse/FrameReject|null[0]
+    enum entry Closed // dev.keliver.treehouse/FrameReject.Closed|null[0]
+    enum entry Io // dev.keliver.treehouse/FrameReject.Io|null[0]
+    enum entry SessionChanged // dev.keliver.treehouse/FrameReject.SessionChanged|null[0]
+    enum entry TooLarge // dev.keliver.treehouse/FrameReject.TooLarge|null[0]
+
+    final val entries // dev.keliver.treehouse/FrameReject.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.keliver.treehouse/FrameReject> // dev.keliver.treehouse/FrameReject.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.keliver.treehouse/FrameReject // dev.keliver.treehouse/FrameReject.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.keliver.treehouse/FrameReject> // dev.keliver.treehouse/FrameReject.values|values#static(){}[0]
+}
+
 abstract fun interface <#A: dev.keliver.treehouse/AppService> dev.keliver.treehouse/TreehouseContentSource { // dev.keliver.treehouse/TreehouseContentSource|null[0]
     abstract fun get(#A): dev.keliver.treehouse/ZiplineTreehouseUi // dev.keliver.treehouse/TreehouseContentSource.get|get(1:0){}[0]
 }
@@ -116,6 +146,11 @@ abstract interface dev.keliver.treehouse/FoldNode { // dev.keliver.treehouse/Fol
     abstract fun property(kotlin/Int): kotlinx.serialization.json/JsonElement? // dev.keliver.treehouse/FoldNode.property|property(kotlin.Int){}[0]
 }
 
+abstract interface dev.keliver.treehouse/FrameStoreClock { // dev.keliver.treehouse/FrameStoreClock|null[0]
+    abstract fun bootMillis(): kotlin/Long // dev.keliver.treehouse/FrameStoreClock.bootMillis|bootMillis(){}[0]
+    abstract fun wallMillis(): kotlin/Long // dev.keliver.treehouse/FrameStoreClock.wallMillis|wallMillis(){}[0]
+}
+
 abstract interface dev.keliver.treehouse/StateStore { // dev.keliver.treehouse/StateStore|null[0]
     abstract suspend fun get(kotlin/String): dev.keliver.treehouse/StateSnapshot? // dev.keliver.treehouse/StateStore.get|get(kotlin.String){}[0]
     abstract suspend fun put(kotlin/String, dev.keliver.treehouse/StateSnapshot) // dev.keliver.treehouse/StateStore.put|put(kotlin.String;dev.keliver.treehouse.StateSnapshot){}[0]
@@ -153,6 +188,38 @@ sealed interface dev.keliver.treehouse/FoldResult { // dev.keliver.treehouse/Fol
             final fun <get-ready>(): kotlin/Boolean // dev.keliver.treehouse/FoldResult.Folded.ready.<get-ready>|<get-ready>(){}[0]
         final val snapshot // dev.keliver.treehouse/FoldResult.Folded.snapshot|{}snapshot[0]
             final fun <get-snapshot>(): dev.keliver.protocol/SnapshotChangeList // dev.keliver.treehouse/FoldResult.Folded.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
+    }
+}
+
+sealed interface dev.keliver.treehouse/FrameRead { // dev.keliver.treehouse/FrameRead|null[0]
+    final class Hit : dev.keliver.treehouse/FrameRead { // dev.keliver.treehouse/FrameRead.Hit|null[0]
+        constructor <init>(dev.keliver.treehouse/StoredFrame) // dev.keliver.treehouse/FrameRead.Hit.<init>|<init>(dev.keliver.treehouse.StoredFrame){}[0]
+
+        final val frame // dev.keliver.treehouse/FrameRead.Hit.frame|{}frame[0]
+            final fun <get-frame>(): dev.keliver.treehouse/StoredFrame // dev.keliver.treehouse/FrameRead.Hit.frame.<get-frame>|<get-frame>(){}[0]
+    }
+
+    final class Miss : dev.keliver.treehouse/FrameRead { // dev.keliver.treehouse/FrameRead.Miss|null[0]
+        constructor <init>(dev.keliver.treehouse/FrameMiss) // dev.keliver.treehouse/FrameRead.Miss.<init>|<init>(dev.keliver.treehouse.FrameMiss){}[0]
+
+        final val reason // dev.keliver.treehouse/FrameRead.Miss.reason|{}reason[0]
+            final fun <get-reason>(): dev.keliver.treehouse/FrameMiss // dev.keliver.treehouse/FrameRead.Miss.reason.<get-reason>|<get-reason>(){}[0]
+    }
+}
+
+sealed interface dev.keliver.treehouse/FrameWrite { // dev.keliver.treehouse/FrameWrite|null[0]
+    final class Rejected : dev.keliver.treehouse/FrameWrite { // dev.keliver.treehouse/FrameWrite.Rejected|null[0]
+        constructor <init>(dev.keliver.treehouse/FrameReject) // dev.keliver.treehouse/FrameWrite.Rejected.<init>|<init>(dev.keliver.treehouse.FrameReject){}[0]
+
+        final val reason // dev.keliver.treehouse/FrameWrite.Rejected.reason|{}reason[0]
+            final fun <get-reason>(): dev.keliver.treehouse/FrameReject // dev.keliver.treehouse/FrameWrite.Rejected.reason.<get-reason>|<get-reason>(){}[0]
+    }
+
+    final class Stored : dev.keliver.treehouse/FrameWrite { // dev.keliver.treehouse/FrameWrite.Stored|null[0]
+        constructor <init>(kotlin/Int) // dev.keliver.treehouse/FrameWrite.Stored.<init>|<init>(kotlin.Int){}[0]
+
+        final val bytes // dev.keliver.treehouse/FrameWrite.Stored.bytes|{}bytes[0]
+            final fun <get-bytes>(): kotlin/Int // dev.keliver.treehouse/FrameWrite.Stored.bytes.<get-bytes>|<get-bytes>(){}[0]
     }
 }
 
@@ -243,6 +310,94 @@ final class dev.keliver.treehouse/FrameFoldRules { // dev.keliver.treehouse/Fram
         final fun <get-urlWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/FrameFoldRules.urlWidgetProperties.<get-urlWidgetProperties>|<get-urlWidgetProperties>(){}[0]
 }
 
+final class dev.keliver.treehouse/FrameKey { // dev.keliver.treehouse/FrameKey|null[0]
+    constructor <init>(dev.keliver.treehouse/FrameRelease, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String) // dev.keliver.treehouse/FrameKey.<init>|<init>(dev.keliver.treehouse.FrameRelease;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
+
+    final val configuration // dev.keliver.treehouse/FrameKey.configuration|{}configuration[0]
+        final fun <get-configuration>(): kotlin/String // dev.keliver.treehouse/FrameKey.configuration.<get-configuration>|<get-configuration>(){}[0]
+    final val engine // dev.keliver.treehouse/FrameKey.engine|{}engine[0]
+        final fun <get-engine>(): kotlin/String // dev.keliver.treehouse/FrameKey.engine.<get-engine>|<get-engine>(){}[0]
+    final val release // dev.keliver.treehouse/FrameKey.release|{}release[0]
+        final fun <get-release>(): dev.keliver.treehouse/FrameRelease // dev.keliver.treehouse/FrameKey.release.<get-release>|<get-release>(){}[0]
+    final val route // dev.keliver.treehouse/FrameKey.route|{}route[0]
+        final fun <get-route>(): kotlin/String // dev.keliver.treehouse/FrameKey.route.<get-route>|<get-route>(){}[0]
+    final val schemaHash // dev.keliver.treehouse/FrameKey.schemaHash|{}schemaHash[0]
+        final fun <get-schemaHash>(): kotlin/String // dev.keliver.treehouse/FrameKey.schemaHash.<get-schemaHash>|<get-schemaHash>(){}[0]
+    final val variant // dev.keliver.treehouse/FrameKey.variant|{}variant[0]
+        final fun <get-variant>(): kotlin/String // dev.keliver.treehouse/FrameKey.variant.<get-variant>|<get-variant>(){}[0]
+    final val widgetVersion // dev.keliver.treehouse/FrameKey.widgetVersion|{}widgetVersion[0]
+        final fun <get-widgetVersion>(): kotlin/String // dev.keliver.treehouse/FrameKey.widgetVersion.<get-widgetVersion>|<get-widgetVersion>(){}[0]
+
+    final fun component1(): dev.keliver.treehouse/FrameRelease // dev.keliver.treehouse/FrameKey.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.keliver.treehouse/FrameKey.component2|component2(){}[0]
+    final fun component3(): kotlin/String // dev.keliver.treehouse/FrameKey.component3|component3(){}[0]
+    final fun component4(): kotlin/String // dev.keliver.treehouse/FrameKey.component4|component4(){}[0]
+    final fun component5(): kotlin/String // dev.keliver.treehouse/FrameKey.component5|component5(){}[0]
+    final fun component6(): kotlin/String // dev.keliver.treehouse/FrameKey.component6|component6(){}[0]
+    final fun component7(): kotlin/String // dev.keliver.treehouse/FrameKey.component7|component7(){}[0]
+    final fun copy(dev.keliver.treehouse/FrameRelease = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...): dev.keliver.treehouse/FrameKey // dev.keliver.treehouse/FrameKey.copy|copy(dev.keliver.treehouse.FrameRelease;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.treehouse/FrameKey.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.treehouse/FrameKey.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.treehouse/FrameKey.toString|toString(){}[0]
+}
+
+final class dev.keliver.treehouse/FrameRelease { // dev.keliver.treehouse/FrameRelease|null[0]
+    constructor <init>(kotlin/Long, kotlin/String, kotlin/String) // dev.keliver.treehouse/FrameRelease.<init>|<init>(kotlin.Long;kotlin.String;kotlin.String){}[0]
+
+    final val manifestSha256 // dev.keliver.treehouse/FrameRelease.manifestSha256|{}manifestSha256[0]
+        final fun <get-manifestSha256>(): kotlin/String // dev.keliver.treehouse/FrameRelease.manifestSha256.<get-manifestSha256>|<get-manifestSha256>(){}[0]
+    final val moduleDigest // dev.keliver.treehouse/FrameRelease.moduleDigest|{}moduleDigest[0]
+        final fun <get-moduleDigest>(): kotlin/String // dev.keliver.treehouse/FrameRelease.moduleDigest.<get-moduleDigest>|<get-moduleDigest>(){}[0]
+    final val sequence // dev.keliver.treehouse/FrameRelease.sequence|{}sequence[0]
+        final fun <get-sequence>(): kotlin/Long // dev.keliver.treehouse/FrameRelease.sequence.<get-sequence>|<get-sequence>(){}[0]
+
+    final fun component1(): kotlin/Long // dev.keliver.treehouse/FrameRelease.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.keliver.treehouse/FrameRelease.component2|component2(){}[0]
+    final fun component3(): kotlin/String // dev.keliver.treehouse/FrameRelease.component3|component3(){}[0]
+    final fun copy(kotlin/Long = ..., kotlin/String = ..., kotlin/String = ...): dev.keliver.treehouse/FrameRelease // dev.keliver.treehouse/FrameRelease.copy|copy(kotlin.Long;kotlin.String;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.treehouse/FrameRelease.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.treehouse/FrameRelease.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.treehouse/FrameRelease.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.treehouse/FrameRelease> { // dev.keliver.treehouse/FrameRelease.$serializer|null[0]
+        final val descriptor // dev.keliver.treehouse/FrameRelease.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.treehouse/FrameRelease.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.treehouse/FrameRelease.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.treehouse/FrameRelease // dev.keliver.treehouse/FrameRelease.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.treehouse/FrameRelease) // dev.keliver.treehouse/FrameRelease.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.treehouse.FrameRelease){}[0]
+    }
+
+    final object Companion { // dev.keliver.treehouse/FrameRelease.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.treehouse/FrameRelease> // dev.keliver.treehouse/FrameRelease.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.treehouse/FrameStore { // dev.keliver.treehouse/FrameStore|null[0]
+    constructor <init>(okio/FileSystem, okio/Path, kotlin/String, dev.keliver.treehouse/FrameStoreClock, kotlin/Function1<kotlin/Int, kotlin/ByteArray>, dev.keliver.treehouse/FrameStoreLimits = ...) // dev.keliver.treehouse/FrameStore.<init>|<init>(okio.FileSystem;okio.Path;kotlin.String;dev.keliver.treehouse.FrameStoreClock;kotlin.Function1<kotlin.Int,kotlin.ByteArray>;dev.keliver.treehouse.FrameStoreLimits){}[0]
+
+    final fun clear(kotlin/String) // dev.keliver.treehouse/FrameStore.clear|clear(kotlin.String){}[0]
+    final fun clearAll() // dev.keliver.treehouse/FrameStore.clearAll|clearAll(){}[0]
+    final fun clearRoute(kotlin/String, kotlin/String) // dev.keliver.treehouse/FrameStore.clearRoute|clearRoute(kotlin.String;kotlin.String){}[0]
+    final fun declareNoAccounts() // dev.keliver.treehouse/FrameStore.declareNoAccounts|declareNoAccounts(){}[0]
+    final fun read(kotlin/String, dev.keliver.treehouse/FrameKey): dev.keliver.treehouse/FrameRead // dev.keliver.treehouse/FrameStore.read|read(kotlin.String;dev.keliver.treehouse.FrameKey){}[0]
+    final fun session(kotlin/String?) // dev.keliver.treehouse/FrameStore.session|session(kotlin.String?){}[0]
+    final fun setOff(kotlin/String, kotlin/Boolean) // dev.keliver.treehouse/FrameStore.setOff|setOff(kotlin.String;kotlin.Boolean){}[0]
+    final fun variantChanged(kotlin/String, kotlin/String) // dev.keliver.treehouse/FrameStore.variantChanged|variantChanged(kotlin.String;kotlin.String){}[0]
+    final fun write(kotlin/String, dev.keliver.treehouse/FrameKey, dev.keliver.protocol/SnapshotChangeList, dev.keliver.treehouse/FrameFoldContent, kotlin/Long): dev.keliver.treehouse/FrameWrite // dev.keliver.treehouse/FrameStore.write|write(kotlin.String;dev.keliver.treehouse.FrameKey;dev.keliver.protocol.SnapshotChangeList;dev.keliver.treehouse.FrameFoldContent;kotlin.Long){}[0]
+}
+
+final class dev.keliver.treehouse/FrameStoreLimits { // dev.keliver.treehouse/FrameStoreLimits|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Long = ..., kotlin/Long = ...) // dev.keliver.treehouse/FrameStoreLimits.<init>|<init>(kotlin.Int;kotlin.Long;kotlin.Long){}[0]
+
+    final val maxCacheNameBytes // dev.keliver.treehouse/FrameStoreLimits.maxCacheNameBytes|{}maxCacheNameBytes[0]
+        final fun <get-maxCacheNameBytes>(): kotlin/Long // dev.keliver.treehouse/FrameStoreLimits.maxCacheNameBytes.<get-maxCacheNameBytes>|<get-maxCacheNameBytes>(){}[0]
+    final val maxDecodedBytes // dev.keliver.treehouse/FrameStoreLimits.maxDecodedBytes|{}maxDecodedBytes[0]
+        final fun <get-maxDecodedBytes>(): kotlin/Long // dev.keliver.treehouse/FrameStoreLimits.maxDecodedBytes.<get-maxDecodedBytes>|<get-maxDecodedBytes>(){}[0]
+    final val maxFrameBytes // dev.keliver.treehouse/FrameStoreLimits.maxFrameBytes|{}maxFrameBytes[0]
+        final fun <get-maxFrameBytes>(): kotlin/Int // dev.keliver.treehouse/FrameStoreLimits.maxFrameBytes.<get-maxFrameBytes>|<get-maxFrameBytes>(){}[0]
+}
+
 final class dev.keliver.treehouse/MemoryStateStore : dev.keliver.treehouse/StateStore { // dev.keliver.treehouse/MemoryStateStore|null[0]
     constructor <init>() // dev.keliver.treehouse/MemoryStateStore.<init>|<init>(){}[0]
 
@@ -253,6 +408,19 @@ final class dev.keliver.treehouse/MemoryStateStore : dev.keliver.treehouse/State
 final class dev.keliver.treehouse/MissingSerializerException : kotlin/RuntimeException { // dev.keliver.treehouse/MissingSerializerException|null[0]
     constructor <init>(kotlin.reflect/KClass<*>, kotlinx.serialization/SerializationException) // dev.keliver.treehouse/MissingSerializerException.<init>|<init>(kotlin.reflect.KClass<*>;kotlinx.serialization.SerializationException){}[0]
     constructor <init>(kotlin/String, kotlinx.serialization/SerializationException) // dev.keliver.treehouse/MissingSerializerException.<init>|<init>(kotlin.String;kotlinx.serialization.SerializationException){}[0]
+}
+
+final class dev.keliver.treehouse/StoredFrame { // dev.keliver.treehouse/StoredFrame|null[0]
+    constructor <init>(dev.keliver.protocol/SnapshotChangeList, dev.keliver.treehouse/FrameFoldContent, kotlin/Long, kotlin/Long) // dev.keliver.treehouse/StoredFrame.<init>|<init>(dev.keliver.protocol.SnapshotChangeList;dev.keliver.treehouse.FrameFoldContent;kotlin.Long;kotlin.Long){}[0]
+
+    final val content // dev.keliver.treehouse/StoredFrame.content|{}content[0]
+        final fun <get-content>(): dev.keliver.treehouse/FrameFoldContent // dev.keliver.treehouse/StoredFrame.content.<get-content>|<get-content>(){}[0]
+    final val createdAtMillis // dev.keliver.treehouse/StoredFrame.createdAtMillis|{}createdAtMillis[0]
+        final fun <get-createdAtMillis>(): kotlin/Long // dev.keliver.treehouse/StoredFrame.createdAtMillis.<get-createdAtMillis>|<get-createdAtMillis>(){}[0]
+    final val maxAgeMillis // dev.keliver.treehouse/StoredFrame.maxAgeMillis|{}maxAgeMillis[0]
+        final fun <get-maxAgeMillis>(): kotlin/Long // dev.keliver.treehouse/StoredFrame.maxAgeMillis.<get-maxAgeMillis>|<get-maxAgeMillis>(){}[0]
+    final val snapshot // dev.keliver.treehouse/StoredFrame.snapshot|{}snapshot[0]
+        final fun <get-snapshot>(): dev.keliver.protocol/SnapshotChangeList // dev.keliver.treehouse/StoredFrame.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
 }
 
 final class dev.keliver.treehouse/ZiplineBindTimeoutException : kotlin/RuntimeException // dev.keliver.treehouse/ZiplineBindTimeoutException|null[0]
@@ -329,3 +497,4 @@ open class dev.keliver.treehouse/TreehouseUIView : dev.keliver.treehouse/Treehou
 final fun <#A: dev.keliver.treehouse/AppService, #B: kotlin/Any> (dev.keliver.treehouse/TreehouseContentSource<#A>).dev.keliver.treehouse/bindWhenReady(dev.keliver.treehouse/TreehouseView<#B>, dev.keliver.treehouse/TreehouseApp<#A>): okio/Closeable // dev.keliver.treehouse/bindWhenReady|bindWhenReady@dev.keliver.treehouse.TreehouseContentSource<0:0>(dev.keliver.treehouse.TreehouseView<0:1>;dev.keliver.treehouse.TreehouseApp<0:0>){0§<dev.keliver.treehouse.AppService>;1§<kotlin.Any>}[0]
 final fun <#A: kotlin/Any> (dev.keliver.treehouse/Content).dev.keliver.treehouse/bindWhenReady(dev.keliver.treehouse/TreehouseView<#A>): okio/Closeable // dev.keliver.treehouse/bindWhenReady|bindWhenReady@dev.keliver.treehouse.Content(dev.keliver.treehouse.TreehouseView<0:0>){0§<kotlin.Any>}[0]
 final fun dev.keliver.treehouse/TreehouseAppFactory(app.cash.zipline.loader/ZiplineHttpClient, app.cash.zipline.loader/ManifestVerifier, okio/FileSystem? = ..., okio/Path? = ..., kotlin/String = ..., kotlin/Long = ..., kotlin/Int = ..., app.cash.zipline.loader/LoaderEventListener = ..., dev.keliver.treehouse/StateStore = ..., dev.keliver.leaks/LeakDetector = ..., dev.keliver.protocol.host/HostProtocol.Factory): dev.keliver.treehouse/TreehouseApp.Factory // dev.keliver.treehouse/TreehouseAppFactory|TreehouseAppFactory(app.cash.zipline.loader.ZiplineHttpClient;app.cash.zipline.loader.ManifestVerifier;okio.FileSystem?;okio.Path?;kotlin.String;kotlin.Long;kotlin.Int;app.cash.zipline.loader.LoaderEventListener;dev.keliver.treehouse.StateStore;dev.keliver.leaks.LeakDetector;dev.keliver.protocol.host.HostProtocol.Factory){}[0]
+final fun dev.keliver.treehouse/iosFrameStore(dev.keliver.treehouse/FrameStoreLimits = ...): dev.keliver.treehouse/FrameStore // dev.keliver.treehouse/iosFrameStore|iosFrameStore(dev.keliver.treehouse.FrameStoreLimits){}[0]

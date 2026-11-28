@@ -26,17 +26,17 @@ import okio.Path
 import okio.Path.Companion.toPath
 import platform.Foundation.NSBundle
 import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSDate
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLIsExcludedFromBackupKey
 import platform.Foundation.NSUserDomainMask
-import platform.posix.clock_gettime_nsec_np
-import platform.posix.CLOCK_UPTIME_RAW
-import platform.Foundation.NSDate
 import platform.Foundation.timeIntervalSince1970
 import platform.Security.SecRandomCopyBytes
 import platform.Security.kSecRandomDefault
+import platform.posix.CLOCK_UPTIME_RAW
+import platform.posix.clock_gettime_nsec_np
 
 /**
  * The [FrameStore] for an iOS app: frames live in `Library/Caches/keliver-frames`, marked excluded
@@ -54,7 +54,7 @@ public fun iosFrameStore(limits: FrameStoreLimits = FrameStoreLimits()): FrameSt
       override fun wallMillis(): Long = (NSDate().timeIntervalSince1970 * 1000.0).toLong()
 
       // CLOCK_UPTIME_RAW does not count sleep, which is fine: the wall clock covers that.
-      override fun bootMillis(): Long = (clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 1_000_000UL).toLong()
+      override fun bootMillis(): Long = (clock_gettime_nsec_np(CLOCK_UPTIME_RAW.toUInt()) / 1_000_000UL).toLong()
     },
     randomBytes = ::secureRandomBytes,
     limits = limits,

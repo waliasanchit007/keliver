@@ -42,7 +42,6 @@ import okio.ByteString.Companion.toByteString
 import okio.FileSystem
 import okio.ForwardingFileSystem
 import okio.Path
-import okio.Path.Companion.toPath
 
 internal class FakeFrameClock(var wall: Long = 1_000_000L, var boot: Long = 5_000L) : FrameStoreClock {
   override fun wallMillis(): Long = wall
@@ -224,9 +223,11 @@ class FrameStoreTest {
   @Test fun maxAgeExpiryMisses() {
     val store = opened()
     store.put(maxAge = 10_000L)
-    clock.wall += 9_999; clock.boot += 9_999
+    clock.wall += 9_999
+    clock.boot += 9_999
     assertThat(textOf(store.get().hit())).isEqualTo("Hello")
-    clock.wall += 1; clock.boot += 1
+    clock.wall += 1
+    clock.boot += 1
     assertThat(store.get().miss()).isEqualTo(FrameMiss.Expired)
     assertThat(framesOnDisk()).hasSize(0)
   }
@@ -320,7 +321,10 @@ class FrameStoreTest {
 
   @Test fun nothingOutsideTheDirectoryAndNoTemporaryFilesLeft() {
     val store = opened()
-    store.put(); store.put(baseKey.copy(route = "b")); store.clear(CACHE); store.put()
+    store.put()
+    store.put(baseKey.copy(route = "b"))
+    store.clear(CACHE)
+    store.put()
     for (file in filesOnDisk()) {
       assertThat(file.toString().startsWith(dir.toString())).isTrue()
       assertThat(file.name.endsWith(".tmp")).isEqualTo(false)
@@ -461,7 +465,8 @@ class FrameStoreTest {
 
   @Test fun clearDeletesOneCacheName() {
     val store = opened()
-    store.put(); store.write("b", baseKey, snapshotOf(), FrameFoldContent.Whole, 1000)
+    store.put()
+    store.write("b", baseKey, snapshotOf(), FrameFoldContent.Whole, 1000)
     store.clear(CACHE)
     assertThat(store.get().miss()).isEqualTo(FrameMiss.Absent)
     assertThat(textOf(store.read("b", baseKey).hit())).isEqualTo("Hello")
@@ -479,7 +484,8 @@ class FrameStoreTest {
 
   @Test fun clearAllDeletesEverythingButStaysOpen() {
     val store = opened()
-    store.put(); store.write("b", baseKey, snapshotOf(), FrameFoldContent.Whole, 1000)
+    store.put()
+    store.write("b", baseKey, snapshotOf(), FrameFoldContent.Whole, 1000)
     store.clearAll()
     assertThat(framesOnDisk()).hasSize(0)
     store.put()
@@ -521,7 +527,8 @@ class FrameStoreTest {
     val store = opened(limits = limits)
     val routes = (1..8).map { "route-$it" }
     for (route in routes) {
-      clock.wall += 10; clock.boot += 10
+      clock.wall += 10
+      clock.boot += 10
       store.put(baseKey.copy(route = route), text = noise(1_000, route.hashCode()))
       val total = framesOnDisk().sumOf { FileSystem.SYSTEM.metadata(it).size ?: 0L }
       assertThat(total).isLessThanOrEqualTo(5_000L)
@@ -537,7 +544,8 @@ class FrameStoreTest {
     val limits = FrameStoreLimits(maxFrameBytes = 2_000, maxCacheNameBytes = 2_500)
     val store = opened(limits = limits)
     store.write("a", baseKey, snapshotOf(noise(1_000, 1)), FrameFoldContent.Whole, 60_000)
-    clock.wall += 10; clock.boot += 10
+    clock.wall += 10
+    clock.boot += 10
     store.write("b", baseKey, snapshotOf(noise(1_000, 2)), FrameFoldContent.Whole, 60_000)
     assertThat(store.read("a", baseKey)).isInstanceOf(FrameRead.Hit::class)
     assertThat(store.read("b", baseKey)).isInstanceOf(FrameRead.Hit::class)

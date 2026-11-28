@@ -47,9 +47,13 @@ class IosFrameStoreTest {
   @Test fun machOUuidIsFoundInAThinHeader() {
     val header = ByteArray(80)
     // magic 0xFEEDFACF little-endian, ncmds = 1 at offset 16
-    header[0] = 0xCF.toByte(); header[1] = 0xFA.toByte(); header[2] = 0xED.toByte(); header[3] = 0xFE.toByte()
+    header[0] = 0xCF.toByte()
+    header[1] = 0xFA.toByte()
+    header[2] = 0xED.toByte()
+    header[3] = 0xFE.toByte()
     header[16] = 1
-    header[32] = 0x1B; header[36] = 24 // LC_UUID, cmdsize 24
+    header[32] = 0x1B
+    header[36] = 24 // LC_UUID, cmdsize 24
     for (i in 0 until 16) header[40 + i] = (i + 1).toByte()
     assertThat(parseMachOUuid(header)).isEqualTo("0102030405060708090a0b0c0d0e0f10")
     assertThat(parseMachOUuid(ByteArray(80))).isEqualTo(null)

@@ -22,6 +22,7 @@ import okio.ByteString.Companion.encodeUtf8
 import okio.ByteString.Companion.toByteString
 import okio.FileSystem
 import okio.Path
+import okio.use
 
 /** The two clocks a frame's age is read from: wall time, and time since boot (which a reboot resets). */
 @KeliverFrameFoldApi
