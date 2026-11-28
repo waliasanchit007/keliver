@@ -46,6 +46,20 @@ public object KeliverHostFeatures {
   public const val PRESS_1: String = "keliver.press@1"
 
   /**
+   * NF5 (A), the cached first frame: the host reads the marker modifiers of
+   * `dev.keliver.protocol.FrameCacheTags` (consumed before widget dispatch, so they never reach a
+   * widget or the mismatch handler). Required by [CachedFrame], [cached] and [notCached].
+   */
+  public const val CACHED_FRAME_1: String = "keliver.cachedFrame@1"
+
+  /**
+   * NF5 (A): the host accepts [FrameScope.sessionChanged] and [FrameScope.variantChanged] from the
+   * guest and handles them as `KeliverHost.session()` does. Requires `keliver.cachedFrame@1`,
+   * because only a host that stores frames has anything to delete.
+   */
+  public const val FRAME_SCOPE_1: String = "keliver.frameScope@1"
+
+  /**
    * Every feature Keliver defines, each with the features it requires (as `keliver.nav.reveal@1`
    * will require `keliver.nav.retainedContainer@2`). A host that declares a feature without all of
    * them is to be treated as not declaring it (docs/SHOW_BEFORE_COMPUTE.md 3.2), and Keliver's
@@ -54,6 +68,8 @@ public object KeliverHostFeatures {
   public val requirements: Map<String, Set<String>> = mapOf(
     NAV_RETAINED_CONTAINER_1 to emptySet(),
     PRESS_1 to emptySet(),
+    CACHED_FRAME_1 to emptySet(),
+    FRAME_SCOPE_1 to setOf(CACHED_FRAME_1),
   )
 
   /** Every name Keliver defines. */

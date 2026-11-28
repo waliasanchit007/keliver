@@ -60,7 +60,18 @@ public class HostProtocolAdapter<W : Any>(
   private val nodes =
     mutableIntObjectMapOf<ProtocolNode<W>>(Id.Root.value, RootProtocolNode(container))
 
-  private val removeNodeById = IdVisitor { nodes.remove(it.value) }
+  /**
+   * What the cached-frame markers said, per node id (`FrameCacheTags`). Only nodes with a readable
+   * marker have an entry. Internal: the recorder (NF5 A3) reads it.
+   */
+  private val frameMarks = mutableIntObjectMapOf<FrameMarks>()
+
+  internal fun frameMarks(id: Id): FrameMarks? = frameMarks[id.value]
+
+  private val removeNodeById = IdVisitor {
+    frameMarks.remove(it.value)
+    nodes.remove(it.value)
+  }
 
   private val changedWidgets = mutableScatterSetOf<ChangeListener>()
 
@@ -157,6 +168,10 @@ public class HostProtocolAdapter<W : Any>(
 
           node.updateModifier(change.modifier)
 
+          // The reserved markers were taken out of the modifier; keep what they said for A3.
+          val marks = FrameMarks.read(change.frameCacheElements)
+          if (marks != null) frameMarks.put(id.value, marks) else frameMarks.remove(id.value)
+
           val widget = node.widget
           if (widget is ChangeListener) {
             changedWidgets += widget
@@ -207,6 +222,7 @@ public class HostProtocolAdapter<W : Any>(
       node.detach()
     }
     nodes.clear()
+    frameMarks.clear()
 
     for (node in pool) {
       node.detach()

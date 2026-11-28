@@ -21,8 +21,10 @@ import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.ChildrenChange
 import dev.keliver.protocol.Create
+import dev.keliver.protocol.FrameCacheTags
 import dev.keliver.protocol.Id
 import dev.keliver.protocol.ModifierChange
+import dev.keliver.protocol.ModifierElement
 import dev.keliver.protocol.PropertyChange
 import dev.keliver.protocol.PropertyTag
 import dev.keliver.protocol.WidgetTag
@@ -65,13 +67,20 @@ public sealed interface UiChange {
         }
         is ModifierChange -> {
           var reuse = false
+          // The reserved framework tags are taken out here, before createModifier, so they reach
+          // neither a widget nor the mismatch handler (NF5 A2).
+          val markers = ArrayList<ModifierElement>(0)
           val modifier = change.elements.fold<_, Modifier>(Modifier) { outer, element ->
+            if (FrameCacheTags.isReserved(element.tag.value)) {
+              markers += element
+              return@fold outer
+            }
             if (element.tag.value == REUSE_MODIFIER_TAG) {
               reuse = true
             }
             outer.then(factory.createModifier(element))
           }
-          UiModifierChange(change.id, reuse, modifier)
+          UiModifierChange(change.id, reuse, modifier, if (markers.isEmpty()) emptyList() else markers)
         }
       }
     }
@@ -104,6 +113,11 @@ public class UiModifierChange(
   override val id: Id,
   public val reuse: Boolean,
   public val modifier: Modifier,
+  /**
+   * The elements in `FrameCacheTags.range`, which [modifier] does not contain. Read by
+   * [HostProtocolAdapter] and never passed to a widget.
+   */
+  public val frameCacheElements: List<ModifierElement> = emptyList(),
 ) : UiChange
 
 /** @suppress */

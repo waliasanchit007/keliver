@@ -17,6 +17,8 @@ package dev.keliver.protocol.guest
 
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
+import dev.keliver.compose.FrameCacheMarker
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.ChildrenChange
@@ -26,6 +28,7 @@ import dev.keliver.protocol.Event
 import dev.keliver.protocol.Id
 import dev.keliver.protocol.ModifierChange
 import dev.keliver.protocol.ModifierElement
+import dev.keliver.protocol.ModifierTag
 import dev.keliver.protocol.PropertyChange
 import dev.keliver.protocol.PropertyTag
 import dev.keliver.protocol.RedwoodVersion
@@ -36,7 +39,10 @@ import dev.keliver.widget.WidgetSystem
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /** @suppress For generated code use only. */
 @OptIn(RedwoodCodegenApi::class)
@@ -125,7 +131,27 @@ public class DefaultGuestProtocolAdapter(
     changes.add(ModifierChange(id, elements))
   }
 
+  @OptIn(ExperimentalKeliverHostFeaturesApi::class)
   private fun <T : Modifier.Element> modifierElement(element: T): ModifierElement {
+    // The cached-frame markers are framework elements, not schema ones (FrameCacheTags).
+    if (element is FrameCacheMarker) {
+      if (element.fields.isEmpty()) return ModifierElement(ModifierTag(element.tag))
+      val value = buildJsonObject {
+        for ((name, field) in element.fields) {
+          put(
+            name,
+            when (field) {
+              null -> JsonNull
+              is String -> JsonPrimitive(field)
+              is Long -> JsonPrimitive(field)
+              is Boolean -> JsonPrimitive(field)
+              else -> throw AssertionError("unsupported marker field $name: $field")
+            },
+          )
+        }
+      }
+      return ModifierElement(ModifierTag(element.tag), value)
+    }
     val (tag, serializer) = widgetSystemFactory.modifierTagAndSerializationStrategy(element)
     if (serializer == null) return ModifierElement(tag)
     return ModifierElement(tag, json.encodeToJsonElement(serializer, element))
