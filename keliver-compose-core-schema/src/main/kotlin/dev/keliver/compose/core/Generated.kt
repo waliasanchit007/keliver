@@ -22,7 +22,6 @@ import dev.keliver.schema.Widget
     GenSpacer1::class,
     GenFlowRow1::class,
     GenText1::class,
-    GenText2::class,
     GenIcon1::class,
     GenImage1::class,
     GenImage2::class,
@@ -67,7 +66,6 @@ import dev.keliver.schema.Widget
     GenBorder1::class,
     GenBorder2::class,
     GenClickable1::class,
-    GenClickable2::class,
     GenHorizontalScroll1::class,
     GenVerticalScroll1::class,
     GenClip1::class,
@@ -148,7 +146,7 @@ public data class GenSpacer1(
 )
 
 /** `androidx.compose.foundation.layout.FlowRow`: [FlowRow] is a layout that fills items from left to right (ltr) in LTR layouts or right to left (rtl) in RTL layouts and when it runs out of space, moves to the next "row" or "line" positioned on the bottom, and then continues filling items until the items run out. */
-@Widget(9)
+@Widget(6)
 public data class GenFlowRow1(
   @Property(2) val horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal,
   @Property(3) val verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical,
@@ -159,30 +157,9 @@ public data class GenFlowRow1(
   @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
 )
 
-/** `androidx.compose.material3.Text` */
-@Widget(6)
-public data class GenText1(
-  @Property(1) val text: kotlin.String,
-  @Property(3) val color: dev.keliver.compose.ui.graphics.Color,
-  @Property(4) val fontSize: dev.keliver.compose.ui.unit.TextUnit,
-  @Property(5) val fontStyle: dev.keliver.compose.ui.text.font.FontStyle?,
-  @Property(6) val fontWeight: dev.keliver.compose.ui.text.font.FontWeight?,
-  @Property(7) val fontFamily: dev.keliver.compose.ui.text.font.FontFamily?,
-  @Property(8) val letterSpacing: dev.keliver.compose.ui.unit.TextUnit,
-  @Property(9) val textDecoration: dev.keliver.compose.ui.text.style.TextDecoration?,
-  @Property(10) val textAlign: dev.keliver.compose.ui.text.style.TextAlign?,
-  @Property(11) val lineHeight: dev.keliver.compose.ui.unit.TextUnit,
-  @Property(12) val overflow: dev.keliver.compose.ui.text.style.TextOverflow,
-  @Property(13) val softWrap: kotlin.Boolean,
-  @Property(14) val maxLines: kotlin.Int,
-  @Property(15) val minLines: kotlin.Int,
-  @Property(17) val style: dev.keliver.compose.ui.text.TextStyle?,
-  @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
-)
-
 /** `androidx.compose.material3.Text`: High level element that displays text and provides semantics / accessibility information. */
-@Widget(10)
-public data class GenText2(
+@Widget(7)
+public data class GenText1(
   @Property(1) val text: kotlin.String,
   @Property(3) val color: dev.keliver.compose.ui.graphics.Color,
   @Property(5) val fontSize: dev.keliver.compose.ui.unit.TextUnit,
@@ -202,7 +179,7 @@ public data class GenText2(
 )
 
 /** `androidx.compose.material3.Icon`: A Material Design icon component that draws [imageVector] using [tint], with a default value of [LocalContentColor]. */
-@Widget(7)
+@Widget(8)
 public data class GenIcon1(
   @Property(1) val imageVector: dev.keliver.compose.ui.graphics.vector.ImageVector,
   @Property(2) val contentDescription: kotlin.String?,
@@ -211,7 +188,7 @@ public data class GenIcon1(
 )
 
 /** `androidx.compose.foundation.Image`: Creates a composable that lays out and draws a given [Painter]. */
-@Widget(12)
+@Widget(9)
 public data class GenImage1(
   @Property(1) val painter: dev.keliver.compose.ui.graphics.painter.Painter,
   @Property(2) val contentDescription: kotlin.String?,
@@ -223,7 +200,7 @@ public data class GenImage1(
 )
 
 /** `androidx.compose.foundation.Image`: A composable that lays out and draws a given [ImageVector]. */
-@Widget(13)
+@Widget(10)
 public data class GenImage2(
   @Property(1) val imageVector: dev.keliver.compose.ui.graphics.vector.ImageVector,
   @Property(2) val contentDescription: kotlin.String?,
@@ -235,7 +212,7 @@ public data class GenImage2(
 )
 
 /** `androidx.compose.foundation.lazy.LazyColumn`: The vertically scrolling list that only composes and lays out the currently visible items. */
-@Widget(14)
+@Widget(11)
 public data class GenLazyColumn1(
   @Property(2) val state: dev.keliver.compose.foundation.lazy.LazyListStateWire,
   @Property(3) val contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?,
@@ -251,7 +228,7 @@ public data class GenLazyColumn1(
 )
 
 /** `androidx.compose.foundation.lazy.LazyRow`: The horizontally scrolling list that only composes and lays out the currently visible items. */
-@Widget(15)
+@Widget(12)
 public data class GenLazyRow1(
   @Property(2) val state: dev.keliver.compose.foundation.lazy.LazyListStateWire,
   @Property(3) val contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?,
@@ -267,7 +244,7 @@ public data class GenLazyRow1(
 )
 
 /** `androidx.compose.material3.Icon`: A Material Design icon component that draws [painter] using [tint], with a default value of [LocalContentColor]. */
-@Widget(16)
+@Widget(13)
 public data class GenIcon2(
   @Property(1) val painter: dev.keliver.compose.ui.graphics.painter.Painter,
   @Property(2) val contentDescription: kotlin.String?,
@@ -276,7 +253,7 @@ public data class GenIcon2(
 )
 
 /** `androidx.compose.material3.Surface`: Material surface is the central metaphor in material design. */
-@Widget(17)
+@Widget(14)
 public data class GenSurface1(
   @Property(2) val shape: dev.keliver.compose.ui.graphics.Shape,
   @Property(3) val color: dev.keliver.compose.ui.graphics.Color?,
@@ -289,7 +266,7 @@ public data class GenSurface1(
 )
 
 /** `androidx.compose.material3.Surface`: Material surface is the central metaphor in material design. */
-@Widget(18)
+@Widget(15)
 public data class GenSurface2(
   @Property(1) val onClick: (() -> Unit)?,
   @Property(3) val enabled: kotlin.Boolean,
@@ -304,7 +281,7 @@ public data class GenSurface2(
 )
 
 /** `androidx.compose.material3.Card`: [Material Design filled card](https://m3.material.io/components/cards/overview) Cards contain contain content and actions that relate information about a subject. */
-@Widget(19)
+@Widget(16)
 public data class GenCard1(
   @Property(2) val shape: dev.keliver.compose.ui.graphics.Shape?,
   @Property(3) val colors: dev.keliver.compose.material3.CardColors?,
@@ -315,7 +292,7 @@ public data class GenCard1(
 )
 
 /** `androidx.compose.material3.Card`: [Material Design filled card](https://m3.material.io/components/cards/overview) Cards contain contain content and actions that relate information about a subject. */
-@Widget(20)
+@Widget(17)
 public data class GenCard2(
   @Property(1) val onClick: (() -> Unit)?,
   @Property(3) val enabled: kotlin.Boolean,
@@ -328,7 +305,7 @@ public data class GenCard2(
 )
 
 /** `androidx.compose.material3.Button`: [Material Design button](https://m3.material.io/components/buttons/overview) Buttons help people initiate actions, from sending an email, to sharing a document, to liking a post. */
-@Widget(21)
+@Widget(18)
 public data class GenButton1(
   @Property(1) val onClick: (() -> Unit)?,
   @Property(3) val enabled: kotlin.Boolean,
@@ -342,7 +319,7 @@ public data class GenButton1(
 )
 
 /** `androidx.compose.material3.TextButton`: [Material Design text button](https://m3.material.io/components/buttons/overview) Buttons help people initiate actions, from sending an email, to sharing a document, to liking a post. */
-@Widget(22)
+@Widget(19)
 public data class GenTextButton1(
   @Property(1) val onClick: (() -> Unit)?,
   @Property(3) val enabled: kotlin.Boolean,
@@ -356,7 +333,7 @@ public data class GenTextButton1(
 )
 
 /** `androidx.compose.material3.OutlinedButton`: [Material Design outlined button](https://m3.material.io/components/buttons/overview) Buttons help people initiate actions, from sending an email, to sharing a document, to liking a post. */
-@Widget(23)
+@Widget(20)
 public data class GenOutlinedButton1(
   @Property(1) val onClick: (() -> Unit)?,
   @Property(3) val enabled: kotlin.Boolean,
@@ -370,7 +347,7 @@ public data class GenOutlinedButton1(
 )
 
 /** `androidx.compose.material3.IconButton`: [Material Design standard icon button](https://m3.material.io/components/icon-button/overview) Icon buttons help people take supplementary actions with a single tap. */
-@Widget(24)
+@Widget(21)
 public data class GenIconButton1(
   @Property(1) val onClick: (() -> Unit)?,
   @Property(3) val enabled: kotlin.Boolean,
@@ -381,7 +358,7 @@ public data class GenIconButton1(
 )
 
 /** `androidx.compose.material3.HorizontalDivider`: [Material Design divider](https://m3.material.io/components/divider/overview) A divider is a thin line that groups content in lists and layouts. */
-@Widget(25)
+@Widget(22)
 public data class GenHorizontalDivider1(
   @Property(2) val thickness: dev.keliver.compose.ui.unit.Dp?,
   @Property(3) val color: dev.keliver.compose.ui.graphics.Color?,
@@ -389,7 +366,7 @@ public data class GenHorizontalDivider1(
 )
 
 /** `androidx.compose.material3.TopAppBar`: [Material Design small top app bar](https://m3.material.io/components/top-app-bar/overview) Top app bars display information and actions at the top of a screen. */
-@Widget(26)
+@Widget(23)
 public data class GenTopAppBar1(
   @Children(1) val title: () -> Unit,
   @Children(3) val navigationIcon: () -> Unit,
@@ -400,7 +377,7 @@ public data class GenTopAppBar1(
 )
 
 /** `androidx.compose.animation.AnimatedVisibility`: [AnimatedVisibility] composable animates the appearance and disappearance of its content, as [visible] value changes. */
-@Widget(27)
+@Widget(24)
 public data class GenAnimatedVisibility1(
   @Property(1) val visible: kotlin.Boolean,
   @Property(3) val enter: dev.keliver.compose.animation.EnterTransition?,
@@ -411,7 +388,7 @@ public data class GenAnimatedVisibility1(
 )
 
 /** `androidx.compose.animation.AnimatedVisibility`: [ColumnScope.AnimatedVisibility] composable animates the appearance and disappearance of its content when the [AnimatedVisibility] is in a [Column]. */
-@Widget(28)
+@Widget(25)
 public data class GenColumnScopeAnimatedVisibility1(
   @Property(1) val visible: kotlin.Boolean,
   @Property(3) val enter: dev.keliver.compose.animation.EnterTransition?,
@@ -422,7 +399,7 @@ public data class GenColumnScopeAnimatedVisibility1(
 )
 
 /** `androidx.compose.animation.AnimatedVisibility`: [RowScope.AnimatedVisibility] composable animates the appearance and disappearance of its content when the [AnimatedVisibility] is in a [Row]. */
-@Widget(29)
+@Widget(26)
 public data class GenRowScopeAnimatedVisibility1(
   @Property(1) val visible: kotlin.Boolean,
   @Property(3) val enter: dev.keliver.compose.animation.EnterTransition?,
@@ -555,28 +532,21 @@ public data class GenBorder1(
 )
 
 /** `androidx.compose.foundation.border`: Modify element to add border with appearance specified with a [border] and a [shape] and clip it. */
-@Modifier(27)
+@Modifier(20)
 public data class GenBorder2(
   val border: dev.keliver.compose.foundation.BorderStroke,
   val shape: dev.keliver.compose.ui.graphics.Shape,
 )
 
 /** `androidx.compose.foundation.clickable`: Configure component to receive clicks via input or accessibility "click" event. */
-@Modifier(20)
+@Modifier(21)
 public data class GenClickable1(
   val enabled: kotlin.Boolean = true,
   val onClick: kotlin.Int,
 )
 
-/** `androidx.compose.foundation.clickable`: Configure component to receive clicks via input or accessibility "click" event. */
-@Modifier(26)
-public data class GenClickable2(
-  val enabled: kotlin.Boolean = true,
-  val onClick: kotlin.Int,
-)
-
 /** `androidx.compose.foundation.horizontalScroll`: Modify element to allow to scroll horizontally when width of the content is bigger than max constraints allow. */
-@Modifier(21)
+@Modifier(22)
 public data class GenHorizontalScroll1(
   val state: dev.keliver.compose.foundation.ScrollState,
   val enabled: kotlin.Boolean = true,
@@ -584,7 +554,7 @@ public data class GenHorizontalScroll1(
 )
 
 /** `androidx.compose.foundation.verticalScroll`: Modify element to allow to scroll vertically when height of the content is bigger than max constraints allow. */
-@Modifier(22)
+@Modifier(23)
 public data class GenVerticalScroll1(
   val state: dev.keliver.compose.foundation.ScrollState,
   val enabled: kotlin.Boolean = true,
@@ -592,19 +562,19 @@ public data class GenVerticalScroll1(
 )
 
 /** `androidx.compose.ui.draw.clip`: Clip the content to [shape]. */
-@Modifier(23)
+@Modifier(24)
 public data class GenClip1(
   val shape: dev.keliver.compose.ui.graphics.Shape,
 )
 
 /** `androidx.compose.ui.draw.alpha`: Draw content with modified alpha that may be less than 1. */
-@Modifier(24)
+@Modifier(25)
 public data class GenAlpha1(
   val alpha: kotlin.Float,
 )
 
 /** `androidx.compose.ui.draw.shadow`: Creates a [graphicsLayer] that draws a shadow. */
-@Modifier(25)
+@Modifier(26)
 public data class GenShadow1(
   val elevation: dev.keliver.compose.ui.unit.Dp,
   val shape: dev.keliver.compose.ui.graphics.Shape,
@@ -617,55 +587,55 @@ public data class GenShadow1(
 )
 
 /** `androidx.compose.foundation.lazy.LazyItemScope.fillParentMaxSize`: Have the content fill the [Constraints.maxWidth] and [Constraints.maxHeight] of the parent measurement constraints by setting the [minimum width][Constraints.minWidth] to be equal to the [maximum width][Constraints.maxWidth] multiplied by [fraction] and the [minimum height][Constraints.minHeight] to be equal to the [maximum height][Constraints.maxHeight] multiplied by [fraction]. */
-@Modifier(28, GenLazyItemScope::class)
+@Modifier(27, GenLazyItemScope::class)
 public data class GenLazyItemScopeFillParentMaxSize1(
   val fraction: kotlin.Float,
 )
 
 /** `androidx.compose.foundation.lazy.LazyItemScope.fillParentMaxWidth`: Have the content fill the [Constraints.maxWidth] of the parent measurement constraints by setting the [minimum width][Constraints.minWidth] to be equal to the [maximum width][Constraints.maxWidth] multiplied by [fraction]. */
-@Modifier(29, GenLazyItemScope::class)
+@Modifier(28, GenLazyItemScope::class)
 public data class GenLazyItemScopeFillParentMaxWidth1(
   val fraction: kotlin.Float,
 )
 
 /** `androidx.compose.foundation.lazy.LazyItemScope.fillParentMaxHeight`: Have the content fill the [Constraints.maxHeight] of the incoming measurement constraints by setting the [minimum height][Constraints.minHeight] to be equal to the [maximum height][Constraints.maxHeight] multiplied by [fraction]. */
-@Modifier(30, GenLazyItemScope::class)
+@Modifier(29, GenLazyItemScope::class)
 public data class GenLazyItemScopeFillParentMaxHeight1(
   val fraction: kotlin.Float,
 )
 
 /** `androidx.compose.foundation.lazy.LazyItemScope.animateItem`: This modifier animates the item appearance (fade in), disappearance (fade out) and placement changes (such as an item reordering). */
-@Modifier(31, GenLazyItemScope::class)
+@Modifier(30, GenLazyItemScope::class)
 public object GenLazyItemScopeAnimateItem1
 
 /** `androidx.compose.foundation.layout.offset`: Offset the content by ([x] dp, [y] dp). */
-@Modifier(32)
+@Modifier(31)
 public data class GenOffset1(
   val x: dev.keliver.compose.ui.unit.Dp,
   val y: dev.keliver.compose.ui.unit.Dp,
 )
 
 /** `androidx.compose.ui.draw.rotate`: Sets the degrees the view is rotated around the center of the composable. */
-@Modifier(33)
+@Modifier(32)
 public data class GenRotate1(
   val degrees: kotlin.Float,
 )
 
 /** `androidx.compose.ui.draw.scale`: Scale the contents of both the horizontal and vertical axis uniformly by the same scale factor. */
-@Modifier(34)
+@Modifier(33)
 public data class GenScale1(
   val scale: kotlin.Float,
 )
 
 /** `androidx.compose.animation.animateContentSize`: This modifier animates its own size when its child modifier (or the child composable if it is already at the tail of the chain) changes size. */
-@Modifier(35)
+@Modifier(34)
 public data class GenAnimateContentSize1(
   val animationSpec: dev.keliver.compose.animation.core.AnimationSpecWire,
   val animationSpecIsDefault: kotlin.Boolean,
 )
 
 /** `androidx.compose.animation.animateContentSize`: This modifier animates its own size when its child modifier (or the child composable if it is already at the tail of the chain) changes size. */
-@Modifier(36)
+@Modifier(35)
 public data class GenAnimateContentSize2(
   val animationSpec: dev.keliver.compose.animation.core.AnimationSpecWire,
   val animationSpecIsDefault: kotlin.Boolean,

@@ -347,7 +347,23 @@ one naming its category. First entries:
     and widget runtime, which core shares (`sharedRuntime`: public behind `@RedwoodCodegenApi`).
     A group with a base has widgets only; its own modifiers, extras or `*Defaults` factories would
     need the base to dispatch to it (Q1's cross-group dispatch), and the generator refuses them.
-    Core's lock keeps the two AsyncImage entries it had (tags 8 and 11, unused) until MS4-06.
+  - **Fresh product locks** (MS4-06, Q2). `core.lock.json` and `coil.lock.json` started over at
+    level 1, with none of the prototype's history: tags from 1 with no gap, every entry at level 1.
+    The product's configs therefore list no overload Compose hides (a hidden overload keeps only an
+    entry its lock already has, for an older guest, and the product has none), so `core.json` drops
+    the pre-`autoSize` `Text` and the pre-`interactionSource` `clickable` that `gatea.json` keeps.
+    The locks are free until the `v0.5.0` tag, then append-only. Every generation already refuses a
+    lock change other than an append; the generator's tests also keep the level-1 locks as fixtures
+    (`src/test/resources/product-level-1/`) and check the checked-in locks against them, so a reset
+    before the freeze replaces those fixtures in the open. A group's lock starts empty when it has
+    none; no lock is seeded from another group's.
+  - **The root's lock** (`root.lock.json`, MS4-06). Each group's dependency tag offsets all of its
+    tags on the wire, and the root's `keliver-api.xml` holds only the schema type, so Redwood's API
+    check cannot see a changed one. The root's lock records each group's tag and the level it was
+    added at; `generateComposeApi` refuses, and `checkComposeApi` fails, when a group's tag changes,
+    a group is removed or a new group takes a tag another had. A new group is an append (the root's
+    level grows by one). The root's check also fails on a `Generated.kt` under its output root that
+    it no longer writes, and a generation deletes it, as the groups' runs do.
   - **Absent groups** (MS4-03, #244 decision 3). keliver-tooling-codegen treats a schema with no
     members of its own (the generated root) as a list of groups a host may leave out: its widget
     system takes each group's factory as nullable (`KeliverComposeCoilOrNull`), plus an

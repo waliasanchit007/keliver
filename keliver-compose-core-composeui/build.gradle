@@ -93,6 +93,13 @@ android {
   namespace 'dev.keliver.compose.core.composeui'
 }
 
+// HostCompatibilityTest reads the generator's core and root locks from the working directory; declared
+// so a cached pass cannot outlive a change to either (the build cache would otherwise return it).
+tasks.matching { it.name == 'jvmTest' }.configureEach {
+  inputs.files(rootProject.files('keliver-compose-generator/core.lock.json', 'keliver-compose-generator/root.lock.json'))
+    .withPropertyName('productLocks').withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 // The iOS same-source run writes its captures (native, guest, diff) beside the JVM ones. simctl
 // passes SIMCTL_CHILD_* variables to the test process without the prefix.
 // -Pkeliver.iosTestDevice=<udid> runs on that (shut down) simulator instead of Kotlin's default device.

@@ -44,6 +44,7 @@ import dev.keliver.compose.material3.TextButton as GuestTextButton
 import dev.keliver.compose.ui.Modifier as GuestModifier
 import dev.keliver.compose.wire.DefaultsCall
 import dev.keliver.compose.wire.KeliverGeneratedApi
+import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -58,7 +59,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/** A guest built now, on a host built before (the lock's levels), and a host subtree recreated. */
+/** A guest's tags against the lock, a newer guest's factory on this host, and a host subtree recreated. */
 @OptIn(ExperimentalTestApi::class)
 class HostCompatibilityTest {
   private val reported = mutableListOf<String>()
@@ -75,20 +76,29 @@ class HostCompatibilityTest {
   }
 
   /**
-   * Text and clickable gained overloads at level 3 whose added parameters (`autoSize`,
-   * `interactionSource`) don't travel, so a guest still sends Gate A's tags (widget 6, modifier 20),
-   * which a level-2 host knows. The core group is the generated root's dependency at tag 10, so on
-   * the wire its tags are offset by 10 × 1,000,000 (until MS4-06's fresh locks, core's lock starts
-   * from the prototype's tags).
+   * MS4-06: core's lock started fresh at level 1 (Q2), so Text and clickable each have one entry,
+   * the visible overload's (no hidden predecessor is kept for an older host: there is none). A guest
+   * sends exactly the tags core's lock records, offset on the wire by core's dependency tag in the
+   * root's lock. The prototype's copy of this test keeps Gate A's hidden overloads and their tags.
    */
-  @Test fun aGuestTextAndClickableSendTheTagsAnOlderHostKnows() {
+  @Test fun aGuestTextAndClickableSendTheTagsCoresLockRecords() {
     val host = guestOnHost { GuestText("Hello", GuestModifier.guestClickable {}) }
     val changes = host.wire.flatMap { Json.parseToJsonElement(it).jsonArray }.map { it.jsonObject }
     val created = changes.filter { it["type"]?.jsonPrimitive?.content == "create" }.map { it.getValue("tag").jsonPrimitive.int }
     val modifiers = changes.filter { it["type"]?.jsonPrimitive?.content == "modifier" }
       .flatMap { it.getValue("elements").jsonArray }.map { it.jsonArray[0].jsonPrimitive.int }
-    assertEquals(listOf(CORE_WIRE_OFFSET + 6), created, "Text is widget 6, not 10")
-    assertEquals(listOf(CORE_WIRE_OFFSET + 20), modifiers, "clickable is modifier 20, not 26")
+
+    // The test's working directory is the module; the locks are the generator's.
+    fun lock(name: String) = Json.parseToJsonElement(File("../keliver-compose-generator/$name").readText()).jsonObject
+    val core = lock("core.lock.json")
+    fun tagOf(kind: String, keyPrefix: String): Int =
+      core.getValue(kind).jsonObject.entries.single { it.key.startsWith(keyPrefix) }.value.jsonObject.getValue("tag").jsonPrimitive.int
+    val coreDependencyTag = lock("root.lock.json").getValue("dependencies").jsonObject
+      .getValue("dev.keliver.compose.core.KeliverComposeCore").jsonObject.getValue("tag").jsonPrimitive.int
+    assertEquals(coreDependencyTag * 1_000_000, CORE_WIRE_OFFSET, "the offset the tests use is the root lock's")
+
+    assertEquals(listOf(CORE_WIRE_OFFSET + tagOf("widgets", "androidx.compose.material3/Text(")), created)
+    assertEquals(listOf(CORE_WIRE_OFFSET + tagOf("modifiers", "androidx.compose.foundation/clickable(")), modifiers)
   }
 
   /** A newer guest's `*Defaults` factory: the widget's own Compose default, reported once, no crash. */

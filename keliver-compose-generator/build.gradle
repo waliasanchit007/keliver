@@ -57,21 +57,21 @@ dependencies {
 def composeInputVersions = "Compose Multiplatform ${libs.versions.jbCompose.get()}, material3 ${libs.jetbrains.compose.material3.get().versionConstraint.requiredVersion}, coil ${libs.versions.coil.get()}"
 
 // The generated groups, one config and one lock each (docs/MS4_PLAN.md, MS4-01), in generation order.
+// The product's locks (core, coil and the root's) started fresh at level 1 (MS4-06, Q2): free until
+// the v0.5.0 tag, then append-only. Every generation refuses a lock change other than an append.
 // - `core` is the product's group (Q1: foundation-layout, foundation, ui, material3, animation and the
 //   extras; the icons stay in it until their own groups, MS4-19). It owns keliver-compose-values and
-//   the `*Defaults` factory tags, and shares its host runtime with `coil` (`sharedRuntime`). Its lock
-//   started from the prototype's (`--seed-lock`, read only while core.lock.json does not exist) until
-//   MS4-06's fresh locks; it keeps the two AsyncImage entries coil took (tags 8 and 11, now unused).
+//   the `*Defaults` factory tags, and shares its host runtime with `coil` (`sharedRuntime`).
 // - `coil` (MS4-03; Q1: optional) is `AsyncImage` alone, on core's host runtime (`base`), so a host
 //   built without keliver-compose-coil-composeui links no Coil. It reads core's factory tags and
-//   writes no values. Its lock is its own, from level 1.
+//   writes no values.
 // - `gatea` is the Gate A/B prototype, kept beside the product for NF5's measurements until MS4-40.
-//   It reads the factory tags from core's lock and writes no values.
+//   It reads the factory tags from core's lock and writes no values. Its own lock carries Gate A's
+//   history (levels 1-5) and is not reset.
 def groups = [
   [
     name: 'core',
     args: [
-      '--seed-lock', file('gatea.lock.json').absolutePath,
       '--out-schema', rootProject.file('keliver-compose-core-schema/src/main/kotlin').absolutePath,
       '--out-guest', rootProject.file('keliver-compose-core-compose/src/commonMain/kotlin').absolutePath,
       '--out-host', rootProject.file('keliver-compose-core-composeui/src/commonMain/kotlin').absolutePath,
@@ -113,9 +113,15 @@ def generatorArgs = { Map group, List extra ->
   ] + group.args + extra
 }
 
-// The root schema lists the product groups (root.json); it needs no Compose input.
+// The root schema lists the product groups (root.json); it needs no Compose input. Its lock
+// (root.lock.json) records each group's dependency tag, append-only: Redwood's API check cannot see
+// them, because the root's keliver-api.xml holds only the schema type.
 def rootArgs = { List extra ->
-  ['--root', file('root.json').absolutePath, '--out-schema', rootProject.file('keliver-compose-root-schema/src/main/kotlin').absolutePath] + extra
+  [
+    '--root', file('root.json').absolutePath,
+    '--lock', file('root.lock.json').absolutePath,
+    '--out-schema', rootProject.file('keliver-compose-root-schema/src/main/kotlin').absolutePath,
+  ] + extra
 }
 
 // The editor canvas's interpreter (MS4-41, G0): each group that passes --out-editor-render writes its
@@ -135,7 +141,7 @@ def generateTasks = groups.collect { group ->
   }
 }
 def generateRoot = tasks.register('generateComposeApiRoot', JavaExec) {
-  description = 'Regenerate the product root schema (root.json)'
+  description = 'Regenerate the product root schema and its lock (root.json, root.lock.json)'
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'dev.keliver.compose.generator.MainKt'
   args = rootArgs([])
@@ -162,6 +168,10 @@ tasks.register('generateComposeApi') {
 tasks.named('test') {
   inputs.files(configurations.composeApi).withPropertyName('composeApi').withNormalizer(ClasspathNormalizer)
   inputs.files(configurations.composeSources).withPropertyName('composeSources').withNormalizer(ClasspathNormalizer)
+  // ...and the checked-in configs and locks and the root's generated schema it compares against, read
+  // from the working directory: without these a cached pass could outlive a change to them.
+  inputs.files(fileTree(projectDir) { include '*.json' }).withPropertyName('configsAndLocks').withPathSensitivity(PathSensitivity.RELATIVE)
+  inputs.files(fileTree(rootProject.file('keliver-compose-root-schema/src/main/kotlin'))).withPropertyName('rootSchemaSources').withPathSensitivity(PathSensitivity.RELATIVE)
   doFirst {
     systemProperty 'keliver.composeApi', configurations.composeApi.asPath
     systemProperty 'keliver.composeSources', configurations.composeSources.asPath
@@ -178,7 +188,7 @@ def checkTasks = groups.collect { group ->
   }
 }
 def checkRoot = tasks.register('checkComposeApiRoot', JavaExec) {
-  description = 'Fails when the checked-in root schema differs from root.json'
+  description = 'Fails when the checked-in root schema or its lock differ from root.json, a group\'s dependency tag changed or a group was removed, or a stale Generated.kt remains'
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'dev.keliver.compose.generator.MainKt'
   args = rootArgs(['--check'])

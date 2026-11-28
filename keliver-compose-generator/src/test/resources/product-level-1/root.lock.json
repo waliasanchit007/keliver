@@ -1,0 +1,14 @@
+{
+  "group": "root",
+  "level": 1,
+  "dependencies": {
+    "dev.keliver.compose.coil.KeliverComposeCoil": {
+      "tag": 17,
+      "since": 1
+    },
+    "dev.keliver.compose.core.KeliverComposeCore": {
+      "tag": 10,
+      "since": 1
+    }
+  }
+}

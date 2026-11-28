@@ -9,7 +9,8 @@ import dev.keliver.schema.Schema.Dependency
 
 /**
  * The generated root (keliver-compose-generator/root.json): no widgets of its own; each
- * product group is a dependency at its own tag, with its own lock and level.
+ * product group is a dependency at its own tag, with its own lock and level. The tags are
+ * recorded, append-only, in keliver-compose-generator/root.lock.json.
  */
 @Schema(
   members = [],

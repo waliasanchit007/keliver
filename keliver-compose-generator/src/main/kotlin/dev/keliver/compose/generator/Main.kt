@@ -126,7 +126,16 @@ fun main(argv: Array<String>) {
   val args = argv.toList()
   fun arg(name: String) = args[args.indexOf(name) + 1]
   val check = "--check" in args
-  if ("--root" in args) return root(File(arg("--root")), File(arg("--out-schema")), check)
+  if ("--root" in args) {
+    val run = runRoot(File(arg("--root")), File(arg("--lock")), File(arg("--out-schema")), check)
+    if (run.problems.isNotEmpty()) {
+      val what = if (check) "checkComposeApi failed (run :keliver-compose-generator:generateComposeApi)" else "refusing to write: the root's lock would change other than by appends"
+      System.err.println("$what:\n  " + run.problems.joinToString("\n  "))
+      exitProcess(1)
+    }
+    println(run.summary)
+    return
+  }
   if ("--editor-dispatcher" in args) return editorDispatcherMain(arg("--editor-dispatcher").split(',').filter { it.isNotEmpty() }, File(arg("--out-editor-render")), check)
   val problems = runGroup(args)
   if (problems.isNotEmpty()) {
@@ -151,14 +160,9 @@ fun runGroup(args: List<String>): List<String> {
   val config = loadConfig(File(arg("--config"))).also { it.input = if ("--input" in args) arg("--input") else null }
   val lockFile = File(arg("--lock"))
   fun readLock(file: File) = lockJson.decodeFromString(Lock.serializer(), file.readText())
-  val oldLock = when {
-    lockFile.exists() -> readLock(lockFile)
-    // A new group's first lock may start from another group's (MS4-01: the product's core group
-    // starts with the prototype's tags, until MS4-06 gives the product fresh locks). Read only
-    // when the group has no lock yet; after that the group's own lock is the one appended to.
-    "--seed-lock" in args -> readLock(File(arg("--seed-lock"))).copy(group = config.group)
-    else -> Lock(config.group)
-  }
+  // A group with no lock yet starts a fresh one at level 1 (MS4-06: the product's locks, Q2). After
+  // that, its own lock is the one appended to.
+  val oldLock = if (lockFile.exists()) readLock(lockFile) else Lock(config.group)
   require(oldLock.group == config.group) { "$lockFile is group ${oldLock.group}, the config is group ${config.group}" }
   // The group that writes keliver-compose-values owns the factory tags; another group reads them.
   val factoryOwner = if ("--factories-lock" in args) readLock(File(arg("--factories-lock"))) else null

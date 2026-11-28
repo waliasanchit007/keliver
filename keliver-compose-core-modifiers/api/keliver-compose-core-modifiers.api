@@ -51,11 +51,6 @@ public abstract interface class dev/keliver/compose/core/modifier/GenClickable1 
 	public abstract fun getOnClick ()I
 }
 
-public abstract interface class dev/keliver/compose/core/modifier/GenClickable2 : dev/keliver/Modifier$UnscopedElement {
-	public abstract fun getEnabled ()Z
-	public abstract fun getOnClick ()I
-}
-
 public abstract interface class dev/keliver/compose/core/modifier/GenClip1 : dev/keliver/Modifier$UnscopedElement {
 	public abstract fun getShape ()Ldev/keliver/compose/ui/graphics/Shape;
 }

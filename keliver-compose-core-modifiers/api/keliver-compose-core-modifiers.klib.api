@@ -78,13 +78,6 @@ abstract interface dev.keliver.compose.core.modifier/GenClickable1 : dev.keliver
         abstract fun <get-onClick>(): kotlin/Int // dev.keliver.compose.core.modifier/GenClickable1.onClick.<get-onClick>|<get-onClick>(){}[0]
 }
 
-abstract interface dev.keliver.compose.core.modifier/GenClickable2 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenClickable2|null[0]
-    abstract val enabled // dev.keliver.compose.core.modifier/GenClickable2.enabled|{}enabled[0]
-        abstract fun <get-enabled>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenClickable2.enabled.<get-enabled>|<get-enabled>(){}[0]
-    abstract val onClick // dev.keliver.compose.core.modifier/GenClickable2.onClick|{}onClick[0]
-        abstract fun <get-onClick>(): kotlin/Int // dev.keliver.compose.core.modifier/GenClickable2.onClick.<get-onClick>|<get-onClick>(){}[0]
-}
-
 abstract interface dev.keliver.compose.core.modifier/GenClip1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenClip1|null[0]
     abstract val shape // dev.keliver.compose.core.modifier/GenClip1.shape|{}shape[0]
         abstract fun <get-shape>(): dev.keliver.compose.ui.graphics/Shape // dev.keliver.compose.core.modifier/GenClip1.shape.<get-shape>|<get-shape>(){}[0]

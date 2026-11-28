@@ -33,8 +33,6 @@ public final class dev/keliver/compose/core/composeui/ComposeUiKeliverComposeCor
 	public fun GenCard2 ()Ldev/keliver/compose/core/widget/GenCard2;
 	public synthetic fun GenClickable1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenClickable1;)V
 	public fun GenClickable1 (Lkotlin/jvm/functions/Function3;Ldev/keliver/compose/core/modifier/GenClickable1;)V
-	public synthetic fun GenClickable2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenClickable2;)V
-	public fun GenClickable2 (Lkotlin/jvm/functions/Function3;Ldev/keliver/compose/core/modifier/GenClickable2;)V
 	public synthetic fun GenClip1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenClip1;)V
 	public fun GenClip1 (Lkotlin/jvm/functions/Function3;Ldev/keliver/compose/core/modifier/GenClip1;)V
 	public fun GenColumn1 ()Ldev/keliver/compose/core/widget/GenColumn1;
@@ -85,7 +83,6 @@ public final class dev/keliver/compose/core/composeui/ComposeUiKeliverComposeCor
 	public fun GenSurface1 ()Ldev/keliver/compose/core/widget/GenSurface1;
 	public fun GenSurface2 ()Ldev/keliver/compose/core/widget/GenSurface2;
 	public fun GenText1 ()Ldev/keliver/compose/core/widget/GenText1;
-	public fun GenText2 ()Ldev/keliver/compose/core/widget/GenText2;
 	public fun GenTextButton1 ()Ldev/keliver/compose/core/widget/GenTextButton1;
 	public fun GenTopAppBar1 ()Ldev/keliver/compose/core/widget/GenTopAppBar1;
 	public synthetic fun GenVerticalScroll1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenVerticalScroll1;)V
