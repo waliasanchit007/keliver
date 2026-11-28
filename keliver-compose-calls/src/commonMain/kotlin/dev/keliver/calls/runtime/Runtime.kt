@@ -65,12 +65,12 @@ public interface CallRecorded {
    * `copy` of one) built it; null for a value that came from a factory or a constant, where the guest
    * holds the call and not the fields. Reads of constructor-backed properties come from here.
    */
-  @InternalCallApi public val values: Map<String, Any?>?
+  @InternalCallApi public val fieldValues: Map<String, Any?>?
 }
 
 /** The fields of [this], or an error that says why a read is not possible (the value was not built by a constructor). */
 @InternalCallApi
-public fun CallRecorded.readValues(what: String): Map<String, Any?> = values
+public fun CallRecorded.readValues(what: String): Map<String, Any?> = fieldValues
   ?: error("Keliver: $what is not readable: this value came from a factory, a constant or a merge, so the guest holds the call and not the fields.")
 
 /**
@@ -81,10 +81,10 @@ public fun CallRecorded.readValues(what: String): Map<String, Any?> = values
 @Immutable
 public abstract class CallValue @InternalCallApi constructor(
   call: CallRecord,
-  values: Map<String, Any?>? = null,
+  fieldValues: Map<String, Any?>? = null,
 ) : CallRecorded {
   @InternalCallApi override val call: CallRecord = call
-  @InternalCallApi override val values: Map<String, Any?>? = values
+  @InternalCallApi override val fieldValues: Map<String, Any?>? = fieldValues
 
   override fun equals(other: Any?): Boolean = other is CallValue && other::class == this::class && other.call == call
   override fun hashCode(): Int = call.hashCode()

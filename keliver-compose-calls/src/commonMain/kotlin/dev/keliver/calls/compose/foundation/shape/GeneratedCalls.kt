@@ -7,7 +7,7 @@ package dev.keliver.calls.compose.foundation.shape
 import dev.keliver.calls.runtime.readValues
 
 /** Guest mirror of `androidx.compose.foundation.shape.AbsoluteCutCornerShape`: a recorded call the host replays (MS4-42, call records). */
-public class AbsoluteCutCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, values: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, values), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
+public class AbsoluteCutCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
   /** `androidx.compose.foundation.shape.AbsoluteCutCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 2). */
   public fun copy(
     topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
@@ -29,7 +29,7 @@ public class AbsoluteCutCornerShape @dev.keliver.calls.runtime.InternalCallApi c
 }
 
 /** Guest mirror of `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape`: a recorded call the host replays (MS4-42, call records). */
-public class AbsoluteRoundedCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, values: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, values), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
+public class AbsoluteRoundedCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
   /** `androidx.compose.foundation.shape.AbsoluteRoundedCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 11). */
   public fun copy(
     topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
@@ -92,16 +92,16 @@ public interface CornerBasedShape : dev.keliver.calls.runtime.CallRecorded, dev.
   )
 }
 @dev.keliver.calls.runtime.InternalCallApi
-internal class CornerBasedShapeCall(call: dev.keliver.calls.runtime.CallRecord, values: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, values), CornerBasedShape
+internal class CornerBasedShapeCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), CornerBasedShape
 
 /** Guest mirror of `androidx.compose.foundation.shape.CornerSize`: a recorded call the host replays (MS4-42, call records). */
 public interface CornerSize : dev.keliver.calls.runtime.CallRecorded {
 }
 @dev.keliver.calls.runtime.InternalCallApi
-internal class CornerSizeCall(call: dev.keliver.calls.runtime.CallRecord, values: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, values), CornerSize
+internal class CornerSizeCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), CornerSize
 
 /** Guest mirror of `androidx.compose.foundation.shape.CutCornerShape`: a recorded call the host replays (MS4-42, call records). */
-public class CutCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, values: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, values), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
+public class CutCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
   /** `androidx.compose.foundation.shape.CutCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 26). */
   public fun copy(
     topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,
@@ -123,7 +123,7 @@ public class CutCornerShape @dev.keliver.calls.runtime.InternalCallApi construct
 }
 
 /** Guest mirror of `androidx.compose.foundation.shape.RoundedCornerShape`: a recorded call the host replays (MS4-42, call records). */
-public class RoundedCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, values: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, values), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
+public class RoundedCornerShape @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.foundation.shape.CornerBasedShape, dev.keliver.calls.compose.ui.graphics.Shape, dev.keliver.calls.compose.ui.graphics.Interpolatable {
   /** `androidx.compose.foundation.shape.RoundedCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)` on a recorded value: the call carries the receiver (lock tag 35). */
   public fun copy(
     topStart: dev.keliver.calls.compose.foundation.shape.CornerSize,

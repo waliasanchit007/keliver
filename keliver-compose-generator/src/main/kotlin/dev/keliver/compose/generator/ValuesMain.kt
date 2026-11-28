@@ -65,6 +65,7 @@ fun runValues(args: List<String>): ValuesRun {
     for ((path, text) in out.guest) put(File(guestRoot, path), text)
     for ((path, text) in out.host) put(File(hostRoot, path), text)
     put(editorFile, out.editor)
+    put(File(arg("--out-report")), out.report.text())
     put(lockFile, lockJson.encodeToString(ValuesLock.serializer(), out.lock) + "\n")
   }
   // One of the values' own files the generator no longer writes is stale; nothing else is looked at.

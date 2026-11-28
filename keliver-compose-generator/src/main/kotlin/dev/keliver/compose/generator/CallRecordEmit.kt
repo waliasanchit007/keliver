@@ -60,7 +60,25 @@ class ValuesReport(
   val propertyStubs: Int,
   /** Why a candidate does not cross, by reason, with a few examples each. */
   val rejected: Map<String, List<String>>,
-)
+) {
+  /** The report as a checked-in file (values.report.md): what crosses, and why the rest does not. */
+  fun text(): String = buildString {
+    appendLine("# Call records: what crosses (generated; do not edit)")
+    appendLine()
+    appendLine("Written by `:keliver-compose-generator:generateComposeApiValues` from `values.json`. The tests assert its counts do not shrink.")
+    appendLine()
+    appendLine("- $types mirrored types, $producers producers (constructors, factories, constants), $members receiver members")
+    appendLine("- $readableProperties readable constructor-backed properties; $propertyStubs property error stubs (computed by Compose on the host)")
+    appendLine()
+    appendLine("## Does not cross")
+    for ((reason, what) in rejected.toSortedMap()) {
+      appendLine()
+      appendLine("### $reason (${what.size})")
+      appendLine()
+      for (w in what.sorted()) appendLine("- `$w`")
+    }
+  }
+}
 
 class ValuesOutput(
   /** Guest mirrors, path (relative to the guest root) → text. */
@@ -236,7 +254,7 @@ class CallRecordEmitter(
   private fun typeOk(fq: String): Boolean {
     if (fq in cfg.excludeTypes || fq in hand) return false
     val k = index.classes[fq] ?: return false
-    return k.visibility == Visibility.PUBLIC && fq.removePrefix(packageOf(fq) + ".").none { it == '.' }
+    return k.visibility == Visibility.PUBLIC && k.typeParameters.isEmpty() && fq.removePrefix(packageOf(fq) + ".").none { it == '.' }
   }
 
   private val memberNameDenylist = setOf("equals", "hashCode", "toString", "component1", "component2", "component3", "component4", "component5", "component6")
@@ -308,7 +326,20 @@ class CallRecordEmitter(
   /** The defaulted, carried parameters whose default text cannot be evaluated at the host's call site (design §5's presence split). */
   private fun splitParams(c: Cand): List<KmValueParameter> {
     val siblings = c.params.map { it.name }.toSet()
-    return c.params.filter { p -> p.declaresDefaultValue && supported(p.valueType) && !hostEvaluable(c.defaults[p.name] ?: "", siblings, c.typeFq) }
+    return c.params.filter { p -> p.declaresDefaultValue && supported(p.valueType) && copyRead(c, p) == null && !hostEvaluable(c.defaults[p.name] ?: "", siblings, c.typeFq) }
+  }
+
+  /**
+   * `copy`'s defaults are "keep the receiver's value" (`color: Color = this.spanStyle.color`, which
+   * names a member the host's call site cannot see). A public property of the receiver with the
+   * parameter's name and type says the same thing, so the host reads that instead of splitting on
+   * 24 parameters. CallRecordsTest compares such a copy with Compose's own.
+   */
+  private fun copyRead(c: Cand, p: KmValueParameter): String? {
+    if (c.kind != Kind.MEMBER || c.name != "copy" || !p.declaresDefaultValue) return null
+    val owner = index.classes[c.typeFq ?: return null] ?: return null
+    val prop = owner.properties.firstOrNull { it.name == p.name && it.visibility == Visibility.PUBLIC && it.receiverParameterType == null } ?: return null
+    return if (typeText(prop.returnType) == typeText(p.type)) "(on as ${c.typeFq}).${p.name}" else null
   }
 
   /** The guest's signature, for telling apart two Compose overloads that coincide once unsupported parameters are dropped. */
@@ -509,12 +540,12 @@ class CallRecordEmitter(
       val supers = index.allSupertypes(fq).filter { it in types && abstractMirror(it) }
       val name = simpleOf(fq)
       val out = file(packageOf(fq))
-      val superList = (if (abstract) listOf("dev.keliver.calls.runtime.CallRecorded") else listOf("dev.keliver.calls.runtime.CallValue(call, values)")) + supers.map(::guestFq)
+      val superList = (if (abstract) listOf("dev.keliver.calls.runtime.CallRecorded") else listOf("dev.keliver.calls.runtime.CallValue(call, fieldValues)")) + supers.map(::guestFq)
       out.appendLine("/** Guest mirror of `$fq`: a recorded call the host replays (MS4-42, call records). */")
       if (abstract) {
         out.appendLine("public interface $name : ${superList.joinToString()} {")
       } else {
-        out.appendLine("public class $name @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, values: Map<String, Any?>? = null) : ${superList.joinToString()} {")
+        out.appendLine("public class $name @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : ${superList.joinToString()} {")
       }
       val props = readable[fq].orEmpty()
       for (prop in k.properties.filter { it.visibility == Visibility.PUBLIC && it.receiverParameterType == null }) {
@@ -546,7 +577,7 @@ class CallRecordEmitter(
       out.appendLine("}")
       if (abstract && order.any { it.returns == fq }) {
         out.appendLine("@dev.keliver.calls.runtime.InternalCallApi")
-        out.appendLine("internal class ${name}Call(call: dev.keliver.calls.runtime.CallRecord, values: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, values), $name")
+        out.appendLine("internal class ${name}Call(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), $name")
       }
       out.appendLine()
     }
@@ -618,7 +649,7 @@ class CallRecordEmitter(
     val g = guestParams(c.params)
     val keep = readable[c.returns].orEmpty().keys
     val values = if (c.kind == Kind.CTOR && keep.isNotEmpty()) {
-      ", values = buildMap { " + g.carried.filter { it.name in keep }.joinToString("; ") { p ->
+      ", fieldValues = buildMap<String, Any?> { " +g.carried.filter { it.name in keep }.joinToString("; ") { p ->
         if (p.declaresDefaultValue) "if (${p.name} != null) put(\"${p.name}\", ${p.name})" else "put(\"${p.name}\", ${p.name})"
       } + " }"
     } else {
@@ -646,9 +677,12 @@ class CallRecordEmitter(
     val g = guestParams(c.params)
     val carrier = if (abstractMirror(c.returns)) "${guestPkg(packageOf(c.returns))}.${simpleOf(c.returns)}Call" else type
     // `copy` of a type whose fields are readable keeps them readable: the new value is the old one's fields plus the passed.
-    val keepValues = c.name == "copy" && c.returns == c.typeFq && readableProps.isNotEmpty() && c.params.all { it.name in readableProps }
+    // Every parameter is a property of the type (a `brush`/`alpha` overload that is not is unknown): the
+    // readable ones are applied, and the others are error stubs in the guest anyway.
+    val propNames = index.classes.getValue(c.returns).properties.filter { it.visibility == Visibility.PUBLIC }.map { it.name }.toSet()
+    val keepValues = c.name == "copy" && c.returns == c.typeFq && readableProps.isNotEmpty() && c.params.all { it.name in propNames }
     val values = if (keepValues) {
-      "values = values?.let { old -> old + buildMap { " + g.carried.joinToString("; ") { p -> if (p.declaresDefaultValue) "if (${p.name} != null) put(\"${p.name}\", ${p.name})" else "put(\"${p.name}\", ${p.name})" } + " } }"
+      "fieldValues = fieldValues?.let { old -> old + buildMap<String, Any?> { " + g.carried.filter { it.name in readableProps }.joinToString("; ") { p -> if (p.declaresDefaultValue) "if (${p.name} != null) put(\"${p.name}\", ${p.name})" else "put(\"${p.name}\", ${p.name})" } + " } }"
     } else {
       null
     }
@@ -714,7 +748,7 @@ class CallRecordEmitter(
     val carried = c.params.filter { supported(it.valueType) }
     val siblings = c.params.map { it.name }.toSet()
     val ownerForDefaults = c.typeFq
-    val split = carried.filter { p -> p.declaresDefaultValue && !hostEvaluable(c.defaults[p.name] ?: "", siblings, ownerForDefaults) }
+    val split = carried.filter { p -> p.declaresDefaultValue && copyRead(c, p) == null && !hostEvaluable(c.defaults[p.name] ?: "", siblings, ownerForDefaults) }
     val pkg = packageOf(c.typeFq ?: c.returns).let { if (c.typeFq == null) c.pkg else it }
     fun arg(p: KmValueParameter, present: Set<String>): String {
       val t = p.valueType
@@ -733,6 +767,7 @@ class CallRecordEmitter(
       val decoded = dec(t, "it")
       return when {
         !p.declaresDefaultValue || p.name in present -> "${p.name} = a.getValue(\"${p.name}\").let { $decoded }"
+        copyRead(c, p) != null -> "${p.name} = a[\"${p.name}\"]?.let { $decoded } ?: ${copyRead(c, p)}"
         else -> "${p.name} = a[\"${p.name}\"]?.let { $decoded } ?: (${qualify(c.defaults.getValue(p.name) ?: error("${c.key}: no default text for ${p.name}"), c.imports, pkg, ownerForDefaults, if (c.kind == Kind.MEMBER) "on as ${c.typeFq}" else null)})"
       }
     }

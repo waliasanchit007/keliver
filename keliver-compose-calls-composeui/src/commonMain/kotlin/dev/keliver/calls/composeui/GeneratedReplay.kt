@@ -3,6 +3,7 @@
 package dev.keliver.calls.composeui
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
@@ -64,6 +65,323 @@ public object GeneratedReplay {
       41 -> c41(a, on) // androidx.compose.foundation.shape.RoundedCornerShape(topStart:Float,topEnd:Float,bottomEnd:Float,bottomStart:Float)
       42 -> c42(a, on) // androidx.compose.foundation.shape.RoundedCornerShape(topStartPercent:Int,topEndPercent:Int,bottomEndPercent:Int,bottomStartPercent:Int)
       43 -> c43(a, on) // androidx.compose.foundation.shape.ZeroCornerSize
+      44 -> c44(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Clear
+      45 -> c45(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Color
+      46 -> c46(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#ColorBurn
+      47 -> c47(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#ColorDodge
+      48 -> c48(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Darken
+      49 -> c49(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Difference
+      50 -> c50(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Dst
+      51 -> c51(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#DstAtop
+      52 -> c52(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#DstIn
+      53 -> c53(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#DstOut
+      54 -> c54(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#DstOver
+      55 -> c55(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Exclusion
+      56 -> c56(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Hardlight
+      57 -> c57(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Hue
+      58 -> c58(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Lighten
+      59 -> c59(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Luminosity
+      60 -> c60(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Modulate
+      61 -> c61(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Multiply
+      62 -> c62(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Overlay
+      63 -> c63(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Plus
+      64 -> c64(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Saturation
+      65 -> c65(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Screen
+      66 -> c66(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Softlight
+      67 -> c67(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Src
+      68 -> c68(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#SrcAtop
+      69 -> c69(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#SrcIn
+      70 -> c70(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#SrcOut
+      71 -> c71(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#SrcOver
+      72 -> c72(a, on) // androidx.compose.ui.graphics.BlendMode.Companion#Xor
+      73 -> c73(a, on) // androidx.compose.ui.graphics.BlendModeColorFilter#<init>(color:Color,blendMode:BlendMode)
+      74 -> c74(a, on) // androidx.compose.ui.graphics.BlurEffect#<init>(renderEffect:RenderEffect?,radiusX:Float,radiusY:Float,edgeTreatment:TileMode)
+      75 -> c75(a, on) // androidx.compose.ui.graphics.BlurEffect(radiusX:Float,radiusY:Float,edgeTreatment:TileMode)
+      76 -> c76(a, on) // androidx.compose.ui.graphics.Brush.Companion#composite(dstBrush:Brush,srcBrush:Brush,blendMode:BlendMode)
+      77 -> c77(a, on) // androidx.compose.ui.graphics.Brush.Companion#horizontalGradient(colors:List<Color>,startX:Float,endX:Float,tileMode:TileMode)
+      78 -> c78(a, on) // androidx.compose.ui.graphics.Brush.Companion#linearGradient(colors:List<Color>,start:Offset,end:Offset,tileMode:TileMode)
+      79 -> c79(a, on) // androidx.compose.ui.graphics.Brush.Companion#radialGradient(colors:List<Color>,center:Offset,radius:Float,tileMode:TileMode)
+      80 -> c80(a, on) // androidx.compose.ui.graphics.Brush.Companion#sweepGradient(colors:List<Color>,center:Offset)
+      81 -> c81(a, on) // androidx.compose.ui.graphics.Brush.Companion#verticalGradient(colors:List<Color>,startY:Float,endY:Float,tileMode:TileMode)
+      82 -> c82(a, on) // androidx.compose.ui.graphics.Canvas(image:ImageBitmap)
+      83 -> c83(a, on) // androidx.compose.ui.graphics.ClipOp.Companion#Difference
+      84 -> c84(a, on) // androidx.compose.ui.graphics.ClipOp.Companion#Intersect
+      85 -> c85(a, on) // androidx.compose.ui.graphics.CloseSegment
+      86 -> c86(a, on) // androidx.compose.ui.graphics.ColorFilter.Companion#colorMatrix(colorMatrix:ColorMatrix)
+      87 -> c87(a, on) // androidx.compose.ui.graphics.ColorFilter.Companion#lighting(multiply:Color,add:Color)
+      88 -> c88(a, on) // androidx.compose.ui.graphics.ColorFilter.Companion#tint(color:Color,blendMode:BlendMode)
+      89 -> c89(a, on) // androidx.compose.ui.graphics.ColorMatrix#<init>(values:FloatArray)
+      90 -> c90(a, on) // androidx.compose.ui.graphics.ColorMatrixColorFilter#<init>(colorMatrix:ColorMatrix)
+      91 -> c91(a, on) // androidx.compose.ui.graphics.ColorMatrixColorFilter#copyColorMatrix(targetColorMatrix:ColorMatrix)
+      92 -> c92(a, on) // androidx.compose.ui.graphics.CompositeShader(dst:Shader,src:Shader,blendMode:BlendMode)
+      93 -> c93(a, on) // androidx.compose.ui.graphics.CompositingStrategy.Companion#Auto
+      94 -> c94(a, on) // androidx.compose.ui.graphics.CompositingStrategy.Companion#ModulateAlpha
+      95 -> c95(a, on) // androidx.compose.ui.graphics.CompositingStrategy.Companion#Offscreen
+      96 -> c96(a, on) // androidx.compose.ui.graphics.DoneSegment
+      97 -> c97(a, on) // androidx.compose.ui.graphics.FilterQuality.Companion#High
+      98 -> c98(a, on) // androidx.compose.ui.graphics.FilterQuality.Companion#Low
+      99 -> c99(a, on) // androidx.compose.ui.graphics.FilterQuality.Companion#Medium
+      100 -> c100(a, on) // androidx.compose.ui.graphics.FilterQuality.Companion#None
+      101 -> c101(a, on) // androidx.compose.ui.graphics.GraphicsLayerScope()
+      102 -> c102(a, on) // androidx.compose.ui.graphics.ImageBitmap(width:Int,height:Int,config:ImageBitmapConfig,hasAlpha:Boolean,colorSpace:ColorSpace)
+      103 -> c103(a, on) // androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Alpha8
+      104 -> c104(a, on) // androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Argb8888
+      105 -> c105(a, on) // androidx.compose.ui.graphics.ImageBitmapConfig.Companion#F16
+      106 -> c106(a, on) // androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Gpu
+      107 -> c107(a, on) // androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Rgb565
+      108 -> c108(a, on) // androidx.compose.ui.graphics.ImageShader(image:ImageBitmap,tileModeX:TileMode,tileModeY:TileMode)
+      110 -> c110(a, on) // androidx.compose.ui.graphics.LayerOutsets#<init>(left:Dp,top:Dp,right:Dp,bottom:Dp)
+      111 -> c111(a, on) // androidx.compose.ui.graphics.LayerOutsets(all:Dp)
+      112 -> c112(a, on) // androidx.compose.ui.graphics.LayerOutsets(vertical:Dp,horizontal:Dp)
+      113 -> c113(a, on) // androidx.compose.ui.graphics.LayerOutsets.Companion#Zero
+      114 -> c114(a, on) // androidx.compose.ui.graphics.LightingColorFilter#<init>(multiply:Color,add:Color)
+      115 -> c115(a, on) // androidx.compose.ui.graphics.LinearGradientShader(from:Offset,to:Offset,colors:List<Color>,colorStops:List<Float>?,tileMode:TileMode)
+      116 -> c116(a, on) // androidx.compose.ui.graphics.Matrix#<init>(values:FloatArray)
+      117 -> c117(a, on) // androidx.compose.ui.graphics.OffsetEffect#<init>(renderEffect:RenderEffect?,offset:Offset)
+      118 -> c118(a, on) // androidx.compose.ui.graphics.OffsetEffect(offsetX:Float,offsetY:Float)
+      119 -> c119(a, on) // androidx.compose.ui.graphics.Paint()
+      120 -> c120(a, on) // androidx.compose.ui.graphics.PaintingStyle.Companion#Fill
+      121 -> c121(a, on) // androidx.compose.ui.graphics.PaintingStyle.Companion#Stroke
+      122 -> c122(a, on) // androidx.compose.ui.graphics.Path#and(path:Path)
+      123 -> c123(a, on) // androidx.compose.ui.graphics.Path#iterator()
+      124 -> c124(a, on) // androidx.compose.ui.graphics.Path#minus(path:Path)
+      125 -> c125(a, on) // androidx.compose.ui.graphics.Path#or(path:Path)
+      126 -> c126(a, on) // androidx.compose.ui.graphics.Path#plus(path:Path)
+      127 -> c127(a, on) // androidx.compose.ui.graphics.Path#xor(path:Path)
+      128 -> c128(a, on) // androidx.compose.ui.graphics.Path()
+      129 -> c129(a, on) // androidx.compose.ui.graphics.Path.Companion#combine(operation:PathOperation,path1:Path,path2:Path)
+      130 -> c130(a, on) // androidx.compose.ui.graphics.PathEffect.Companion#chainPathEffect(outer:PathEffect,inner:PathEffect)
+      131 -> c131(a, on) // androidx.compose.ui.graphics.PathEffect.Companion#cornerPathEffect(radius:Float)
+      132 -> c132(a, on) // androidx.compose.ui.graphics.PathEffect.Companion#stampedPathEffect(shape:Path,advance:Float,phase:Float,style:StampedPathEffectStyle)
+      133 -> c133(a, on) // androidx.compose.ui.graphics.PathFillType.Companion#EvenOdd
+      134 -> c134(a, on) // androidx.compose.ui.graphics.PathFillType.Companion#NonZero
+      135 -> c135(a, on) // androidx.compose.ui.graphics.PathHitTester#<init>()
+      136 -> c136(a, on) // androidx.compose.ui.graphics.PathHitTester(path:Path,tolerance:Float)
+      137 -> c137(a, on) // androidx.compose.ui.graphics.PathIterator#next()
+      138 -> c138(a, on) // androidx.compose.ui.graphics.PathIterator(path:Path,conicEvaluation:PathIterator.ConicEvaluation,tolerance:Float)
+      139 -> c139(a, on) // androidx.compose.ui.graphics.PathMeasure()
+      140 -> c140(a, on) // androidx.compose.ui.graphics.PathOperation.Companion#Difference
+      141 -> c141(a, on) // androidx.compose.ui.graphics.PathOperation.Companion#Intersect
+      142 -> c142(a, on) // androidx.compose.ui.graphics.PathOperation.Companion#ReverseDifference
+      143 -> c143(a, on) // androidx.compose.ui.graphics.PathOperation.Companion#Union
+      144 -> c144(a, on) // androidx.compose.ui.graphics.PathOperation.Companion#Xor
+      145 -> c145(a, on) // androidx.compose.ui.graphics.PointMode.Companion#Lines
+      146 -> c146(a, on) // androidx.compose.ui.graphics.PointMode.Companion#Points
+      147 -> c147(a, on) // androidx.compose.ui.graphics.PointMode.Companion#Polygon
+      148 -> c148(a, on) // androidx.compose.ui.graphics.RadialGradientShader(center:Offset,radius:Float,colors:List<Color>,colorStops:List<Float>?,tileMode:TileMode)
+      149 -> c149(a, on) // androidx.compose.ui.graphics.RectangleShape
+      150 -> c150(a, on) // androidx.compose.ui.graphics.ShaderBrush#createShader(size:Size)
+      151 -> c151(a, on) // androidx.compose.ui.graphics.ShaderBrush(shader:Shader)
+      152 -> c152(a, on) // androidx.compose.ui.graphics.Shadow#<init>(color:Color,offset:Offset,blurRadius:Float)
+      153 -> c153(a, on) // androidx.compose.ui.graphics.Shadow#copy(color:Color,offset:Offset,blurRadius:Float)
+      154 -> c154(a, on) // androidx.compose.ui.graphics.Shadow.Companion#None
+      155 -> c155(a, on) // androidx.compose.ui.graphics.SkiaGraphicsContext#<init>(measureDrawBounds:Boolean)
+      156 -> c156(a, on) // androidx.compose.ui.graphics.SolidColor#<init>(value:Color)
+      157 -> c157(a, on) // androidx.compose.ui.graphics.StampedPathEffectStyle.Companion#Morph
+      158 -> c158(a, on) // androidx.compose.ui.graphics.StampedPathEffectStyle.Companion#Rotate
+      159 -> c159(a, on) // androidx.compose.ui.graphics.StampedPathEffectStyle.Companion#Translate
+      160 -> c160(a, on) // androidx.compose.ui.graphics.StrokeCap.Companion#Butt
+      161 -> c161(a, on) // androidx.compose.ui.graphics.StrokeCap.Companion#Round
+      162 -> c162(a, on) // androidx.compose.ui.graphics.StrokeCap.Companion#Square
+      163 -> c163(a, on) // androidx.compose.ui.graphics.StrokeJoin.Companion#Bevel
+      164 -> c164(a, on) // androidx.compose.ui.graphics.StrokeJoin.Companion#Miter
+      165 -> c165(a, on) // androidx.compose.ui.graphics.StrokeJoin.Companion#Round
+      166 -> c166(a, on) // androidx.compose.ui.graphics.SweepGradientShader(center:Offset,colors:List<Color>,colorStops:List<Float>?)
+      167 -> c167(a, on) // androidx.compose.ui.graphics.TileMode.Companion#Clamp
+      168 -> c168(a, on) // androidx.compose.ui.graphics.TileMode.Companion#Decal
+      169 -> c169(a, on) // androidx.compose.ui.graphics.TileMode.Companion#Mirror
+      170 -> c170(a, on) // androidx.compose.ui.graphics.TileMode.Companion#Repeated
+      171 -> c171(a, on) // androidx.compose.ui.graphics.TransformOrigin#copy(pivotFractionX:Float,pivotFractionY:Float)
+      172 -> c172(a, on) // androidx.compose.ui.graphics.TransformOrigin(pivotFractionX:Float,pivotFractionY:Float)
+      173 -> c173(a, on) // androidx.compose.ui.graphics.TransformOrigin.Companion#Center
+      174 -> c174(a, on) // androidx.compose.ui.graphics.VertexMode.Companion#TriangleFan
+      175 -> c175(a, on) // androidx.compose.ui.graphics.VertexMode.Companion#TriangleStrip
+      176 -> c176(a, on) // androidx.compose.ui.graphics.VertexMode.Companion#Triangles
+      177 -> c177(a, on) // androidx.compose.ui.graphics.Vertices#<init>(vertexMode:VertexMode,positions:List<Offset>,textureCoordinates:List<Offset>,colors:List<Color>,indices:List<Int>)
+      178 -> c178(a, on) // androidx.compose.ui.graphics.drawscope.CanvasDrawScope#<init>()
+      179 -> c179(a, on) // androidx.compose.ui.graphics.drawscope.DrawScope.Companion#DefaultBlendMode
+      180 -> c180(a, on) // androidx.compose.ui.graphics.drawscope.DrawScope.Companion#DefaultFilterQuality
+      181 -> c181(a, on) // androidx.compose.ui.graphics.drawscope.Stroke#<init>(width:Float,miter:Float,cap:StrokeCap,join:StrokeJoin,pathEffect:PathEffect?)
+      182 -> c182(a, on) // androidx.compose.ui.graphics.drawscope.Stroke.Companion#DefaultCap
+      183 -> c183(a, on) // androidx.compose.ui.graphics.drawscope.Stroke.Companion#DefaultJoin
+      184 -> c184(a, on) // androidx.compose.ui.graphics.lerp(start:Shadow,stop:Shadow,fraction:Float)
+      185 -> c185(a, on) // androidx.compose.ui.text.AnnotatedString#<init>(text:String,annotations:List<AnnotatedString.Range<AnnotatedString.Annotation>>)
+      186 -> c186(a, on) // androidx.compose.ui.text.AnnotatedString#plus(other:AnnotatedString)
+      187 -> c187(a, on) // androidx.compose.ui.text.AnnotatedString#subSequence(range:TextRange)
+      188 -> c188(a, on) // androidx.compose.ui.text.AnnotatedString#subSequence(startIndex:Int,endIndex:Int)
+      189 -> c189(a, on) // androidx.compose.ui.text.AnnotatedString(text:String,paragraphStyle:ParagraphStyle)
+      190 -> c190(a, on) // androidx.compose.ui.text.AnnotatedString(text:String,spanStyle:SpanStyle,paragraphStyle:ParagraphStyle?)
+      191 -> c191(a, on) // androidx.compose.ui.text.Bullet#<init>(shape:Shape,width:TextUnit,height:TextUnit,padding:TextUnit,brush:Brush?,alpha:Float,drawStyle:DrawStyle)
+      192 -> c192(a, on) // androidx.compose.ui.text.Bullet#copy(shape:Shape,width:TextUnit,height:TextUnit,padding:TextUnit,brush:Brush?,alpha:Float,drawStyle:DrawStyle)
+      193 -> c193(a, on) // androidx.compose.ui.text.Bullet.Companion#Default
+      194 -> c194(a, on) // androidx.compose.ui.text.FontHinting#Full
+      195 -> c195(a, on) // androidx.compose.ui.text.FontHinting#None
+      196 -> c196(a, on) // androidx.compose.ui.text.FontHinting#Normal
+      197 -> c197(a, on) // androidx.compose.ui.text.FontHinting#Slight
+      198 -> c198(a, on) // androidx.compose.ui.text.FontRasterizationSettings#<init>(smoothing:FontSmoothing,hinting:FontHinting,subpixelPositioning:Boolean,autoHintingForced:Boolean)
+      199 -> c199(a, on) // androidx.compose.ui.text.FontRasterizationSettings.Companion#PlatformDefault
+      200 -> c200(a, on) // androidx.compose.ui.text.FontSmoothing#AntiAlias
+      201 -> c201(a, on) // androidx.compose.ui.text.FontSmoothing#None
+      202 -> c202(a, on) // androidx.compose.ui.text.FontSmoothing#SubpixelAntiAlias
+      203 -> c203(a, on) // androidx.compose.ui.text.ParagraphStyle#<init>(textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformParagraphStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)
+      204 -> c204(a, on) // androidx.compose.ui.text.ParagraphStyle#copy(textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformParagraphStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)
+      205 -> c205(a, on) // androidx.compose.ui.text.ParagraphStyle#merge(other:ParagraphStyle?)
+      206 -> c206(a, on) // androidx.compose.ui.text.ParagraphStyle#plus(other:ParagraphStyle)
+      207 -> c207(a, on) // androidx.compose.ui.text.Placeholder#<init>(width:TextUnit,height:TextUnit,placeholderVerticalAlign:PlaceholderVerticalAlign)
+      208 -> c208(a, on) // androidx.compose.ui.text.Placeholder#copy(width:TextUnit,height:TextUnit,placeholderVerticalAlign:PlaceholderVerticalAlign)
+      209 -> c209(a, on) // androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#AboveBaseline
+      210 -> c210(a, on) // androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Bottom
+      211 -> c211(a, on) // androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Center
+      212 -> c212(a, on) // androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextBottom
+      213 -> c213(a, on) // androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextCenter
+      214 -> c214(a, on) // androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextTop
+      215 -> c215(a, on) // androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Top
+      216 -> c216(a, on) // androidx.compose.ui.text.PlatformParagraphStyle#<init>()
+      217 -> c217(a, on) // androidx.compose.ui.text.PlatformParagraphStyle#<init>(fontRasterizationSettings:FontRasterizationSettings)
+      218 -> c218(a, on) // androidx.compose.ui.text.PlatformParagraphStyle#merge(other:PlatformParagraphStyle?)
+      219 -> c219(a, on) // androidx.compose.ui.text.PlatformParagraphStyle.Companion#Default
+      220 -> c220(a, on) // androidx.compose.ui.text.PlatformSpanStyle#<init>()
+      221 -> c221(a, on) // androidx.compose.ui.text.PlatformSpanStyle#<init>(textDecorationLineStyle:TextDecorationLineStyle?)
+      222 -> c222(a, on) // androidx.compose.ui.text.PlatformSpanStyle#merge(other:PlatformSpanStyle?)
+      223 -> c223(a, on) // androidx.compose.ui.text.PlatformSpanStyle.Companion#Default
+      224 -> c224(a, on) // androidx.compose.ui.text.PlatformTextStyle#<init>(spanStyle:PlatformSpanStyle?,paragraphStyle:PlatformParagraphStyle?)
+      225 -> c225(a, on) // androidx.compose.ui.text.PlatformTextStyle#<init>(textDecorationLineStyle:TextDecorationLineStyle?)
+      226 -> c226(a, on) // androidx.compose.ui.text.SpanStyle#<init>(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)
+      227 -> c227(a, on) // androidx.compose.ui.text.SpanStyle#<init>(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)
+      228 -> c228(a, on) // androidx.compose.ui.text.SpanStyle#copy(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)
+      229 -> c229(a, on) // androidx.compose.ui.text.SpanStyle#copy(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)
+      230 -> c230(a, on) // androidx.compose.ui.text.SpanStyle#merge(other:SpanStyle?)
+      231 -> c231(a, on) // androidx.compose.ui.text.SpanStyle#plus(other:SpanStyle)
+      232 -> c232(a, on) // androidx.compose.ui.text.StringAnnotation#<init>(value:String)
+      233 -> c233(a, on) // androidx.compose.ui.text.TextDecorationLineStyle.Companion#Dashed
+      234 -> c234(a, on) // androidx.compose.ui.text.TextDecorationLineStyle.Companion#Dotted
+      235 -> c235(a, on) // androidx.compose.ui.text.TextDecorationLineStyle.Companion#Double
+      236 -> c236(a, on) // androidx.compose.ui.text.TextDecorationLineStyle.Companion#Solid
+      237 -> c237(a, on) // androidx.compose.ui.text.TextDecorationLineStyle.Companion#Wavy
+      238 -> c238(a, on) // androidx.compose.ui.text.TextGranularity.Companion#Character
+      239 -> c239(a, on) // androidx.compose.ui.text.TextGranularity.Companion#Word
+      240 -> c240(a, on) // androidx.compose.ui.text.TextInclusionStrategy.Companion#AnyOverlap
+      241 -> c241(a, on) // androidx.compose.ui.text.TextInclusionStrategy.Companion#ContainsAll
+      242 -> c242(a, on) // androidx.compose.ui.text.TextInclusionStrategy.Companion#ContainsCenter
+      243 -> c243(a, on) // androidx.compose.ui.text.TextLinkStyles#<init>(style:SpanStyle?,focusedStyle:SpanStyle?,hoveredStyle:SpanStyle?,pressedStyle:SpanStyle?)
+      244 -> c244(a, on) // androidx.compose.ui.text.TextRange(index:Int)
+      245 -> c245(a, on) // androidx.compose.ui.text.TextRange(start:Int,end:Int)
+      246 -> c246(a, on) // androidx.compose.ui.text.TextRange.Companion#Zero
+      247 -> c247(a, on) // androidx.compose.ui.text.TextStyle#<init>(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)
+      248 -> c248(a, on) // androidx.compose.ui.text.TextStyle#<init>(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)
+      360 -> c360(a, on) // androidx.compose.ui.text.TextStyle#copy(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)
+      361 -> c361(a, on) // androidx.compose.ui.text.TextStyle#copy(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)
+      249 -> c249(a, on) // androidx.compose.ui.text.TextStyle#merge(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,platformStyle:PlatformTextStyle?,textMotion:TextMotion?)
+      250 -> c250(a, on) // androidx.compose.ui.text.TextStyle#merge(other:ParagraphStyle)
+      251 -> c251(a, on) // androidx.compose.ui.text.TextStyle#merge(other:SpanStyle)
+      252 -> c252(a, on) // androidx.compose.ui.text.TextStyle#merge(other:TextStyle?)
+      253 -> c253(a, on) // androidx.compose.ui.text.TextStyle#plus(other:ParagraphStyle)
+      254 -> c254(a, on) // androidx.compose.ui.text.TextStyle#plus(other:SpanStyle)
+      255 -> c255(a, on) // androidx.compose.ui.text.TextStyle#plus(other:TextStyle)
+      256 -> c256(a, on) // androidx.compose.ui.text.TextStyle#toParagraphStyle()
+      257 -> c257(a, on) // androidx.compose.ui.text.TextStyle#toSpanStyle()
+      258 -> c258(a, on) // androidx.compose.ui.text.TextStyle.Companion#Default
+      259 -> c259(a, on) // androidx.compose.ui.text.UnresolvedSymbolsRegistry#<init>()
+      260 -> c260(a, on) // androidx.compose.ui.text.UrlAnnotation#<init>(url:String)
+      261 -> c261(a, on) // androidx.compose.ui.text.VerbatimTtsAnnotation#<init>(verbatim:String)
+      262 -> c262(a, on) // androidx.compose.ui.text.font.Font(resId:Int,weight:FontWeight,style:FontStyle,loadingStrategy:FontLoadingStrategy)
+      263 -> c263(a, on) // androidx.compose.ui.text.font.FontFamily(familyName:String)
+      264 -> c264(a, on) // androidx.compose.ui.text.font.FontFamily(fonts:Font...)
+      265 -> c265(a, on) // androidx.compose.ui.text.font.FontFamily(fonts:List<Font>)
+      266 -> c266(a, on) // androidx.compose.ui.text.font.FontFamily.Companion#Cursive
+      267 -> c267(a, on) // androidx.compose.ui.text.font.FontFamily.Companion#Default
+      268 -> c268(a, on) // androidx.compose.ui.text.font.FontFamily.Companion#Monospace
+      269 -> c269(a, on) // androidx.compose.ui.text.font.FontFamily.Companion#SansSerif
+      270 -> c270(a, on) // androidx.compose.ui.text.font.FontFamily.Companion#Serif
+      271 -> c271(a, on) // androidx.compose.ui.text.font.FontLoadingStrategy.Companion#Async
+      272 -> c272(a, on) // androidx.compose.ui.text.font.FontLoadingStrategy.Companion#Blocking
+      273 -> c273(a, on) // androidx.compose.ui.text.font.FontLoadingStrategy.Companion#OptionalLocal
+      274 -> c274(a, on) // androidx.compose.ui.text.font.FontStyle#<init>(value:Int)
+      275 -> c275(a, on) // androidx.compose.ui.text.font.FontStyle.Companion#Italic
+      276 -> c276(a, on) // androidx.compose.ui.text.font.FontStyle.Companion#Normal
+      277 -> c277(a, on) // androidx.compose.ui.text.font.FontSynthesis.Companion#All
+      278 -> c278(a, on) // androidx.compose.ui.text.font.FontSynthesis.Companion#None
+      279 -> c279(a, on) // androidx.compose.ui.text.font.FontSynthesis.Companion#Style
+      280 -> c280(a, on) // androidx.compose.ui.text.font.FontSynthesis.Companion#Weight
+      281 -> c281(a, on) // androidx.compose.ui.text.font.FontSynthesis.Companion#valueOf(value:Int)
+      282 -> c282(a, on) // androidx.compose.ui.text.font.FontWeight#<init>(weight:Int)
+      283 -> c283(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#Black
+      284 -> c284(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#Bold
+      285 -> c285(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#ExtraBold
+      286 -> c286(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#ExtraLight
+      287 -> c287(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#Light
+      288 -> c288(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#Medium
+      289 -> c289(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#Normal
+      290 -> c290(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#SemiBold
+      291 -> c291(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#Thin
+      292 -> c292(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#W100
+      293 -> c293(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#W200
+      294 -> c294(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#W300
+      295 -> c295(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#W400
+      296 -> c296(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#W500
+      297 -> c297(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#W600
+      298 -> c298(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#W700
+      299 -> c299(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#W800
+      300 -> c300(a, on) // androidx.compose.ui.text.font.FontWeight.Companion#W900
+      301 -> c301(a, on) // androidx.compose.ui.text.font.lerp(start:FontWeight,stop:FontWeight,fraction:Float)
+      302 -> c302(a, on) // androidx.compose.ui.text.lerp(start:ParagraphStyle,stop:ParagraphStyle,fraction:Float)
+      303 -> c303(a, on) // androidx.compose.ui.text.lerp(start:PlatformParagraphStyle,stop:PlatformParagraphStyle,fraction:Float)
+      304 -> c304(a, on) // androidx.compose.ui.text.lerp(start:PlatformSpanStyle,stop:PlatformSpanStyle,fraction:Float)
+      305 -> c305(a, on) // androidx.compose.ui.text.lerp(start:SpanStyle,stop:SpanStyle,fraction:Float)
+      306 -> c306(a, on) // androidx.compose.ui.text.lerp(start:TextStyle,stop:TextStyle,fraction:Float)
+      307 -> c307(a, on) // androidx.compose.ui.text.style.BaselineShift#<init>(multiplier:Float)
+      308 -> c308(a, on) // androidx.compose.ui.text.style.BaselineShift.Companion#None
+      309 -> c309(a, on) // androidx.compose.ui.text.style.BaselineShift.Companion#Subscript
+      310 -> c310(a, on) // androidx.compose.ui.text.style.BaselineShift.Companion#Superscript
+      311 -> c311(a, on) // androidx.compose.ui.text.style.BaselineShift.Companion#Unspecified
+      312 -> c312(a, on) // androidx.compose.ui.text.style.Hyphens.Companion#Auto
+      313 -> c313(a, on) // androidx.compose.ui.text.style.Hyphens.Companion#None
+      314 -> c314(a, on) // androidx.compose.ui.text.style.Hyphens.Companion#Unspecified
+      315 -> c315(a, on) // androidx.compose.ui.text.style.Hyphens.Companion#valueOf(value:Int)
+      316 -> c316(a, on) // androidx.compose.ui.text.style.LineBreak.Companion#Heading
+      317 -> c317(a, on) // androidx.compose.ui.text.style.LineBreak.Companion#Paragraph
+      318 -> c318(a, on) // androidx.compose.ui.text.style.LineBreak.Companion#Simple
+      319 -> c319(a, on) // androidx.compose.ui.text.style.LineBreak.Companion#Unspecified
+      320 -> c320(a, on) // androidx.compose.ui.text.style.LineHeightStyle#copy(alignment:LineHeightStyle.Alignment,trim:LineHeightStyle.Trim,mode:LineHeightStyle.Mode)
+      321 -> c321(a, on) // androidx.compose.ui.text.style.LineHeightStyle.Companion#Default
+      322 -> c322(a, on) // androidx.compose.ui.text.style.ResolvedTextDirection#Ltr
+      323 -> c323(a, on) // androidx.compose.ui.text.style.ResolvedTextDirection#Rtl
+      324 -> c324(a, on) // androidx.compose.ui.text.style.TextAlign.Companion#Center
+      325 -> c325(a, on) // androidx.compose.ui.text.style.TextAlign.Companion#End
+      326 -> c326(a, on) // androidx.compose.ui.text.style.TextAlign.Companion#Justify
+      327 -> c327(a, on) // androidx.compose.ui.text.style.TextAlign.Companion#Left
+      328 -> c328(a, on) // androidx.compose.ui.text.style.TextAlign.Companion#Right
+      329 -> c329(a, on) // androidx.compose.ui.text.style.TextAlign.Companion#Start
+      330 -> c330(a, on) // androidx.compose.ui.text.style.TextAlign.Companion#Unspecified
+      331 -> c331(a, on) // androidx.compose.ui.text.style.TextAlign.Companion#valueOf(value:Int)
+      332 -> c332(a, on) // androidx.compose.ui.text.style.TextDecoration#plus(decoration:TextDecoration)
+      333 -> c333(a, on) // androidx.compose.ui.text.style.TextDecoration.Companion#LineThrough
+      334 -> c334(a, on) // androidx.compose.ui.text.style.TextDecoration.Companion#None
+      335 -> c335(a, on) // androidx.compose.ui.text.style.TextDecoration.Companion#Underline
+      336 -> c336(a, on) // androidx.compose.ui.text.style.TextDecoration.Companion#combine(decorations:List<TextDecoration>)
+      337 -> c337(a, on) // androidx.compose.ui.text.style.TextDecoration.Companion#valueOf(mask:Int)
+      338 -> c338(a, on) // androidx.compose.ui.text.style.TextDirection.Companion#Content
+      339 -> c339(a, on) // androidx.compose.ui.text.style.TextDirection.Companion#ContentOrLtr
+      340 -> c340(a, on) // androidx.compose.ui.text.style.TextDirection.Companion#ContentOrRtl
+      341 -> c341(a, on) // androidx.compose.ui.text.style.TextDirection.Companion#Ltr
+      342 -> c342(a, on) // androidx.compose.ui.text.style.TextDirection.Companion#Rtl
+      343 -> c343(a, on) // androidx.compose.ui.text.style.TextDirection.Companion#Unspecified
+      344 -> c344(a, on) // androidx.compose.ui.text.style.TextDirection.Companion#valueOf(value:Int)
+      345 -> c345(a, on) // androidx.compose.ui.text.style.TextGeometricTransform#<init>(scaleX:Float,skewX:Float)
+      346 -> c346(a, on) // androidx.compose.ui.text.style.TextGeometricTransform#copy(scaleX:Float,skewX:Float)
+      347 -> c347(a, on) // androidx.compose.ui.text.style.TextIndent#<init>(firstLine:TextUnit,restLine:TextUnit)
+      348 -> c348(a, on) // androidx.compose.ui.text.style.TextIndent#copy(firstLine:TextUnit,restLine:TextUnit)
+      349 -> c349(a, on) // androidx.compose.ui.text.style.TextIndent.Companion#None
+      350 -> c350(a, on) // androidx.compose.ui.text.style.TextMotion.Companion#Animated
+      351 -> c351(a, on) // androidx.compose.ui.text.style.TextMotion.Companion#Static
+      352 -> c352(a, on) // androidx.compose.ui.text.style.TextOverflow.Companion#Clip
+      353 -> c353(a, on) // androidx.compose.ui.text.style.TextOverflow.Companion#Ellipsis
+      354 -> c354(a, on) // androidx.compose.ui.text.style.TextOverflow.Companion#MiddleEllipsis
+      355 -> c355(a, on) // androidx.compose.ui.text.style.TextOverflow.Companion#StartEllipsis
+      356 -> c356(a, on) // androidx.compose.ui.text.style.TextOverflow.Companion#Visible
+      357 -> c357(a, on) // androidx.compose.ui.text.style.lerp(start:BaselineShift,stop:BaselineShift,fraction:Float)
+      358 -> c358(a, on) // androidx.compose.ui.text.style.lerp(start:TextGeometricTransform,stop:TextGeometricTransform,fraction:Float)
+      359 -> c359(a, on) // androidx.compose.ui.text.style.lerp(start:TextIndent,stop:TextIndent,fraction:Float)
       else -> error("unknown call $tag")
     }
   }
@@ -157,10 +475,10 @@ public object GeneratedReplay {
       all = a.getValue("all").let { (GeneratedReplay.replay(it) as androidx.compose.foundation.shape.CornerSize) }
     )
   private fun c21(a: JsonObject, on: Any?): Any = (on as androidx.compose.foundation.shape.CornerBasedShape).copy(
-      topStart = a["topStart"]?.let { (GeneratedReplay.replay(it) as androidx.compose.foundation.shape.CornerSize) } ?: ((on as androidx.compose.foundation.shape.CornerBasedShape).topStart),
-      topEnd = a["topEnd"]?.let { (GeneratedReplay.replay(it) as androidx.compose.foundation.shape.CornerSize) } ?: ((on as androidx.compose.foundation.shape.CornerBasedShape).topEnd),
-      bottomEnd = a["bottomEnd"]?.let { (GeneratedReplay.replay(it) as androidx.compose.foundation.shape.CornerSize) } ?: ((on as androidx.compose.foundation.shape.CornerBasedShape).bottomEnd),
-      bottomStart = a["bottomStart"]?.let { (GeneratedReplay.replay(it) as androidx.compose.foundation.shape.CornerSize) } ?: ((on as androidx.compose.foundation.shape.CornerBasedShape).bottomStart)
+      topStart = a["topStart"]?.let { (GeneratedReplay.replay(it) as androidx.compose.foundation.shape.CornerSize) } ?: (on as androidx.compose.foundation.shape.CornerBasedShape).topStart,
+      topEnd = a["topEnd"]?.let { (GeneratedReplay.replay(it) as androidx.compose.foundation.shape.CornerSize) } ?: (on as androidx.compose.foundation.shape.CornerBasedShape).topEnd,
+      bottomEnd = a["bottomEnd"]?.let { (GeneratedReplay.replay(it) as androidx.compose.foundation.shape.CornerSize) } ?: (on as androidx.compose.foundation.shape.CornerBasedShape).bottomEnd,
+      bottomStart = a["bottomStart"]?.let { (GeneratedReplay.replay(it) as androidx.compose.foundation.shape.CornerSize) } ?: (on as androidx.compose.foundation.shape.CornerBasedShape).bottomStart
     )
   private fun c22(a: JsonObject, on: Any?): Any = androidx.compose.foundation.shape.CornerSize(
       percent = a.getValue("percent").let { it.jsonPrimitive.int }
@@ -256,4 +574,907 @@ public object GeneratedReplay {
       bottomStartPercent = a["bottomStartPercent"]?.let { it.jsonPrimitive.int } ?: (0)
     )
   private fun c43(a: JsonObject, on: Any?): Any = androidx.compose.foundation.shape.ZeroCornerSize
+  private fun c44(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Clear
+  private fun c45(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Color
+  private fun c46(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.ColorBurn
+  private fun c47(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.ColorDodge
+  private fun c48(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Darken
+  private fun c49(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Difference
+  private fun c50(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Dst
+  private fun c51(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.DstAtop
+  private fun c52(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.DstIn
+  private fun c53(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.DstOut
+  private fun c54(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.DstOver
+  private fun c55(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Exclusion
+  private fun c56(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Hardlight
+  private fun c57(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Hue
+  private fun c58(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Lighten
+  private fun c59(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Luminosity
+  private fun c60(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Modulate
+  private fun c61(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Multiply
+  private fun c62(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Overlay
+  private fun c63(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Plus
+  private fun c64(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Saturation
+  private fun c65(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Screen
+  private fun c66(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Softlight
+  private fun c67(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Src
+  private fun c68(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.SrcAtop
+  private fun c69(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.SrcIn
+  private fun c70(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.SrcOut
+  private fun c71(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.SrcOver
+  private fun c72(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendMode.Xor
+  private fun c73(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlendModeColorFilter(
+      color = a.getValue("color").let { decodeColor(it) },
+      blendMode = a.getValue("blendMode").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.BlendMode) }
+    )
+  private fun c74(a: JsonObject, on: Any?): Any = if ("radiusY" in a) androidx.compose.ui.graphics.BlurEffect(
+      renderEffect = a.getValue("renderEffect").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.RenderEffect)) },
+      radiusX = a.getValue("radiusX").let { it.jsonPrimitive.float },
+      radiusY = a.getValue("radiusY").let { it.jsonPrimitive.float },
+      edgeTreatment = a["edgeTreatment"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    ) else androidx.compose.ui.graphics.BlurEffect(
+      renderEffect = a.getValue("renderEffect").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.RenderEffect)) },
+      radiusX = a.getValue("radiusX").let { it.jsonPrimitive.float },
+      edgeTreatment = a["edgeTreatment"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    )
+  private fun c75(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.BlurEffect(
+      radiusX = a.getValue("radiusX").let { it.jsonPrimitive.float },
+      radiusY = a.getValue("radiusY").let { it.jsonPrimitive.float },
+      edgeTreatment = a["edgeTreatment"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    )
+  private fun c76(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Brush.composite(
+      dstBrush = a.getValue("dstBrush").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Brush) },
+      srcBrush = a.getValue("srcBrush").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Brush) },
+      blendMode = a.getValue("blendMode").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.BlendMode) }
+    )
+  private fun c77(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Brush.horizontalGradient(
+      colors = a.getValue("colors").let { it.jsonArray.map { decodeColor(it) } },
+      startX = a["startX"]?.let { it.jsonPrimitive.float } ?: (0.0f),
+      endX = a["endX"]?.let { it.jsonPrimitive.float } ?: (Float.POSITIVE_INFINITY),
+      tileMode = a["tileMode"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    )
+  private fun c78(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Brush.linearGradient(
+      colors = a.getValue("colors").let { it.jsonArray.map { decodeColor(it) } },
+      start = a["start"]?.let { decodeOffset(it) } ?: (androidx.compose.ui.geometry.Offset.Zero),
+      end = a["end"]?.let { decodeOffset(it) } ?: (androidx.compose.ui.geometry.Offset.Infinite),
+      tileMode = a["tileMode"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    )
+  private fun c79(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Brush.radialGradient(
+      colors = a.getValue("colors").let { it.jsonArray.map { decodeColor(it) } },
+      center = a["center"]?.let { decodeOffset(it) } ?: (androidx.compose.ui.geometry.Offset.Unspecified),
+      radius = a["radius"]?.let { it.jsonPrimitive.float } ?: (Float.POSITIVE_INFINITY),
+      tileMode = a["tileMode"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    )
+  private fun c80(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Brush.sweepGradient(
+      colors = a.getValue("colors").let { it.jsonArray.map { decodeColor(it) } },
+      center = a["center"]?.let { decodeOffset(it) } ?: (androidx.compose.ui.geometry.Offset.Unspecified)
+    )
+  private fun c81(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Brush.verticalGradient(
+      colors = a.getValue("colors").let { it.jsonArray.map { decodeColor(it) } },
+      startY = a["startY"]?.let { it.jsonPrimitive.float } ?: (0.0f),
+      endY = a["endY"]?.let { it.jsonPrimitive.float } ?: (Float.POSITIVE_INFINITY),
+      tileMode = a["tileMode"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    )
+  private fun c82(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Canvas(
+      image = a.getValue("image").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.ImageBitmap) }
+    )
+  private fun c83(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ClipOp.Difference
+  private fun c84(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ClipOp.Intersect
+  private fun c85(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.CloseSegment
+  private fun c86(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+      colorMatrix = a.getValue("colorMatrix").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.ColorMatrix) }
+    )
+  private fun c87(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ColorFilter.lighting(
+      multiply = a.getValue("multiply").let { decodeColor(it) },
+      add = a.getValue("add").let { decodeColor(it) }
+    )
+  private fun c88(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ColorFilter.tint(
+      color = a.getValue("color").let { decodeColor(it) },
+      blendMode = a["blendMode"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.BlendMode) } ?: (androidx.compose.ui.graphics.BlendMode.SrcIn)
+    )
+  private fun c89(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ColorMatrix(
+
+    )
+  private fun c90(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ColorMatrixColorFilter(
+      colorMatrix = a.getValue("colorMatrix").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.ColorMatrix) }
+    )
+  private fun c91(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.ColorMatrixColorFilter).copyColorMatrix(
+      targetColorMatrix = a["targetColorMatrix"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.ColorMatrix) } ?: (androidx.compose.ui.graphics.ColorMatrix())
+    )
+  private fun c92(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.CompositeShader(
+      dst = a.getValue("dst").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shader) },
+      src = a.getValue("src").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shader) },
+      blendMode = a.getValue("blendMode").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.BlendMode) }
+    )
+  private fun c93(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.CompositingStrategy.Auto
+  private fun c94(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.CompositingStrategy.ModulateAlpha
+  private fun c95(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+  private fun c96(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.DoneSegment
+  private fun c97(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.FilterQuality.High
+  private fun c98(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.FilterQuality.Low
+  private fun c99(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.FilterQuality.Medium
+  private fun c100(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.FilterQuality.None
+  private fun c101(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.GraphicsLayerScope(
+
+    )
+  private fun c102(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ImageBitmap(
+      width = a.getValue("width").let { it.jsonPrimitive.int },
+      height = a.getValue("height").let { it.jsonPrimitive.int },
+      config = a["config"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.ImageBitmapConfig) } ?: (androidx.compose.ui.graphics.ImageBitmapConfig.Argb8888),
+      hasAlpha = a["hasAlpha"]?.let { it.jsonPrimitive.boolean } ?: (true)
+    )
+  private fun c103(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ImageBitmapConfig.Alpha8
+  private fun c104(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ImageBitmapConfig.Argb8888
+  private fun c105(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ImageBitmapConfig.F16
+  private fun c106(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ImageBitmapConfig.Gpu
+  private fun c107(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ImageBitmapConfig.Rgb565
+  private fun c108(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ImageShader(
+      image = a.getValue("image").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.ImageBitmap) },
+      tileModeX = a["tileModeX"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp),
+      tileModeY = a["tileModeY"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    )
+  private fun c110(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.LayerOutsets(
+      left = a["left"]?.let { decodeDp(it) } ?: (0.dp),
+      top = a["top"]?.let { decodeDp(it) } ?: (0.dp),
+      right = a["right"]?.let { decodeDp(it) } ?: (0.dp),
+      bottom = a["bottom"]?.let { decodeDp(it) } ?: (0.dp)
+    )
+  private fun c111(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.LayerOutsets(
+      all = a.getValue("all").let { decodeDp(it) }
+    )
+  private fun c112(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.LayerOutsets(
+      vertical = a.getValue("vertical").let { decodeDp(it) },
+      horizontal = a.getValue("horizontal").let { decodeDp(it) }
+    )
+  private fun c113(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.LayerOutsets.Zero
+  private fun c114(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.LightingColorFilter(
+      multiply = a.getValue("multiply").let { decodeColor(it) },
+      add = a.getValue("add").let { decodeColor(it) }
+    )
+  private fun c115(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.LinearGradientShader(
+      from = a.getValue("from").let { decodeOffset(it) },
+      to = a.getValue("to").let { decodeOffset(it) },
+      colors = a.getValue("colors").let { it.jsonArray.map { decodeColor(it) } },
+      colorStops = a["colorStops"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonArray.map { it.jsonPrimitive.float }) } ?: (null),
+      tileMode = a["tileMode"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    )
+  private fun c116(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Matrix(
+
+    )
+  private fun c117(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.OffsetEffect(
+      renderEffect = a.getValue("renderEffect").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.RenderEffect)) },
+      offset = a.getValue("offset").let { decodeOffset(it) }
+    )
+  private fun c118(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.OffsetEffect(
+      offsetX = a.getValue("offsetX").let { it.jsonPrimitive.float },
+      offsetY = a.getValue("offsetY").let { it.jsonPrimitive.float }
+    )
+  private fun c119(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Paint(
+
+    )
+  private fun c120(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PaintingStyle.Fill
+  private fun c121(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PaintingStyle.Stroke
+  private fun c122(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.Path).and(
+      path = a.getValue("path").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) }
+    )
+  private fun c123(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.Path).iterator(
+
+    )
+  private fun c124(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.Path).minus(
+      path = a.getValue("path").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) }
+    )
+  private fun c125(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.Path).or(
+      path = a.getValue("path").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) }
+    )
+  private fun c126(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.Path).plus(
+      path = a.getValue("path").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) }
+    )
+  private fun c127(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.Path).xor(
+      path = a.getValue("path").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) }
+    )
+  private fun c128(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Path(
+
+    )
+  private fun c129(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Path.combine(
+      operation = a.getValue("operation").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.PathOperation) },
+      path1 = a.getValue("path1").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) },
+      path2 = a.getValue("path2").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) }
+    )
+  private fun c130(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathEffect.chainPathEffect(
+      outer = a.getValue("outer").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.PathEffect) },
+      inner = a.getValue("inner").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.PathEffect) }
+    )
+  private fun c131(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathEffect.cornerPathEffect(
+      radius = a.getValue("radius").let { it.jsonPrimitive.float }
+    )
+  private fun c132(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathEffect.stampedPathEffect(
+      shape = a.getValue("shape").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) },
+      advance = a.getValue("advance").let { it.jsonPrimitive.float },
+      phase = a.getValue("phase").let { it.jsonPrimitive.float },
+      style = a.getValue("style").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.StampedPathEffectStyle) }
+    )
+  private fun c133(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathFillType.EvenOdd
+  private fun c134(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathFillType.NonZero
+  private fun c135(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathHitTester(
+
+    )
+  private fun c136(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathHitTester(
+      path = a.getValue("path").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) },
+      tolerance = a["tolerance"]?.let { it.jsonPrimitive.float } ?: (0.5f)
+    )
+  private fun c137(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.PathIterator).next(
+
+    )
+  private fun c138(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathIterator(
+      path = a.getValue("path").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Path) },
+      tolerance = a["tolerance"]?.let { it.jsonPrimitive.float } ?: (0.25f)
+    )
+  private fun c139(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathMeasure(
+
+    )
+  private fun c140(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathOperation.Difference
+  private fun c141(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathOperation.Intersect
+  private fun c142(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathOperation.ReverseDifference
+  private fun c143(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathOperation.Union
+  private fun c144(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PathOperation.Xor
+  private fun c145(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PointMode.Lines
+  private fun c146(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PointMode.Points
+  private fun c147(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.PointMode.Polygon
+  private fun c148(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.RadialGradientShader(
+      center = a.getValue("center").let { decodeOffset(it) },
+      radius = a.getValue("radius").let { it.jsonPrimitive.float },
+      colors = a.getValue("colors").let { it.jsonArray.map { decodeColor(it) } },
+      colorStops = a["colorStops"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonArray.map { it.jsonPrimitive.float }) } ?: (null),
+      tileMode = a["tileMode"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.TileMode) } ?: (androidx.compose.ui.graphics.TileMode.Clamp)
+    )
+  private fun c149(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.RectangleShape
+  private fun c150(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.ShaderBrush).createShader(
+      size = a.getValue("size").let { decodeSize(it) }
+    )
+  private fun c151(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.ShaderBrush(
+      shader = a.getValue("shader").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shader) }
+    )
+  private fun c152(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Shadow(
+      color = a["color"]?.let { decodeColor(it) } ?: (androidx.compose.ui.graphics.Color(0xFF000000)),
+      offset = a["offset"]?.let { decodeOffset(it) } ?: (androidx.compose.ui.geometry.Offset.Zero),
+      blurRadius = a["blurRadius"]?.let { it.jsonPrimitive.float } ?: (0.0f)
+    )
+  private fun c153(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.Shadow).copy(
+      color = a["color"]?.let { decodeColor(it) } ?: (on as androidx.compose.ui.graphics.Shadow).color,
+      offset = a["offset"]?.let { decodeOffset(it) } ?: (on as androidx.compose.ui.graphics.Shadow).offset,
+      blurRadius = a["blurRadius"]?.let { it.jsonPrimitive.float } ?: (on as androidx.compose.ui.graphics.Shadow).blurRadius
+    )
+  private fun c154(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Shadow.None
+  private fun c155(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.SkiaGraphicsContext(
+      measureDrawBounds = a["measureDrawBounds"]?.let { it.jsonPrimitive.boolean } ?: (false)
+    )
+  private fun c156(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.SolidColor(
+      value = a.getValue("value").let { decodeColor(it) }
+    )
+  private fun c157(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.StampedPathEffectStyle.Morph
+  private fun c158(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.StampedPathEffectStyle.Rotate
+  private fun c159(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.StampedPathEffectStyle.Translate
+  private fun c160(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.StrokeCap.Butt
+  private fun c161(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.StrokeCap.Round
+  private fun c162(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.StrokeCap.Square
+  private fun c163(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.StrokeJoin.Bevel
+  private fun c164(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.StrokeJoin.Miter
+  private fun c165(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.StrokeJoin.Round
+  private fun c166(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.SweepGradientShader(
+      center = a.getValue("center").let { decodeOffset(it) },
+      colors = a.getValue("colors").let { it.jsonArray.map { decodeColor(it) } },
+      colorStops = a["colorStops"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonArray.map { it.jsonPrimitive.float }) } ?: (null)
+    )
+  private fun c167(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.TileMode.Clamp
+  private fun c168(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.TileMode.Decal
+  private fun c169(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.TileMode.Mirror
+  private fun c170(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.TileMode.Repeated
+  private fun c171(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.graphics.TransformOrigin).copy(
+      pivotFractionX = a["pivotFractionX"]?.let { it.jsonPrimitive.float } ?: (on as androidx.compose.ui.graphics.TransformOrigin).pivotFractionX,
+      pivotFractionY = a["pivotFractionY"]?.let { it.jsonPrimitive.float } ?: (on as androidx.compose.ui.graphics.TransformOrigin).pivotFractionY
+    )
+  private fun c172(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.TransformOrigin(
+      pivotFractionX = a.getValue("pivotFractionX").let { it.jsonPrimitive.float },
+      pivotFractionY = a.getValue("pivotFractionY").let { it.jsonPrimitive.float }
+    )
+  private fun c173(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.TransformOrigin.Center
+  private fun c174(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.VertexMode.TriangleFan
+  private fun c175(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.VertexMode.TriangleStrip
+  private fun c176(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.VertexMode.Triangles
+  private fun c177(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.Vertices(
+      vertexMode = a.getValue("vertexMode").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.VertexMode) },
+      positions = a.getValue("positions").let { it.jsonArray.map { decodeOffset(it) } },
+      textureCoordinates = a.getValue("textureCoordinates").let { it.jsonArray.map { decodeOffset(it) } },
+      colors = a.getValue("colors").let { it.jsonArray.map { decodeColor(it) } },
+      indices = a.getValue("indices").let { it.jsonArray.map { it.jsonPrimitive.int } }
+    )
+  private fun c178(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.drawscope.CanvasDrawScope(
+
+    )
+  private fun c179(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.drawscope.DrawScope.DefaultBlendMode
+  private fun c180(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.drawscope.DrawScope.DefaultFilterQuality
+  private fun c181(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.drawscope.Stroke(
+      width = a["width"]?.let { it.jsonPrimitive.float } ?: (0.0f),
+      miter = a["miter"]?.let { it.jsonPrimitive.float } ?: (androidx.compose.ui.graphics.drawscope.Stroke.DefaultMiter),
+      cap = a["cap"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.StrokeCap) } ?: (androidx.compose.ui.graphics.drawscope.Stroke.DefaultCap),
+      join = a["join"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.StrokeJoin) } ?: (androidx.compose.ui.graphics.drawscope.Stroke.DefaultJoin),
+      pathEffect = a["pathEffect"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.PathEffect)) } ?: (null)
+    )
+  private fun c182(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.drawscope.Stroke.DefaultCap
+  private fun c183(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.drawscope.Stroke.DefaultJoin
+  private fun c184(a: JsonObject, on: Any?): Any = androidx.compose.ui.graphics.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
+  private fun c185(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.AnnotatedString(
+      text = a.getValue("text").let { it.jsonPrimitive.content }
+    )
+  private fun c186(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.AnnotatedString).plus(
+      other = a.getValue("other").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.AnnotatedString) }
+    )
+  private fun c187(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.AnnotatedString).subSequence(
+      range = a.getValue("range").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.TextRange) }
+    )
+  private fun c188(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.AnnotatedString).subSequence(
+      startIndex = a.getValue("startIndex").let { it.jsonPrimitive.int },
+      endIndex = a.getValue("endIndex").let { it.jsonPrimitive.int }
+    )
+  private fun c189(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.AnnotatedString(
+      text = a.getValue("text").let { it.jsonPrimitive.content },
+      paragraphStyle = a.getValue("paragraphStyle").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.ParagraphStyle) }
+    )
+  private fun c190(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.AnnotatedString(
+      text = a.getValue("text").let { it.jsonPrimitive.content },
+      spanStyle = a.getValue("spanStyle").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle) },
+      paragraphStyle = a["paragraphStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.ParagraphStyle)) } ?: (null)
+    )
+  private fun c191(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.Bullet(
+      shape = a.getValue("shape").let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shape) },
+      width = a.getValue("width").let { decodeTextUnit(it) },
+      height = a.getValue("height").let { decodeTextUnit(it) },
+      padding = a.getValue("padding").let { decodeTextUnit(it) },
+      brush = a["brush"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Brush)) } ?: (null),
+      alpha = a["alpha"]?.let { it.jsonPrimitive.float } ?: (Float.NaN),
+      drawStyle = a["drawStyle"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle) } ?: (androidx.compose.ui.graphics.drawscope.Fill)
+    )
+  private fun c192(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.Bullet).copy(
+      shape = a["shape"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shape) } ?: (on as androidx.compose.ui.text.Bullet).shape,
+      width = a["width"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.Bullet).width,
+      height = a["height"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.Bullet).height,
+      padding = a["padding"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.Bullet).padding,
+      brush = a["brush"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Brush)) } ?: (on as androidx.compose.ui.text.Bullet).brush,
+      alpha = a["alpha"]?.let { it.jsonPrimitive.float } ?: (on as androidx.compose.ui.text.Bullet).alpha,
+      drawStyle = a["drawStyle"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle) } ?: (on as androidx.compose.ui.text.Bullet).drawStyle
+    )
+  private fun c193(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.Bullet.Default
+  private fun c194(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.FontHinting.Full
+  private fun c195(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.FontHinting.None
+  private fun c196(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.FontHinting.Normal
+  private fun c197(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.FontHinting.Slight
+  private fun c198(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.FontRasterizationSettings(
+      smoothing = a.getValue("smoothing").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.FontSmoothing) },
+      hinting = a.getValue("hinting").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.FontHinting) },
+      subpixelPositioning = a.getValue("subpixelPositioning").let { it.jsonPrimitive.boolean },
+      autoHintingForced = a.getValue("autoHintingForced").let { it.jsonPrimitive.boolean }
+    )
+  private fun c199(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.FontRasterizationSettings.PlatformDefault
+  private fun c200(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.FontSmoothing.AntiAlias
+  private fun c201(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.FontSmoothing.None
+  private fun c202(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.FontSmoothing.SubpixelAntiAlias
+  private fun c203(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.ParagraphStyle(
+      textAlign = a["textAlign"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextAlign) } ?: (androidx.compose.ui.text.style.TextAlign.Unspecified),
+      textDirection = a["textDirection"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDirection) } ?: (androidx.compose.ui.text.style.TextDirection.Unspecified),
+      lineHeight = a["lineHeight"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      textIndent = a["textIndent"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextIndent)) } ?: (null),
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformParagraphStyle)) } ?: (null),
+      lineHeightStyle = a["lineHeightStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineHeightStyle)) } ?: (null),
+      lineBreak = a["lineBreak"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineBreak) } ?: (androidx.compose.ui.text.style.LineBreak.Unspecified),
+      hyphens = a["hyphens"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.Hyphens) } ?: (androidx.compose.ui.text.style.Hyphens.Unspecified),
+      textMotion = a["textMotion"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextMotion)) } ?: (null)
+    )
+  private fun c204(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.ParagraphStyle).copy(
+      textAlign = a["textAlign"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextAlign) } ?: (on as androidx.compose.ui.text.ParagraphStyle).textAlign,
+      textDirection = a["textDirection"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDirection) } ?: (on as androidx.compose.ui.text.ParagraphStyle).textDirection,
+      lineHeight = a["lineHeight"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.ParagraphStyle).lineHeight,
+      textIndent = a["textIndent"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextIndent)) } ?: (on as androidx.compose.ui.text.ParagraphStyle).textIndent,
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformParagraphStyle)) } ?: (on as androidx.compose.ui.text.ParagraphStyle).platformStyle,
+      lineHeightStyle = a["lineHeightStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineHeightStyle)) } ?: (on as androidx.compose.ui.text.ParagraphStyle).lineHeightStyle,
+      lineBreak = a["lineBreak"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineBreak) } ?: (on as androidx.compose.ui.text.ParagraphStyle).lineBreak,
+      hyphens = a["hyphens"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.Hyphens) } ?: (on as androidx.compose.ui.text.ParagraphStyle).hyphens,
+      textMotion = a["textMotion"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextMotion)) } ?: (on as androidx.compose.ui.text.ParagraphStyle).textMotion
+    )
+  private fun c205(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.ParagraphStyle).merge(
+      other = a["other"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.ParagraphStyle)) } ?: (null)
+    )
+  private fun c206(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.ParagraphStyle).plus(
+      other = a.getValue("other").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.ParagraphStyle) }
+    )
+  private fun c207(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.Placeholder(
+      width = a.getValue("width").let { decodeTextUnit(it) },
+      height = a.getValue("height").let { decodeTextUnit(it) },
+      placeholderVerticalAlign = a.getValue("placeholderVerticalAlign").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlaceholderVerticalAlign) }
+    )
+  private fun c208(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.Placeholder).copy(
+      width = a["width"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.Placeholder).width,
+      height = a["height"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.Placeholder).height,
+      placeholderVerticalAlign = a["placeholderVerticalAlign"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlaceholderVerticalAlign) } ?: (on as androidx.compose.ui.text.Placeholder).placeholderVerticalAlign
+    )
+  private fun c209(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlaceholderVerticalAlign.AboveBaseline
+  private fun c210(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlaceholderVerticalAlign.Bottom
+  private fun c211(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlaceholderVerticalAlign.Center
+  private fun c212(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlaceholderVerticalAlign.TextBottom
+  private fun c213(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter
+  private fun c214(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlaceholderVerticalAlign.TextTop
+  private fun c215(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlaceholderVerticalAlign.Top
+  private fun c216(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlatformParagraphStyle(
+
+    )
+  private fun c217(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlatformParagraphStyle(
+      fontRasterizationSettings = a["fontRasterizationSettings"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.FontRasterizationSettings) } ?: (androidx.compose.ui.text.FontRasterizationSettings.PlatformDefault)
+    )
+  private fun c218(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.PlatformParagraphStyle).merge(
+      other = a.getValue("other").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformParagraphStyle)) }
+    )
+  private fun c219(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlatformParagraphStyle.Default
+  private fun c220(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlatformSpanStyle(
+
+    )
+  private fun c221(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlatformSpanStyle(
+      textDecorationLineStyle = a.getValue("textDecorationLineStyle").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.TextDecorationLineStyle)) }
+    )
+  private fun c222(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.PlatformSpanStyle).merge(
+      other = a.getValue("other").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformSpanStyle)) }
+    )
+  private fun c223(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlatformSpanStyle.Default
+  private fun c224(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlatformTextStyle(
+      spanStyle = a.getValue("spanStyle").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformSpanStyle)) },
+      paragraphStyle = a.getValue("paragraphStyle").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformParagraphStyle)) }
+    )
+  private fun c225(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.PlatformTextStyle(
+      textDecorationLineStyle = a.getValue("textDecorationLineStyle").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.TextDecorationLineStyle)) }
+    )
+  private fun c226(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.SpanStyle(
+      brush = a.getValue("brush").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Brush)) },
+      alpha = a["alpha"]?.let { it.jsonPrimitive.float } ?: (Float.NaN),
+      fontSize = a["fontSize"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      fontWeight = a["fontWeight"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight)) } ?: (null),
+      fontStyle = a["fontStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle)) } ?: (null),
+      fontSynthesis = a["fontSynthesis"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontSynthesis)) } ?: (null),
+      fontFamily = a["fontFamily"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontFamily)) } ?: (null),
+      fontFeatureSettings = a["fontFeatureSettings"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content) } ?: (null),
+      letterSpacing = a["letterSpacing"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      baselineShift = a["baselineShift"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift)) } ?: (null),
+      textGeometricTransform = a["textGeometricTransform"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform)) } ?: (null),
+      background = a["background"]?.let { decodeColor(it) } ?: (androidx.compose.ui.graphics.Color.Unspecified),
+      textDecoration = a["textDecoration"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration)) } ?: (null),
+      shadow = a["shadow"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow)) } ?: (null),
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformSpanStyle)) } ?: (null),
+      drawStyle = a["drawStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle)) } ?: (null)
+    )
+  private fun c227(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.SpanStyle(
+      color = a["color"]?.let { decodeColor(it) } ?: (androidx.compose.ui.graphics.Color.Unspecified),
+      fontSize = a["fontSize"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      fontWeight = a["fontWeight"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight)) } ?: (null),
+      fontStyle = a["fontStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle)) } ?: (null),
+      fontSynthesis = a["fontSynthesis"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontSynthesis)) } ?: (null),
+      fontFamily = a["fontFamily"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontFamily)) } ?: (null),
+      fontFeatureSettings = a["fontFeatureSettings"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content) } ?: (null),
+      letterSpacing = a["letterSpacing"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      baselineShift = a["baselineShift"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift)) } ?: (null),
+      textGeometricTransform = a["textGeometricTransform"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform)) } ?: (null),
+      background = a["background"]?.let { decodeColor(it) } ?: (androidx.compose.ui.graphics.Color.Unspecified),
+      textDecoration = a["textDecoration"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration)) } ?: (null),
+      shadow = a["shadow"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow)) } ?: (null),
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformSpanStyle)) } ?: (null),
+      drawStyle = a["drawStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle)) } ?: (null)
+    )
+  private fun c228(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.SpanStyle).copy(
+      brush = a.getValue("brush").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Brush)) },
+      alpha = a["alpha"]?.let { it.jsonPrimitive.float } ?: (on as androidx.compose.ui.text.SpanStyle).alpha,
+      fontSize = a["fontSize"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.SpanStyle).fontSize,
+      fontWeight = a["fontWeight"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight)) } ?: (on as androidx.compose.ui.text.SpanStyle).fontWeight,
+      fontStyle = a["fontStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle)) } ?: (on as androidx.compose.ui.text.SpanStyle).fontStyle,
+      fontSynthesis = a["fontSynthesis"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontSynthesis)) } ?: (on as androidx.compose.ui.text.SpanStyle).fontSynthesis,
+      fontFamily = a["fontFamily"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontFamily)) } ?: (on as androidx.compose.ui.text.SpanStyle).fontFamily,
+      fontFeatureSettings = a["fontFeatureSettings"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content) } ?: (on as androidx.compose.ui.text.SpanStyle).fontFeatureSettings,
+      letterSpacing = a["letterSpacing"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.SpanStyle).letterSpacing,
+      baselineShift = a["baselineShift"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift)) } ?: (on as androidx.compose.ui.text.SpanStyle).baselineShift,
+      textGeometricTransform = a["textGeometricTransform"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform)) } ?: (on as androidx.compose.ui.text.SpanStyle).textGeometricTransform,
+      background = a["background"]?.let { decodeColor(it) } ?: (on as androidx.compose.ui.text.SpanStyle).background,
+      textDecoration = a["textDecoration"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration)) } ?: (on as androidx.compose.ui.text.SpanStyle).textDecoration,
+      shadow = a["shadow"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow)) } ?: (on as androidx.compose.ui.text.SpanStyle).shadow,
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformSpanStyle)) } ?: (on as androidx.compose.ui.text.SpanStyle).platformStyle,
+      drawStyle = a["drawStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle)) } ?: (on as androidx.compose.ui.text.SpanStyle).drawStyle
+    )
+  private fun c229(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.SpanStyle).copy(
+      color = a["color"]?.let { decodeColor(it) } ?: (on as androidx.compose.ui.text.SpanStyle).color,
+      fontSize = a["fontSize"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.SpanStyle).fontSize,
+      fontWeight = a["fontWeight"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight)) } ?: (on as androidx.compose.ui.text.SpanStyle).fontWeight,
+      fontStyle = a["fontStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle)) } ?: (on as androidx.compose.ui.text.SpanStyle).fontStyle,
+      fontSynthesis = a["fontSynthesis"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontSynthesis)) } ?: (on as androidx.compose.ui.text.SpanStyle).fontSynthesis,
+      fontFamily = a["fontFamily"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontFamily)) } ?: (on as androidx.compose.ui.text.SpanStyle).fontFamily,
+      fontFeatureSettings = a["fontFeatureSettings"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content) } ?: (on as androidx.compose.ui.text.SpanStyle).fontFeatureSettings,
+      letterSpacing = a["letterSpacing"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.SpanStyle).letterSpacing,
+      baselineShift = a["baselineShift"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift)) } ?: (on as androidx.compose.ui.text.SpanStyle).baselineShift,
+      textGeometricTransform = a["textGeometricTransform"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform)) } ?: (on as androidx.compose.ui.text.SpanStyle).textGeometricTransform,
+      background = a["background"]?.let { decodeColor(it) } ?: (on as androidx.compose.ui.text.SpanStyle).background,
+      textDecoration = a["textDecoration"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration)) } ?: (on as androidx.compose.ui.text.SpanStyle).textDecoration,
+      shadow = a["shadow"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow)) } ?: (on as androidx.compose.ui.text.SpanStyle).shadow,
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformSpanStyle)) } ?: (on as androidx.compose.ui.text.SpanStyle).platformStyle,
+      drawStyle = a["drawStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle)) } ?: (on as androidx.compose.ui.text.SpanStyle).drawStyle
+    )
+  private fun c230(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.SpanStyle).merge(
+      other = a["other"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle)) } ?: (null)
+    )
+  private fun c231(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.SpanStyle).plus(
+      other = a.getValue("other").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle) }
+    )
+  private fun c232(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.StringAnnotation(
+      value = a.getValue("value").let { it.jsonPrimitive.content }
+    )
+  private fun c233(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextDecorationLineStyle.Dashed
+  private fun c234(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextDecorationLineStyle.Dotted
+  private fun c235(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextDecorationLineStyle.Double
+  private fun c236(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextDecorationLineStyle.Solid
+  private fun c237(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextDecorationLineStyle.Wavy
+  private fun c238(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextGranularity.Character
+  private fun c239(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextGranularity.Word
+  private fun c240(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextInclusionStrategy.AnyOverlap
+  private fun c241(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextInclusionStrategy.ContainsAll
+  private fun c242(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextInclusionStrategy.ContainsCenter
+  private fun c243(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextLinkStyles(
+      style = a["style"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle)) } ?: (null),
+      focusedStyle = a["focusedStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle)) } ?: (null),
+      hoveredStyle = a["hoveredStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle)) } ?: (null),
+      pressedStyle = a["pressedStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle)) } ?: (null)
+    )
+  private fun c244(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextRange(
+      index = a.getValue("index").let { it.jsonPrimitive.int }
+    )
+  private fun c245(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextRange(
+      start = a.getValue("start").let { it.jsonPrimitive.int },
+      end = a.getValue("end").let { it.jsonPrimitive.int }
+    )
+  private fun c246(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextRange.Zero
+  private fun c247(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextStyle(
+      brush = a.getValue("brush").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Brush)) },
+      alpha = a["alpha"]?.let { it.jsonPrimitive.float } ?: (Float.NaN),
+      fontSize = a["fontSize"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      fontWeight = a["fontWeight"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight)) } ?: (null),
+      fontStyle = a["fontStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle)) } ?: (null),
+      fontSynthesis = a["fontSynthesis"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontSynthesis)) } ?: (null),
+      fontFamily = a["fontFamily"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontFamily)) } ?: (null),
+      fontFeatureSettings = a["fontFeatureSettings"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content) } ?: (null),
+      letterSpacing = a["letterSpacing"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      baselineShift = a["baselineShift"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift)) } ?: (null),
+      textGeometricTransform = a["textGeometricTransform"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform)) } ?: (null),
+      background = a["background"]?.let { decodeColor(it) } ?: (androidx.compose.ui.graphics.Color.Unspecified),
+      textDecoration = a["textDecoration"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration)) } ?: (null),
+      shadow = a["shadow"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow)) } ?: (null),
+      drawStyle = a["drawStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle)) } ?: (null),
+      textAlign = a["textAlign"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextAlign) } ?: (androidx.compose.ui.text.style.TextAlign.Unspecified),
+      textDirection = a["textDirection"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDirection) } ?: (androidx.compose.ui.text.style.TextDirection.Unspecified),
+      lineHeight = a["lineHeight"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      textIndent = a["textIndent"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextIndent)) } ?: (null),
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformTextStyle)) } ?: (null),
+      lineHeightStyle = a["lineHeightStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineHeightStyle)) } ?: (null),
+      lineBreak = a["lineBreak"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineBreak) } ?: (androidx.compose.ui.text.style.LineBreak.Unspecified),
+      hyphens = a["hyphens"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.Hyphens) } ?: (androidx.compose.ui.text.style.Hyphens.Unspecified),
+      textMotion = a["textMotion"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextMotion)) } ?: (null)
+    )
+  private fun c248(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextStyle(
+      color = a["color"]?.let { decodeColor(it) } ?: (androidx.compose.ui.graphics.Color.Unspecified),
+      fontSize = a["fontSize"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      fontWeight = a["fontWeight"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight)) } ?: (null),
+      fontStyle = a["fontStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle)) } ?: (null),
+      fontSynthesis = a["fontSynthesis"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontSynthesis)) } ?: (null),
+      fontFamily = a["fontFamily"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontFamily)) } ?: (null),
+      fontFeatureSettings = a["fontFeatureSettings"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content) } ?: (null),
+      letterSpacing = a["letterSpacing"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      baselineShift = a["baselineShift"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift)) } ?: (null),
+      textGeometricTransform = a["textGeometricTransform"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform)) } ?: (null),
+      background = a["background"]?.let { decodeColor(it) } ?: (androidx.compose.ui.graphics.Color.Unspecified),
+      textDecoration = a["textDecoration"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration)) } ?: (null),
+      shadow = a["shadow"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow)) } ?: (null),
+      drawStyle = a["drawStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle)) } ?: (null),
+      textAlign = a["textAlign"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextAlign) } ?: (androidx.compose.ui.text.style.TextAlign.Unspecified),
+      textDirection = a["textDirection"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDirection) } ?: (androidx.compose.ui.text.style.TextDirection.Unspecified),
+      lineHeight = a["lineHeight"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      textIndent = a["textIndent"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextIndent)) } ?: (null),
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformTextStyle)) } ?: (null),
+      lineHeightStyle = a["lineHeightStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineHeightStyle)) } ?: (null),
+      lineBreak = a["lineBreak"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineBreak) } ?: (androidx.compose.ui.text.style.LineBreak.Unspecified),
+      hyphens = a["hyphens"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.Hyphens) } ?: (androidx.compose.ui.text.style.Hyphens.Unspecified),
+      textMotion = a["textMotion"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextMotion)) } ?: (null)
+    )
+  private fun c360(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).copy(
+      brush = a.getValue("brush").let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Brush)) },
+      alpha = a["alpha"]?.let { it.jsonPrimitive.float } ?: (on as androidx.compose.ui.text.TextStyle).alpha,
+      fontSize = a["fontSize"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.TextStyle).fontSize,
+      fontWeight = a["fontWeight"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight)) } ?: (on as androidx.compose.ui.text.TextStyle).fontWeight,
+      fontStyle = a["fontStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle)) } ?: (on as androidx.compose.ui.text.TextStyle).fontStyle,
+      fontSynthesis = a["fontSynthesis"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontSynthesis)) } ?: (on as androidx.compose.ui.text.TextStyle).fontSynthesis,
+      fontFamily = a["fontFamily"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontFamily)) } ?: (on as androidx.compose.ui.text.TextStyle).fontFamily,
+      fontFeatureSettings = a["fontFeatureSettings"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content) } ?: (on as androidx.compose.ui.text.TextStyle).fontFeatureSettings,
+      letterSpacing = a["letterSpacing"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.TextStyle).letterSpacing,
+      baselineShift = a["baselineShift"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift)) } ?: (on as androidx.compose.ui.text.TextStyle).baselineShift,
+      textGeometricTransform = a["textGeometricTransform"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform)) } ?: (on as androidx.compose.ui.text.TextStyle).textGeometricTransform,
+      background = a["background"]?.let { decodeColor(it) } ?: (on as androidx.compose.ui.text.TextStyle).background,
+      textDecoration = a["textDecoration"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration)) } ?: (on as androidx.compose.ui.text.TextStyle).textDecoration,
+      shadow = a["shadow"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow)) } ?: (on as androidx.compose.ui.text.TextStyle).shadow,
+      drawStyle = a["drawStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle)) } ?: (on as androidx.compose.ui.text.TextStyle).drawStyle,
+      textAlign = a["textAlign"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextAlign) } ?: (on as androidx.compose.ui.text.TextStyle).textAlign,
+      textDirection = a["textDirection"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDirection) } ?: (on as androidx.compose.ui.text.TextStyle).textDirection,
+      lineHeight = a["lineHeight"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.TextStyle).lineHeight,
+      textIndent = a["textIndent"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextIndent)) } ?: (on as androidx.compose.ui.text.TextStyle).textIndent,
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformTextStyle)) } ?: (on as androidx.compose.ui.text.TextStyle).platformStyle,
+      lineHeightStyle = a["lineHeightStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineHeightStyle)) } ?: (on as androidx.compose.ui.text.TextStyle).lineHeightStyle,
+      lineBreak = a["lineBreak"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineBreak) } ?: (on as androidx.compose.ui.text.TextStyle).lineBreak,
+      hyphens = a["hyphens"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.Hyphens) } ?: (on as androidx.compose.ui.text.TextStyle).hyphens,
+      textMotion = a["textMotion"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextMotion)) } ?: (on as androidx.compose.ui.text.TextStyle).textMotion
+    )
+  private fun c361(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).copy(
+      color = a["color"]?.let { decodeColor(it) } ?: (on as androidx.compose.ui.text.TextStyle).color,
+      fontSize = a["fontSize"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.TextStyle).fontSize,
+      fontWeight = a["fontWeight"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight)) } ?: (on as androidx.compose.ui.text.TextStyle).fontWeight,
+      fontStyle = a["fontStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle)) } ?: (on as androidx.compose.ui.text.TextStyle).fontStyle,
+      fontSynthesis = a["fontSynthesis"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontSynthesis)) } ?: (on as androidx.compose.ui.text.TextStyle).fontSynthesis,
+      fontFamily = a["fontFamily"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontFamily)) } ?: (on as androidx.compose.ui.text.TextStyle).fontFamily,
+      fontFeatureSettings = a["fontFeatureSettings"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content) } ?: (on as androidx.compose.ui.text.TextStyle).fontFeatureSettings,
+      letterSpacing = a["letterSpacing"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.TextStyle).letterSpacing,
+      baselineShift = a["baselineShift"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift)) } ?: (on as androidx.compose.ui.text.TextStyle).baselineShift,
+      textGeometricTransform = a["textGeometricTransform"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform)) } ?: (on as androidx.compose.ui.text.TextStyle).textGeometricTransform,
+      background = a["background"]?.let { decodeColor(it) } ?: (on as androidx.compose.ui.text.TextStyle).background,
+      textDecoration = a["textDecoration"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration)) } ?: (on as androidx.compose.ui.text.TextStyle).textDecoration,
+      shadow = a["shadow"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow)) } ?: (on as androidx.compose.ui.text.TextStyle).shadow,
+      drawStyle = a["drawStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle)) } ?: (on as androidx.compose.ui.text.TextStyle).drawStyle,
+      textAlign = a["textAlign"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextAlign) } ?: (on as androidx.compose.ui.text.TextStyle).textAlign,
+      textDirection = a["textDirection"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDirection) } ?: (on as androidx.compose.ui.text.TextStyle).textDirection,
+      lineHeight = a["lineHeight"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.TextStyle).lineHeight,
+      textIndent = a["textIndent"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextIndent)) } ?: (on as androidx.compose.ui.text.TextStyle).textIndent,
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformTextStyle)) } ?: (on as androidx.compose.ui.text.TextStyle).platformStyle,
+      lineHeightStyle = a["lineHeightStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineHeightStyle)) } ?: (on as androidx.compose.ui.text.TextStyle).lineHeightStyle,
+      lineBreak = a["lineBreak"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineBreak) } ?: (on as androidx.compose.ui.text.TextStyle).lineBreak,
+      hyphens = a["hyphens"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.Hyphens) } ?: (on as androidx.compose.ui.text.TextStyle).hyphens,
+      textMotion = a["textMotion"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextMotion)) } ?: (on as androidx.compose.ui.text.TextStyle).textMotion
+    )
+  private fun c249(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).merge(
+      color = a["color"]?.let { decodeColor(it) } ?: (androidx.compose.ui.graphics.Color.Unspecified),
+      fontSize = a["fontSize"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      fontWeight = a["fontWeight"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight)) } ?: (null),
+      fontStyle = a["fontStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle)) } ?: (null),
+      fontSynthesis = a["fontSynthesis"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontSynthesis)) } ?: (null),
+      fontFamily = a["fontFamily"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontFamily)) } ?: (null),
+      fontFeatureSettings = a["fontFeatureSettings"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content) } ?: (null),
+      letterSpacing = a["letterSpacing"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      baselineShift = a["baselineShift"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift)) } ?: (null),
+      textGeometricTransform = a["textGeometricTransform"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform)) } ?: (null),
+      background = a["background"]?.let { decodeColor(it) } ?: (androidx.compose.ui.graphics.Color.Unspecified),
+      textDecoration = a["textDecoration"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration)) } ?: (null),
+      shadow = a["shadow"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.Shadow)) } ?: (null),
+      drawStyle = a["drawStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.graphics.drawscope.DrawStyle)) } ?: (null),
+      textAlign = a["textAlign"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextAlign) } ?: (androidx.compose.ui.text.style.TextAlign.Unspecified),
+      textDirection = a["textDirection"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDirection) } ?: (androidx.compose.ui.text.style.TextDirection.Unspecified),
+      lineHeight = a["lineHeight"]?.let { decodeTextUnit(it) } ?: (androidx.compose.ui.unit.TextUnit.Unspecified),
+      textIndent = a["textIndent"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextIndent)) } ?: (null),
+      lineHeightStyle = a["lineHeightStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineHeightStyle)) } ?: (null),
+      lineBreak = a["lineBreak"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.LineBreak) } ?: (androidx.compose.ui.text.style.LineBreak.Unspecified),
+      hyphens = a["hyphens"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.Hyphens) } ?: (androidx.compose.ui.text.style.Hyphens.Unspecified),
+      platformStyle = a["platformStyle"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformTextStyle)) } ?: (null),
+      textMotion = a["textMotion"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextMotion)) } ?: (null)
+    )
+  private fun c250(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).merge(
+      other = a.getValue("other").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.ParagraphStyle) }
+    )
+  private fun c251(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).merge(
+      other = a.getValue("other").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle) }
+    )
+  private fun c252(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).merge(
+      other = a["other"]?.let { (if (it is kotlinx.serialization.json.JsonNull) null else (GeneratedReplay.replay(it) as androidx.compose.ui.text.TextStyle)) } ?: (null)
+    )
+  private fun c253(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).plus(
+      other = a.getValue("other").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.ParagraphStyle) }
+    )
+  private fun c254(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).plus(
+      other = a.getValue("other").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle) }
+    )
+  private fun c255(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).plus(
+      other = a.getValue("other").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.TextStyle) }
+    )
+  private fun c256(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).toParagraphStyle(
+
+    )
+  private fun c257(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.TextStyle).toSpanStyle(
+
+    )
+  private fun c258(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.TextStyle.Default
+  private fun c259(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.UnresolvedSymbolsRegistry(
+
+    )
+  private fun c260(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.UrlAnnotation(
+      url = a.getValue("url").let { it.jsonPrimitive.content }
+    )
+  private fun c261(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.VerbatimTtsAnnotation(
+      verbatim = a.getValue("verbatim").let { it.jsonPrimitive.content }
+    )
+  private fun c262(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.Font(
+      resId = a.getValue("resId").let { it.jsonPrimitive.int },
+      weight = a["weight"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight) } ?: (androidx.compose.ui.text.font.FontWeight.Normal),
+      style = a["style"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontStyle) } ?: (androidx.compose.ui.text.font.FontStyle.Normal),
+      loadingStrategy = a["loadingStrategy"]?.let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontLoadingStrategy) } ?: (androidx.compose.ui.text.font.FontLoadingStrategy.Blocking)
+    )
+  private fun c263(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontFamily(
+      familyName = a.getValue("familyName").let { it.jsonPrimitive.content }
+    )
+  private fun c264(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontFamily(
+      fonts = *a.getValue("fonts").jsonArray.map { (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.Font) }.toTypedArray()
+    )
+  private fun c265(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontFamily(
+      fonts = a.getValue("fonts").let { it.jsonArray.map { (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.Font) } }
+    )
+  private fun c266(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontFamily.Cursive
+  private fun c267(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontFamily.Default
+  private fun c268(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontFamily.Monospace
+  private fun c269(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontFamily.SansSerif
+  private fun c270(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontFamily.Serif
+  private fun c271(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontLoadingStrategy.Async
+  private fun c272(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontLoadingStrategy.Blocking
+  private fun c273(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontLoadingStrategy.OptionalLocal
+  private fun c274(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontStyle(
+      value = a.getValue("value").let { it.jsonPrimitive.int }
+    )
+  private fun c275(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontStyle.Italic
+  private fun c276(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontStyle.Normal
+  private fun c277(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontSynthesis.All
+  private fun c278(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontSynthesis.None
+  private fun c279(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontSynthesis.Style
+  private fun c280(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontSynthesis.Weight
+  private fun c281(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontSynthesis.valueOf(
+      value = a.getValue("value").let { it.jsonPrimitive.int }
+    )
+  private fun c282(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight(
+      weight = a.getValue("weight").let { it.jsonPrimitive.int }
+    )
+  private fun c283(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.Black
+  private fun c284(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.Bold
+  private fun c285(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.ExtraBold
+  private fun c286(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.ExtraLight
+  private fun c287(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.Light
+  private fun c288(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.Medium
+  private fun c289(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.Normal
+  private fun c290(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.SemiBold
+  private fun c291(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.Thin
+  private fun c292(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.W100
+  private fun c293(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.W200
+  private fun c294(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.W300
+  private fun c295(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.W400
+  private fun c296(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.W500
+  private fun c297(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.W600
+  private fun c298(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.W700
+  private fun c299(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.W800
+  private fun c300(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.FontWeight.W900
+  private fun c301(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.font.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.font.FontWeight) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
+  private fun c302(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.ParagraphStyle) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.ParagraphStyle) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
+  private fun c303(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformParagraphStyle) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformParagraphStyle) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
+  private fun c304(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformSpanStyle) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.PlatformSpanStyle) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
+  private fun c305(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.SpanStyle) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
+  private fun c306(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.TextStyle) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.TextStyle) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
+  private fun c307(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.BaselineShift(
+      multiplier = a.getValue("multiplier").let { it.jsonPrimitive.float }
+    )
+  private fun c308(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.BaselineShift.None
+  private fun c309(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.BaselineShift.Subscript
+  private fun c310(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.BaselineShift.Superscript
+  private fun c311(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.BaselineShift.Unspecified
+  private fun c312(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.Hyphens.Auto
+  private fun c313(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.Hyphens.None
+  private fun c314(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.Hyphens.Unspecified
+  private fun c315(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.Hyphens.valueOf(
+      value = a.getValue("value").let { it.jsonPrimitive.int }
+    )
+  private fun c316(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.LineBreak.Heading
+  private fun c317(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.LineBreak.Paragraph
+  private fun c318(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.LineBreak.Simple
+  private fun c319(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.LineBreak.Unspecified
+  private fun c320(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.style.LineHeightStyle).copy(
+
+    )
+  private fun c321(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.LineHeightStyle.Default
+  private fun c322(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.ResolvedTextDirection.Ltr
+  private fun c323(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.ResolvedTextDirection.Rtl
+  private fun c324(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextAlign.Center
+  private fun c325(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextAlign.End
+  private fun c326(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextAlign.Justify
+  private fun c327(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextAlign.Left
+  private fun c328(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextAlign.Right
+  private fun c329(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextAlign.Start
+  private fun c330(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextAlign.Unspecified
+  private fun c331(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextAlign.valueOf(
+      value = a.getValue("value").let { it.jsonPrimitive.int }
+    )
+  private fun c332(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.style.TextDecoration).plus(
+      decoration = a.getValue("decoration").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration) }
+    )
+  private fun c333(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDecoration.LineThrough
+  private fun c334(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDecoration.None
+  private fun c335(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDecoration.Underline
+  private fun c336(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDecoration.combine(
+      decorations = a.getValue("decorations").let { it.jsonArray.map { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextDecoration) } }
+    )
+  private fun c337(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDecoration.valueOf(
+      mask = a.getValue("mask").let { it.jsonPrimitive.int }
+    )
+  private fun c338(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDirection.Content
+  private fun c339(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDirection.ContentOrLtr
+  private fun c340(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDirection.ContentOrRtl
+  private fun c341(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDirection.Ltr
+  private fun c342(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDirection.Rtl
+  private fun c343(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDirection.Unspecified
+  private fun c344(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextDirection.valueOf(
+      value = a.getValue("value").let { it.jsonPrimitive.int }
+    )
+  private fun c345(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextGeometricTransform(
+      scaleX = a["scaleX"]?.let { it.jsonPrimitive.float } ?: (1.0f),
+      skewX = a["skewX"]?.let { it.jsonPrimitive.float } ?: (0f)
+    )
+  private fun c346(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.style.TextGeometricTransform).copy(
+      scaleX = a["scaleX"]?.let { it.jsonPrimitive.float } ?: (on as androidx.compose.ui.text.style.TextGeometricTransform).scaleX,
+      skewX = a["skewX"]?.let { it.jsonPrimitive.float } ?: (on as androidx.compose.ui.text.style.TextGeometricTransform).skewX
+    )
+  private fun c347(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextIndent(
+      firstLine = a["firstLine"]?.let { decodeTextUnit(it) } ?: (0.sp),
+      restLine = a["restLine"]?.let { decodeTextUnit(it) } ?: (0.sp)
+    )
+  private fun c348(a: JsonObject, on: Any?): Any = (on as androidx.compose.ui.text.style.TextIndent).copy(
+      firstLine = a["firstLine"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.style.TextIndent).firstLine,
+      restLine = a["restLine"]?.let { decodeTextUnit(it) } ?: (on as androidx.compose.ui.text.style.TextIndent).restLine
+    )
+  private fun c349(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextIndent.None
+  private fun c350(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextMotion.Animated
+  private fun c351(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextMotion.Static
+  private fun c352(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextOverflow.Clip
+  private fun c353(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+  private fun c354(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextOverflow.MiddleEllipsis
+  private fun c355(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextOverflow.StartEllipsis
+  private fun c356(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.TextOverflow.Visible
+  private fun c357(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.BaselineShift) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
+  private fun c358(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextGeometricTransform) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
+  private fun c359(a: JsonObject, on: Any?): Any = androidx.compose.ui.text.style.lerp(
+      start = a.getValue("start").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextIndent) },
+      stop = a.getValue("stop").let { (GeneratedReplay.replay(it) as androidx.compose.ui.text.style.TextIndent) },
+      fraction = a.getValue("fraction").let { it.jsonPrimitive.float }
+    )
 }

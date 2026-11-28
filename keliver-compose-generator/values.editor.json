@@ -965,15 +965,5255 @@
         }
       ]
     },
+    "androidx.compose.ui.graphics.BlendMode": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.BlendMode",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 44,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Clear",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 45,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Color",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 46,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#ColorBurn",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 47,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#ColorDodge",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 48,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Darken",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 49,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Difference",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 50,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Dst",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 51,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#DstAtop",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 52,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#DstIn",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 53,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#DstOut",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 54,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#DstOver",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 55,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Exclusion",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 56,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Hardlight",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 57,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Hue",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 58,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Lighten",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 59,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Luminosity",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 60,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Modulate",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 61,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Multiply",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 62,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Overlay",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 63,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Plus",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 64,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Saturation",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 65,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Screen",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 66,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Softlight",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 67,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Src",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 68,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#SrcAtop",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 69,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#SrcIn",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 70,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#SrcOut",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 71,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#SrcOver",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 72,
+          "key": "androidx.compose.ui.graphics.BlendMode.Companion#Xor",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 179,
+          "key": "androidx.compose.ui.graphics.drawscope.DrawScope.Companion#DefaultBlendMode",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.BlendModeColorFilter": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.BlendModeColorFilter",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 73,
+          "key": "androidx.compose.ui.graphics.BlendModeColorFilter#<init>(color:Color,blendMode:BlendMode)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "blendMode",
+              "type": "BlendMode",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.BlurEffect": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.BlurEffect",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 74,
+          "key": "androidx.compose.ui.graphics.BlurEffect#<init>(renderEffect:RenderEffect?,radiusX:Float,radiusY:Float,edgeTreatment:TileMode)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "renderEffect",
+              "type": "RenderEffect?",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "radiusX",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "radiusY",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "edgeTreatment",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 75,
+          "key": "androidx.compose.ui.graphics.BlurEffect(radiusX:Float,radiusY:Float,edgeTreatment:TileMode)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "radiusX",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "radiusY",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "edgeTreatment",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.Brush": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.Brush",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 76,
+          "key": "androidx.compose.ui.graphics.Brush.Companion#composite(dstBrush:Brush,srcBrush:Brush,blendMode:BlendMode)",
+          "call": "static",
+          "params": [
+            {
+              "name": "dstBrush",
+              "type": "Brush",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "srcBrush",
+              "type": "Brush",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "blendMode",
+              "type": "BlendMode",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 77,
+          "key": "androidx.compose.ui.graphics.Brush.Companion#horizontalGradient(colors:List<Color>,startX:Float,endX:Float,tileMode:TileMode)",
+          "call": "static",
+          "params": [
+            {
+              "name": "colors",
+              "type": "List<Color>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "startX",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "endX",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "tileMode",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 78,
+          "key": "androidx.compose.ui.graphics.Brush.Companion#linearGradient(colors:List<Color>,start:Offset,end:Offset,tileMode:TileMode)",
+          "call": "static",
+          "params": [
+            {
+              "name": "colors",
+              "type": "List<Color>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "start",
+              "type": "Offset",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "end",
+              "type": "Offset",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "tileMode",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 79,
+          "key": "androidx.compose.ui.graphics.Brush.Companion#radialGradient(colors:List<Color>,center:Offset,radius:Float,tileMode:TileMode)",
+          "call": "static",
+          "params": [
+            {
+              "name": "colors",
+              "type": "List<Color>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "center",
+              "type": "Offset",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "radius",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "tileMode",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 80,
+          "key": "androidx.compose.ui.graphics.Brush.Companion#sweepGradient(colors:List<Color>,center:Offset)",
+          "call": "static",
+          "params": [
+            {
+              "name": "colors",
+              "type": "List<Color>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "center",
+              "type": "Offset",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 81,
+          "key": "androidx.compose.ui.graphics.Brush.Companion#verticalGradient(colors:List<Color>,startY:Float,endY:Float,tileMode:TileMode)",
+          "call": "static",
+          "params": [
+            {
+              "name": "colors",
+              "type": "List<Color>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "startY",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "endY",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "tileMode",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.Canvas": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.Canvas",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 82,
+          "key": "androidx.compose.ui.graphics.Canvas(image:ImageBitmap)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "image",
+              "type": "ImageBitmap",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.ClipOp": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.ClipOp",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 83,
+          "key": "androidx.compose.ui.graphics.ClipOp.Companion#Difference",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 84,
+          "key": "androidx.compose.ui.graphics.ClipOp.Companion#Intersect",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.ColorFilter": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.ColorFilter",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 86,
+          "key": "androidx.compose.ui.graphics.ColorFilter.Companion#colorMatrix(colorMatrix:ColorMatrix)",
+          "call": "static",
+          "params": [
+            {
+              "name": "colorMatrix",
+              "type": "ColorMatrix",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 87,
+          "key": "androidx.compose.ui.graphics.ColorFilter.Companion#lighting(multiply:Color,add:Color)",
+          "call": "static",
+          "params": [
+            {
+              "name": "multiply",
+              "type": "Color",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "add",
+              "type": "Color",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 88,
+          "key": "androidx.compose.ui.graphics.ColorFilter.Companion#tint(color:Color,blendMode:BlendMode)",
+          "call": "static",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "blendMode",
+              "type": "BlendMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.ColorMatrix": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.ColorMatrix",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 89,
+          "key": "androidx.compose.ui.graphics.ColorMatrix#<init>(values:FloatArray)",
+          "call": "ctor",
+          "params": []
+        },
+        {
+          "tag": 91,
+          "key": "androidx.compose.ui.graphics.ColorMatrixColorFilter#copyColorMatrix(targetColorMatrix:ColorMatrix)",
+          "call": "member",
+          "params": [
+            {
+              "name": "targetColorMatrix",
+              "type": "ColorMatrix",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.ColorMatrixColorFilter": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.ColorMatrixColorFilter",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 90,
+          "key": "androidx.compose.ui.graphics.ColorMatrixColorFilter#<init>(colorMatrix:ColorMatrix)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "colorMatrix",
+              "type": "ColorMatrix",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.CompositingStrategy": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.CompositingStrategy",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 93,
+          "key": "androidx.compose.ui.graphics.CompositingStrategy.Companion#Auto",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 94,
+          "key": "androidx.compose.ui.graphics.CompositingStrategy.Companion#ModulateAlpha",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 95,
+          "key": "androidx.compose.ui.graphics.CompositingStrategy.Companion#Offscreen",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.FilterQuality": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.FilterQuality",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 97,
+          "key": "androidx.compose.ui.graphics.FilterQuality.Companion#High",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 98,
+          "key": "androidx.compose.ui.graphics.FilterQuality.Companion#Low",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 99,
+          "key": "androidx.compose.ui.graphics.FilterQuality.Companion#Medium",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 100,
+          "key": "androidx.compose.ui.graphics.FilterQuality.Companion#None",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 180,
+          "key": "androidx.compose.ui.graphics.drawscope.DrawScope.Companion#DefaultFilterQuality",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.GraphicsContext": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.GraphicsContext",
+      "interface": true,
+      "producers": []
+    },
+    "androidx.compose.ui.graphics.GraphicsLayerScope": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.GraphicsLayerScope",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 101,
+          "key": "androidx.compose.ui.graphics.GraphicsLayerScope()",
+          "call": "package_fn",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.ImageBitmap": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.ImageBitmap",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 102,
+          "key": "androidx.compose.ui.graphics.ImageBitmap(width:Int,height:Int,config:ImageBitmapConfig,hasAlpha:Boolean,colorSpace:ColorSpace)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "width",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "height",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "config",
+              "type": "ImageBitmapConfig",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "hasAlpha",
+              "type": "Boolean",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.ImageBitmapConfig": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 103,
+          "key": "androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Alpha8",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 104,
+          "key": "androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Argb8888",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 105,
+          "key": "androidx.compose.ui.graphics.ImageBitmapConfig.Companion#F16",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 106,
+          "key": "androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Gpu",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 107,
+          "key": "androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Rgb565",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
     "androidx.compose.ui.graphics.Interpolatable": {
       "kind": "call-record",
       "guest": "dev.keliver.calls.compose.ui.graphics.Interpolatable",
       "interface": true,
       "producers": []
     },
+    "androidx.compose.ui.graphics.LayerOutsets": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.LayerOutsets",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 110,
+          "key": "androidx.compose.ui.graphics.LayerOutsets#<init>(left:Dp,top:Dp,right:Dp,bottom:Dp)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "left",
+              "type": "Dp",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "top",
+              "type": "Dp",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "right",
+              "type": "Dp",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "bottom",
+              "type": "Dp",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 111,
+          "key": "androidx.compose.ui.graphics.LayerOutsets(all:Dp)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "all",
+              "type": "Dp",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 112,
+          "key": "androidx.compose.ui.graphics.LayerOutsets(vertical:Dp,horizontal:Dp)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "vertical",
+              "type": "Dp",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "horizontal",
+              "type": "Dp",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 113,
+          "key": "androidx.compose.ui.graphics.LayerOutsets.Companion#Zero",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.LightingColorFilter": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.LightingColorFilter",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 114,
+          "key": "androidx.compose.ui.graphics.LightingColorFilter#<init>(multiply:Color,add:Color)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "multiply",
+              "type": "Color",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "add",
+              "type": "Color",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.Matrix": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.Matrix",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 116,
+          "key": "androidx.compose.ui.graphics.Matrix#<init>(values:FloatArray)",
+          "call": "ctor",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.OffsetEffect": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.OffsetEffect",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 117,
+          "key": "androidx.compose.ui.graphics.OffsetEffect#<init>(renderEffect:RenderEffect?,offset:Offset)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "renderEffect",
+              "type": "RenderEffect?",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "offset",
+              "type": "Offset",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 118,
+          "key": "androidx.compose.ui.graphics.OffsetEffect(offsetX:Float,offsetY:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "offsetX",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "offsetY",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.Paint": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.Paint",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 119,
+          "key": "androidx.compose.ui.graphics.Paint()",
+          "call": "package_fn",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.PaintingStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.PaintingStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 120,
+          "key": "androidx.compose.ui.graphics.PaintingStyle.Companion#Fill",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 121,
+          "key": "androidx.compose.ui.graphics.PaintingStyle.Companion#Stroke",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.Path": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.Path",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 122,
+          "key": "androidx.compose.ui.graphics.Path#and(path:Path)",
+          "call": "member",
+          "params": [
+            {
+              "name": "path",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 124,
+          "key": "androidx.compose.ui.graphics.Path#minus(path:Path)",
+          "call": "member",
+          "params": [
+            {
+              "name": "path",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 125,
+          "key": "androidx.compose.ui.graphics.Path#or(path:Path)",
+          "call": "member",
+          "params": [
+            {
+              "name": "path",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 126,
+          "key": "androidx.compose.ui.graphics.Path#plus(path:Path)",
+          "call": "member",
+          "params": [
+            {
+              "name": "path",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 127,
+          "key": "androidx.compose.ui.graphics.Path#xor(path:Path)",
+          "call": "member",
+          "params": [
+            {
+              "name": "path",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 128,
+          "key": "androidx.compose.ui.graphics.Path()",
+          "call": "package_fn",
+          "params": []
+        },
+        {
+          "tag": 129,
+          "key": "androidx.compose.ui.graphics.Path.Companion#combine(operation:PathOperation,path1:Path,path2:Path)",
+          "call": "static",
+          "params": [
+            {
+              "name": "operation",
+              "type": "PathOperation",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "path1",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "path2",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.PathEffect": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.PathEffect",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 130,
+          "key": "androidx.compose.ui.graphics.PathEffect.Companion#chainPathEffect(outer:PathEffect,inner:PathEffect)",
+          "call": "static",
+          "params": [
+            {
+              "name": "outer",
+              "type": "PathEffect",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "inner",
+              "type": "PathEffect",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 131,
+          "key": "androidx.compose.ui.graphics.PathEffect.Companion#cornerPathEffect(radius:Float)",
+          "call": "static",
+          "params": [
+            {
+              "name": "radius",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 132,
+          "key": "androidx.compose.ui.graphics.PathEffect.Companion#stampedPathEffect(shape:Path,advance:Float,phase:Float,style:StampedPathEffectStyle)",
+          "call": "static",
+          "params": [
+            {
+              "name": "shape",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "advance",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "phase",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "style",
+              "type": "StampedPathEffectStyle",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.PathFillType": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.PathFillType",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 133,
+          "key": "androidx.compose.ui.graphics.PathFillType.Companion#EvenOdd",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 134,
+          "key": "androidx.compose.ui.graphics.PathFillType.Companion#NonZero",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.PathHitTester": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.PathHitTester",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 135,
+          "key": "androidx.compose.ui.graphics.PathHitTester#<init>()",
+          "call": "ctor",
+          "params": []
+        },
+        {
+          "tag": 136,
+          "key": "androidx.compose.ui.graphics.PathHitTester(path:Path,tolerance:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "path",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "tolerance",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.PathIterator": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.PathIterator",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 123,
+          "key": "androidx.compose.ui.graphics.Path#iterator()",
+          "call": "member",
+          "params": []
+        },
+        {
+          "tag": 138,
+          "key": "androidx.compose.ui.graphics.PathIterator(path:Path,conicEvaluation:PathIterator.ConicEvaluation,tolerance:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "path",
+              "type": "Path",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "tolerance",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.PathMeasure": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.PathMeasure",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 139,
+          "key": "androidx.compose.ui.graphics.PathMeasure()",
+          "call": "package_fn",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.PathOperation": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.PathOperation",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 140,
+          "key": "androidx.compose.ui.graphics.PathOperation.Companion#Difference",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 141,
+          "key": "androidx.compose.ui.graphics.PathOperation.Companion#Intersect",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 142,
+          "key": "androidx.compose.ui.graphics.PathOperation.Companion#ReverseDifference",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 143,
+          "key": "androidx.compose.ui.graphics.PathOperation.Companion#Union",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 144,
+          "key": "androidx.compose.ui.graphics.PathOperation.Companion#Xor",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.PathSegment": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.PathSegment",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 85,
+          "key": "androidx.compose.ui.graphics.CloseSegment",
+          "call": "package_prop",
+          "params": []
+        },
+        {
+          "tag": 96,
+          "key": "androidx.compose.ui.graphics.DoneSegment",
+          "call": "package_prop",
+          "params": []
+        },
+        {
+          "tag": 137,
+          "key": "androidx.compose.ui.graphics.PathIterator#next()",
+          "call": "member",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.PointMode": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.PointMode",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 145,
+          "key": "androidx.compose.ui.graphics.PointMode.Companion#Lines",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 146,
+          "key": "androidx.compose.ui.graphics.PointMode.Companion#Points",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 147,
+          "key": "androidx.compose.ui.graphics.PointMode.Companion#Polygon",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.RenderEffect": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.RenderEffect",
+      "interface": true,
+      "producers": []
+    },
+    "androidx.compose.ui.graphics.Shader": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.Shader",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 92,
+          "key": "androidx.compose.ui.graphics.CompositeShader(dst:Shader,src:Shader,blendMode:BlendMode)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "dst",
+              "type": "Shader",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "src",
+              "type": "Shader",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "blendMode",
+              "type": "BlendMode",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 108,
+          "key": "androidx.compose.ui.graphics.ImageShader(image:ImageBitmap,tileModeX:TileMode,tileModeY:TileMode)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "image",
+              "type": "ImageBitmap",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "tileModeX",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "tileModeY",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 115,
+          "key": "androidx.compose.ui.graphics.LinearGradientShader(from:Offset,to:Offset,colors:List<Color>,colorStops:List<Float>?,tileMode:TileMode)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "from",
+              "type": "Offset",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "to",
+              "type": "Offset",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "colors",
+              "type": "List<Color>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "colorStops",
+              "type": "List<Float>?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "tileMode",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 148,
+          "key": "androidx.compose.ui.graphics.RadialGradientShader(center:Offset,radius:Float,colors:List<Color>,colorStops:List<Float>?,tileMode:TileMode)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "center",
+              "type": "Offset",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "radius",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "colors",
+              "type": "List<Color>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "colorStops",
+              "type": "List<Float>?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "tileMode",
+              "type": "TileMode",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 150,
+          "key": "androidx.compose.ui.graphics.ShaderBrush#createShader(size:Size)",
+          "call": "member",
+          "params": [
+            {
+              "name": "size",
+              "type": "Size",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 166,
+          "key": "androidx.compose.ui.graphics.SweepGradientShader(center:Offset,colors:List<Color>,colorStops:List<Float>?)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "center",
+              "type": "Offset",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "colors",
+              "type": "List<Color>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "colorStops",
+              "type": "List<Float>?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.ShaderBrush": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.ShaderBrush",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 151,
+          "key": "androidx.compose.ui.graphics.ShaderBrush(shader:Shader)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "shader",
+              "type": "Shader",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.Shadow": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.Shadow",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 152,
+          "key": "androidx.compose.ui.graphics.Shadow#<init>(color:Color,offset:Offset,blurRadius:Float)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "offset",
+              "type": "Offset",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "blurRadius",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 153,
+          "key": "androidx.compose.ui.graphics.Shadow#copy(color:Color,offset:Offset,blurRadius:Float)",
+          "call": "member",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "offset",
+              "type": "Offset",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "blurRadius",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 154,
+          "key": "androidx.compose.ui.graphics.Shadow.Companion#None",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 184,
+          "key": "androidx.compose.ui.graphics.lerp(start:Shadow,stop:Shadow,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "Shadow",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "Shadow",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
     "androidx.compose.ui.graphics.Shape": {
       "kind": "call-record",
       "guest": "dev.keliver.calls.compose.ui.graphics.Shape",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 149,
+          "key": "androidx.compose.ui.graphics.RectangleShape",
+          "call": "package_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.SkiaGraphicsContext": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.SkiaGraphicsContext",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 155,
+          "key": "androidx.compose.ui.graphics.SkiaGraphicsContext#<init>(measureDrawBounds:Boolean)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "measureDrawBounds",
+              "type": "Boolean",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.SolidColor": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.SolidColor",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 156,
+          "key": "androidx.compose.ui.graphics.SolidColor#<init>(value:Color)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "value",
+              "type": "Color",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.StampedPathEffectStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.StampedPathEffectStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 157,
+          "key": "androidx.compose.ui.graphics.StampedPathEffectStyle.Companion#Morph",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 158,
+          "key": "androidx.compose.ui.graphics.StampedPathEffectStyle.Companion#Rotate",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 159,
+          "key": "androidx.compose.ui.graphics.StampedPathEffectStyle.Companion#Translate",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.StrokeCap": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.StrokeCap",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 160,
+          "key": "androidx.compose.ui.graphics.StrokeCap.Companion#Butt",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 161,
+          "key": "androidx.compose.ui.graphics.StrokeCap.Companion#Round",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 162,
+          "key": "androidx.compose.ui.graphics.StrokeCap.Companion#Square",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 182,
+          "key": "androidx.compose.ui.graphics.drawscope.Stroke.Companion#DefaultCap",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.StrokeJoin": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.StrokeJoin",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 163,
+          "key": "androidx.compose.ui.graphics.StrokeJoin.Companion#Bevel",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 164,
+          "key": "androidx.compose.ui.graphics.StrokeJoin.Companion#Miter",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 165,
+          "key": "androidx.compose.ui.graphics.StrokeJoin.Companion#Round",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 183,
+          "key": "androidx.compose.ui.graphics.drawscope.Stroke.Companion#DefaultJoin",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.TileMode": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.TileMode",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 167,
+          "key": "androidx.compose.ui.graphics.TileMode.Companion#Clamp",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 168,
+          "key": "androidx.compose.ui.graphics.TileMode.Companion#Decal",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 169,
+          "key": "androidx.compose.ui.graphics.TileMode.Companion#Mirror",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 170,
+          "key": "androidx.compose.ui.graphics.TileMode.Companion#Repeated",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.TransformOrigin": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.TransformOrigin",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 171,
+          "key": "androidx.compose.ui.graphics.TransformOrigin#copy(pivotFractionX:Float,pivotFractionY:Float)",
+          "call": "member",
+          "params": [
+            {
+              "name": "pivotFractionX",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "pivotFractionY",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 172,
+          "key": "androidx.compose.ui.graphics.TransformOrigin(pivotFractionX:Float,pivotFractionY:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "pivotFractionX",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "pivotFractionY",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 173,
+          "key": "androidx.compose.ui.graphics.TransformOrigin.Companion#Center",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.VertexMode": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.VertexMode",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 174,
+          "key": "androidx.compose.ui.graphics.VertexMode.Companion#TriangleFan",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 175,
+          "key": "androidx.compose.ui.graphics.VertexMode.Companion#TriangleStrip",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 176,
+          "key": "androidx.compose.ui.graphics.VertexMode.Companion#Triangles",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.Vertices": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.Vertices",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 177,
+          "key": "androidx.compose.ui.graphics.Vertices#<init>(vertexMode:VertexMode,positions:List<Offset>,textureCoordinates:List<Offset>,colors:List<Color>,indices:List<Int>)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "vertexMode",
+              "type": "VertexMode",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "positions",
+              "type": "List<Offset>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "textureCoordinates",
+              "type": "List<Offset>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "colors",
+              "type": "List<Color>",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "indices",
+              "type": "List<Int>",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.drawscope.CanvasDrawScope": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.drawscope.CanvasDrawScope",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 178,
+          "key": "androidx.compose.ui.graphics.drawscope.CanvasDrawScope#<init>()",
+          "call": "ctor",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.graphics.drawscope.DrawScope": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.drawscope.DrawScope",
+      "interface": true,
+      "producers": []
+    },
+    "androidx.compose.ui.graphics.drawscope.DrawStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.drawscope.DrawStyle",
+      "interface": true,
+      "producers": []
+    },
+    "androidx.compose.ui.graphics.drawscope.Stroke": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.graphics.drawscope.Stroke",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 181,
+          "key": "androidx.compose.ui.graphics.drawscope.Stroke#<init>(width:Float,miter:Float,cap:StrokeCap,join:StrokeJoin,pathEffect:PathEffect?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "width",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "miter",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "cap",
+              "type": "StrokeCap",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "join",
+              "type": "StrokeJoin",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "pathEffect",
+              "type": "PathEffect?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.AnnotatedString": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.AnnotatedString",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 185,
+          "key": "androidx.compose.ui.text.AnnotatedString#<init>(text:String,annotations:List<AnnotatedString.Range<AnnotatedString.Annotation>>)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "text",
+              "type": "String",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 186,
+          "key": "androidx.compose.ui.text.AnnotatedString#plus(other:AnnotatedString)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "AnnotatedString",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 187,
+          "key": "androidx.compose.ui.text.AnnotatedString#subSequence(range:TextRange)",
+          "call": "member",
+          "params": [
+            {
+              "name": "range",
+              "type": "TextRange",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 188,
+          "key": "androidx.compose.ui.text.AnnotatedString#subSequence(startIndex:Int,endIndex:Int)",
+          "call": "member",
+          "params": [
+            {
+              "name": "startIndex",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "endIndex",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 189,
+          "key": "androidx.compose.ui.text.AnnotatedString(text:String,paragraphStyle:ParagraphStyle)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "text",
+              "type": "String",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "paragraphStyle",
+              "type": "ParagraphStyle",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 190,
+          "key": "androidx.compose.ui.text.AnnotatedString(text:String,spanStyle:SpanStyle,paragraphStyle:ParagraphStyle?)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "text",
+              "type": "String",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "spanStyle",
+              "type": "SpanStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "paragraphStyle",
+              "type": "ParagraphStyle?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.Bullet": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.Bullet",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 191,
+          "key": "androidx.compose.ui.text.Bullet#<init>(shape:Shape,width:TextUnit,height:TextUnit,padding:TextUnit,brush:Brush?,alpha:Float,drawStyle:DrawStyle)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "shape",
+              "type": "Shape",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "width",
+              "type": "TextUnit",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "height",
+              "type": "TextUnit",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "padding",
+              "type": "TextUnit",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "brush",
+              "type": "Brush?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "alpha",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 192,
+          "key": "androidx.compose.ui.text.Bullet#copy(shape:Shape,width:TextUnit,height:TextUnit,padding:TextUnit,brush:Brush?,alpha:Float,drawStyle:DrawStyle)",
+          "call": "member",
+          "params": [
+            {
+              "name": "shape",
+              "type": "Shape",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "width",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "height",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "padding",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "brush",
+              "type": "Brush?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "alpha",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 193,
+          "key": "androidx.compose.ui.text.Bullet.Companion#Default",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.FontHinting": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.FontHinting",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 194,
+          "key": "androidx.compose.ui.text.FontHinting#Full",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 195,
+          "key": "androidx.compose.ui.text.FontHinting#None",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 196,
+          "key": "androidx.compose.ui.text.FontHinting#Normal",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 197,
+          "key": "androidx.compose.ui.text.FontHinting#Slight",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.FontRasterizationSettings": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.FontRasterizationSettings",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 198,
+          "key": "androidx.compose.ui.text.FontRasterizationSettings#<init>(smoothing:FontSmoothing,hinting:FontHinting,subpixelPositioning:Boolean,autoHintingForced:Boolean)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "smoothing",
+              "type": "FontSmoothing",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "hinting",
+              "type": "FontHinting",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "subpixelPositioning",
+              "type": "Boolean",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "autoHintingForced",
+              "type": "Boolean",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 199,
+          "key": "androidx.compose.ui.text.FontRasterizationSettings.Companion#PlatformDefault",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.FontSmoothing": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.FontSmoothing",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 200,
+          "key": "androidx.compose.ui.text.FontSmoothing#AntiAlias",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 201,
+          "key": "androidx.compose.ui.text.FontSmoothing#None",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 202,
+          "key": "androidx.compose.ui.text.FontSmoothing#SubpixelAntiAlias",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.ParagraphStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.ParagraphStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 203,
+          "key": "androidx.compose.ui.text.ParagraphStyle#<init>(textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformParagraphStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "textAlign",
+              "type": "TextAlign",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDirection",
+              "type": "TextDirection",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeight",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textIndent",
+              "type": "TextIndent?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformParagraphStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeightStyle",
+              "type": "LineHeightStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineBreak",
+              "type": "LineBreak",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "hyphens",
+              "type": "Hyphens",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textMotion",
+              "type": "TextMotion?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 204,
+          "key": "androidx.compose.ui.text.ParagraphStyle#copy(textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformParagraphStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "textAlign",
+              "type": "TextAlign",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDirection",
+              "type": "TextDirection",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeight",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textIndent",
+              "type": "TextIndent?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformParagraphStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeightStyle",
+              "type": "LineHeightStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineBreak",
+              "type": "LineBreak",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "hyphens",
+              "type": "Hyphens",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textMotion",
+              "type": "TextMotion?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 205,
+          "key": "androidx.compose.ui.text.ParagraphStyle#merge(other:ParagraphStyle?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "ParagraphStyle?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 206,
+          "key": "androidx.compose.ui.text.ParagraphStyle#plus(other:ParagraphStyle)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "ParagraphStyle",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 256,
+          "key": "androidx.compose.ui.text.TextStyle#toParagraphStyle()",
+          "call": "member",
+          "params": []
+        },
+        {
+          "tag": 302,
+          "key": "androidx.compose.ui.text.lerp(start:ParagraphStyle,stop:ParagraphStyle,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "ParagraphStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "ParagraphStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.Placeholder": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.Placeholder",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 207,
+          "key": "androidx.compose.ui.text.Placeholder#<init>(width:TextUnit,height:TextUnit,placeholderVerticalAlign:PlaceholderVerticalAlign)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "width",
+              "type": "TextUnit",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "height",
+              "type": "TextUnit",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "placeholderVerticalAlign",
+              "type": "PlaceholderVerticalAlign",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 208,
+          "key": "androidx.compose.ui.text.Placeholder#copy(width:TextUnit,height:TextUnit,placeholderVerticalAlign:PlaceholderVerticalAlign)",
+          "call": "member",
+          "params": [
+            {
+              "name": "width",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "height",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "placeholderVerticalAlign",
+              "type": "PlaceholderVerticalAlign",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.PlaceholderVerticalAlign": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.PlaceholderVerticalAlign",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 209,
+          "key": "androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#AboveBaseline",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 210,
+          "key": "androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Bottom",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 211,
+          "key": "androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Center",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 212,
+          "key": "androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextBottom",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 213,
+          "key": "androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextCenter",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 214,
+          "key": "androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#TextTop",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 215,
+          "key": "androidx.compose.ui.text.PlaceholderVerticalAlign.Companion#Top",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.PlatformParagraphStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.PlatformParagraphStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 216,
+          "key": "androidx.compose.ui.text.PlatformParagraphStyle#<init>()",
+          "call": "ctor",
+          "params": []
+        },
+        {
+          "tag": 217,
+          "key": "androidx.compose.ui.text.PlatformParagraphStyle#<init>(fontRasterizationSettings:FontRasterizationSettings)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "fontRasterizationSettings",
+              "type": "FontRasterizationSettings",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 218,
+          "key": "androidx.compose.ui.text.PlatformParagraphStyle#merge(other:PlatformParagraphStyle?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "PlatformParagraphStyle?",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 219,
+          "key": "androidx.compose.ui.text.PlatformParagraphStyle.Companion#Default",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 303,
+          "key": "androidx.compose.ui.text.lerp(start:PlatformParagraphStyle,stop:PlatformParagraphStyle,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "PlatformParagraphStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "PlatformParagraphStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.PlatformSpanStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.PlatformSpanStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 220,
+          "key": "androidx.compose.ui.text.PlatformSpanStyle#<init>()",
+          "call": "ctor",
+          "params": []
+        },
+        {
+          "tag": 221,
+          "key": "androidx.compose.ui.text.PlatformSpanStyle#<init>(textDecorationLineStyle:TextDecorationLineStyle?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "textDecorationLineStyle",
+              "type": "TextDecorationLineStyle?",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 222,
+          "key": "androidx.compose.ui.text.PlatformSpanStyle#merge(other:PlatformSpanStyle?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "PlatformSpanStyle?",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 223,
+          "key": "androidx.compose.ui.text.PlatformSpanStyle.Companion#Default",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 304,
+          "key": "androidx.compose.ui.text.lerp(start:PlatformSpanStyle,stop:PlatformSpanStyle,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "PlatformSpanStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "PlatformSpanStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.PlatformTextStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.PlatformTextStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 224,
+          "key": "androidx.compose.ui.text.PlatformTextStyle#<init>(spanStyle:PlatformSpanStyle?,paragraphStyle:PlatformParagraphStyle?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "spanStyle",
+              "type": "PlatformSpanStyle?",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "paragraphStyle",
+              "type": "PlatformParagraphStyle?",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 225,
+          "key": "androidx.compose.ui.text.PlatformTextStyle#<init>(textDecorationLineStyle:TextDecorationLineStyle?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "textDecorationLineStyle",
+              "type": "TextDecorationLineStyle?",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.SpanStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.SpanStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 226,
+          "key": "androidx.compose.ui.text.SpanStyle#<init>(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "brush",
+              "type": "Brush?",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "alpha",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSize",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "FontWeight?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "FontStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSynthesis",
+              "type": "FontSynthesis?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFamily",
+              "type": "FontFamily?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFeatureSettings",
+              "type": "String?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "letterSpacing",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "baselineShift",
+              "type": "BaselineShift?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textGeometricTransform",
+              "type": "TextGeometricTransform?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "background",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDecoration",
+              "type": "TextDecoration?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "shadow",
+              "type": "Shadow?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformSpanStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 227,
+          "key": "androidx.compose.ui.text.SpanStyle#<init>(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSize",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "FontWeight?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "FontStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSynthesis",
+              "type": "FontSynthesis?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFamily",
+              "type": "FontFamily?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFeatureSettings",
+              "type": "String?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "letterSpacing",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "baselineShift",
+              "type": "BaselineShift?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textGeometricTransform",
+              "type": "TextGeometricTransform?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "background",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDecoration",
+              "type": "TextDecoration?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "shadow",
+              "type": "Shadow?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformSpanStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 228,
+          "key": "androidx.compose.ui.text.SpanStyle#copy(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "brush",
+              "type": "Brush?",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "alpha",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSize",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "FontWeight?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "FontStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSynthesis",
+              "type": "FontSynthesis?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFamily",
+              "type": "FontFamily?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFeatureSettings",
+              "type": "String?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "letterSpacing",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "baselineShift",
+              "type": "BaselineShift?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textGeometricTransform",
+              "type": "TextGeometricTransform?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "background",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDecoration",
+              "type": "TextDecoration?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "shadow",
+              "type": "Shadow?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformSpanStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 229,
+          "key": "androidx.compose.ui.text.SpanStyle#copy(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,platformStyle:PlatformSpanStyle?,drawStyle:DrawStyle?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSize",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "FontWeight?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "FontStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSynthesis",
+              "type": "FontSynthesis?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFamily",
+              "type": "FontFamily?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFeatureSettings",
+              "type": "String?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "letterSpacing",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "baselineShift",
+              "type": "BaselineShift?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textGeometricTransform",
+              "type": "TextGeometricTransform?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "background",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDecoration",
+              "type": "TextDecoration?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "shadow",
+              "type": "Shadow?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformSpanStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 230,
+          "key": "androidx.compose.ui.text.SpanStyle#merge(other:SpanStyle?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "SpanStyle?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 231,
+          "key": "androidx.compose.ui.text.SpanStyle#plus(other:SpanStyle)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "SpanStyle",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 257,
+          "key": "androidx.compose.ui.text.TextStyle#toSpanStyle()",
+          "call": "member",
+          "params": []
+        },
+        {
+          "tag": 305,
+          "key": "androidx.compose.ui.text.lerp(start:SpanStyle,stop:SpanStyle,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "SpanStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "SpanStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.StringAnnotation": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.StringAnnotation",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 232,
+          "key": "androidx.compose.ui.text.StringAnnotation#<init>(value:String)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "value",
+              "type": "String",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.TextDecorationLineStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.TextDecorationLineStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 233,
+          "key": "androidx.compose.ui.text.TextDecorationLineStyle.Companion#Dashed",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 234,
+          "key": "androidx.compose.ui.text.TextDecorationLineStyle.Companion#Dotted",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 235,
+          "key": "androidx.compose.ui.text.TextDecorationLineStyle.Companion#Double",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 236,
+          "key": "androidx.compose.ui.text.TextDecorationLineStyle.Companion#Solid",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 237,
+          "key": "androidx.compose.ui.text.TextDecorationLineStyle.Companion#Wavy",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.TextGranularity": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.TextGranularity",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 238,
+          "key": "androidx.compose.ui.text.TextGranularity.Companion#Character",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 239,
+          "key": "androidx.compose.ui.text.TextGranularity.Companion#Word",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.TextInclusionStrategy": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.TextInclusionStrategy",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 240,
+          "key": "androidx.compose.ui.text.TextInclusionStrategy.Companion#AnyOverlap",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 241,
+          "key": "androidx.compose.ui.text.TextInclusionStrategy.Companion#ContainsAll",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 242,
+          "key": "androidx.compose.ui.text.TextInclusionStrategy.Companion#ContainsCenter",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.TextLinkStyles": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.TextLinkStyles",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 243,
+          "key": "androidx.compose.ui.text.TextLinkStyles#<init>(style:SpanStyle?,focusedStyle:SpanStyle?,hoveredStyle:SpanStyle?,pressedStyle:SpanStyle?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "style",
+              "type": "SpanStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "focusedStyle",
+              "type": "SpanStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "hoveredStyle",
+              "type": "SpanStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "pressedStyle",
+              "type": "SpanStyle?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.TextRange": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.TextRange",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 244,
+          "key": "androidx.compose.ui.text.TextRange(index:Int)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "index",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 245,
+          "key": "androidx.compose.ui.text.TextRange(start:Int,end:Int)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "end",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 246,
+          "key": "androidx.compose.ui.text.TextRange.Companion#Zero",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.TextStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.TextStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 247,
+          "key": "androidx.compose.ui.text.TextStyle#<init>(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "brush",
+              "type": "Brush?",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "alpha",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSize",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "FontWeight?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "FontStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSynthesis",
+              "type": "FontSynthesis?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFamily",
+              "type": "FontFamily?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFeatureSettings",
+              "type": "String?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "letterSpacing",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "baselineShift",
+              "type": "BaselineShift?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textGeometricTransform",
+              "type": "TextGeometricTransform?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "background",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDecoration",
+              "type": "TextDecoration?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "shadow",
+              "type": "Shadow?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textAlign",
+              "type": "TextAlign",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDirection",
+              "type": "TextDirection",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeight",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textIndent",
+              "type": "TextIndent?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformTextStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeightStyle",
+              "type": "LineHeightStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineBreak",
+              "type": "LineBreak",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "hyphens",
+              "type": "Hyphens",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textMotion",
+              "type": "TextMotion?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 248,
+          "key": "androidx.compose.ui.text.TextStyle#<init>(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSize",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "FontWeight?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "FontStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSynthesis",
+              "type": "FontSynthesis?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFamily",
+              "type": "FontFamily?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFeatureSettings",
+              "type": "String?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "letterSpacing",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "baselineShift",
+              "type": "BaselineShift?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textGeometricTransform",
+              "type": "TextGeometricTransform?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "background",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDecoration",
+              "type": "TextDecoration?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "shadow",
+              "type": "Shadow?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textAlign",
+              "type": "TextAlign",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDirection",
+              "type": "TextDirection",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeight",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textIndent",
+              "type": "TextIndent?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformTextStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeightStyle",
+              "type": "LineHeightStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineBreak",
+              "type": "LineBreak",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "hyphens",
+              "type": "Hyphens",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textMotion",
+              "type": "TextMotion?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 360,
+          "key": "androidx.compose.ui.text.TextStyle#copy(brush:Brush?,alpha:Float,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "brush",
+              "type": "Brush?",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "alpha",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSize",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "FontWeight?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "FontStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSynthesis",
+              "type": "FontSynthesis?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFamily",
+              "type": "FontFamily?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFeatureSettings",
+              "type": "String?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "letterSpacing",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "baselineShift",
+              "type": "BaselineShift?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textGeometricTransform",
+              "type": "TextGeometricTransform?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "background",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDecoration",
+              "type": "TextDecoration?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "shadow",
+              "type": "Shadow?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textAlign",
+              "type": "TextAlign",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDirection",
+              "type": "TextDirection",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeight",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textIndent",
+              "type": "TextIndent?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformTextStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeightStyle",
+              "type": "LineHeightStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineBreak",
+              "type": "LineBreak",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "hyphens",
+              "type": "Hyphens",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textMotion",
+              "type": "TextMotion?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 361,
+          "key": "androidx.compose.ui.text.TextStyle#copy(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,platformStyle:PlatformTextStyle?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,textMotion:TextMotion?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSize",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "FontWeight?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "FontStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSynthesis",
+              "type": "FontSynthesis?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFamily",
+              "type": "FontFamily?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFeatureSettings",
+              "type": "String?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "letterSpacing",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "baselineShift",
+              "type": "BaselineShift?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textGeometricTransform",
+              "type": "TextGeometricTransform?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "background",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDecoration",
+              "type": "TextDecoration?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "shadow",
+              "type": "Shadow?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textAlign",
+              "type": "TextAlign",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDirection",
+              "type": "TextDirection",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeight",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textIndent",
+              "type": "TextIndent?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformTextStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeightStyle",
+              "type": "LineHeightStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineBreak",
+              "type": "LineBreak",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "hyphens",
+              "type": "Hyphens",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textMotion",
+              "type": "TextMotion?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 249,
+          "key": "androidx.compose.ui.text.TextStyle#merge(color:Color,fontSize:TextUnit,fontWeight:FontWeight?,fontStyle:FontStyle?,fontSynthesis:FontSynthesis?,fontFamily:FontFamily?,fontFeatureSettings:String?,letterSpacing:TextUnit,baselineShift:BaselineShift?,textGeometricTransform:TextGeometricTransform?,localeList:LocaleList?,background:Color,textDecoration:TextDecoration?,shadow:Shadow?,drawStyle:DrawStyle?,textAlign:TextAlign,textDirection:TextDirection,lineHeight:TextUnit,textIndent:TextIndent?,lineHeightStyle:LineHeightStyle?,lineBreak:LineBreak,hyphens:Hyphens,platformStyle:PlatformTextStyle?,textMotion:TextMotion?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSize",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "FontWeight?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "FontStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontSynthesis",
+              "type": "FontSynthesis?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFamily",
+              "type": "FontFamily?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "fontFeatureSettings",
+              "type": "String?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "letterSpacing",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "baselineShift",
+              "type": "BaselineShift?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textGeometricTransform",
+              "type": "TextGeometricTransform?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "background",
+              "type": "Color",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDecoration",
+              "type": "TextDecoration?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "shadow",
+              "type": "Shadow?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "drawStyle",
+              "type": "DrawStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textAlign",
+              "type": "TextAlign",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textDirection",
+              "type": "TextDirection",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeight",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textIndent",
+              "type": "TextIndent?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineHeightStyle",
+              "type": "LineHeightStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "lineBreak",
+              "type": "LineBreak",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "hyphens",
+              "type": "Hyphens",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "platformStyle",
+              "type": "PlatformTextStyle?",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "textMotion",
+              "type": "TextMotion?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 250,
+          "key": "androidx.compose.ui.text.TextStyle#merge(other:ParagraphStyle)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "ParagraphStyle",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 251,
+          "key": "androidx.compose.ui.text.TextStyle#merge(other:SpanStyle)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "SpanStyle",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 252,
+          "key": "androidx.compose.ui.text.TextStyle#merge(other:TextStyle?)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "TextStyle?",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 253,
+          "key": "androidx.compose.ui.text.TextStyle#plus(other:ParagraphStyle)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "ParagraphStyle",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 254,
+          "key": "androidx.compose.ui.text.TextStyle#plus(other:SpanStyle)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "SpanStyle",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 255,
+          "key": "androidx.compose.ui.text.TextStyle#plus(other:TextStyle)",
+          "call": "member",
+          "params": [
+            {
+              "name": "other",
+              "type": "TextStyle",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 258,
+          "key": "androidx.compose.ui.text.TextStyle.Companion#Default",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 306,
+          "key": "androidx.compose.ui.text.lerp(start:TextStyle,stop:TextStyle,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "TextStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "TextStyle",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.TtsAnnotation": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.TtsAnnotation",
+      "interface": true,
+      "producers": []
+    },
+    "androidx.compose.ui.text.UnresolvedSymbolsRegistry": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.UnresolvedSymbolsRegistry",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 259,
+          "key": "androidx.compose.ui.text.UnresolvedSymbolsRegistry#<init>()",
+          "call": "ctor",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.UrlAnnotation": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.UrlAnnotation",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 260,
+          "key": "androidx.compose.ui.text.UrlAnnotation#<init>(url:String)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "url",
+              "type": "String",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.VerbatimTtsAnnotation": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.VerbatimTtsAnnotation",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 261,
+          "key": "androidx.compose.ui.text.VerbatimTtsAnnotation#<init>(verbatim:String)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "verbatim",
+              "type": "String",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.font.Font": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.font.Font",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 262,
+          "key": "androidx.compose.ui.text.font.Font(resId:Int,weight:FontWeight,style:FontStyle,loadingStrategy:FontLoadingStrategy)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "resId",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "weight",
+              "type": "FontWeight",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "style",
+              "type": "FontStyle",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "loadingStrategy",
+              "type": "FontLoadingStrategy",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.font.FontFamily": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.font.FontFamily",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 263,
+          "key": "androidx.compose.ui.text.font.FontFamily(familyName:String)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "familyName",
+              "type": "String",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 264,
+          "key": "androidx.compose.ui.text.font.FontFamily(fonts:Font...)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "fonts",
+              "type": "Font",
+              "optional": false,
+              "vararg": true
+            }
+          ]
+        },
+        {
+          "tag": 265,
+          "key": "androidx.compose.ui.text.font.FontFamily(fonts:List<Font>)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "fonts",
+              "type": "List<Font>",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.font.FontLoadingStrategy": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.font.FontLoadingStrategy",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 271,
+          "key": "androidx.compose.ui.text.font.FontLoadingStrategy.Companion#Async",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 272,
+          "key": "androidx.compose.ui.text.font.FontLoadingStrategy.Companion#Blocking",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 273,
+          "key": "androidx.compose.ui.text.font.FontLoadingStrategy.Companion#OptionalLocal",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.font.FontStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.font.FontStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 274,
+          "key": "androidx.compose.ui.text.font.FontStyle#<init>(value:Int)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "value",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 275,
+          "key": "androidx.compose.ui.text.font.FontStyle.Companion#Italic",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 276,
+          "key": "androidx.compose.ui.text.font.FontStyle.Companion#Normal",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.font.FontSynthesis": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.font.FontSynthesis",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 277,
+          "key": "androidx.compose.ui.text.font.FontSynthesis.Companion#All",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 278,
+          "key": "androidx.compose.ui.text.font.FontSynthesis.Companion#None",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 279,
+          "key": "androidx.compose.ui.text.font.FontSynthesis.Companion#Style",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 280,
+          "key": "androidx.compose.ui.text.font.FontSynthesis.Companion#Weight",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 281,
+          "key": "androidx.compose.ui.text.font.FontSynthesis.Companion#valueOf(value:Int)",
+          "call": "static",
+          "params": [
+            {
+              "name": "value",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.font.FontWeight": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.font.FontWeight",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 282,
+          "key": "androidx.compose.ui.text.font.FontWeight#<init>(weight:Int)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "weight",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 283,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#Black",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 284,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#Bold",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 285,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#ExtraBold",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 286,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#ExtraLight",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 287,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#Light",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 288,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#Medium",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 289,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#Normal",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 290,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#SemiBold",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 291,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#Thin",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 292,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#W100",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 293,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#W200",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 294,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#W300",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 295,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#W400",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 296,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#W500",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 297,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#W600",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 298,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#W700",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 299,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#W800",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 300,
+          "key": "androidx.compose.ui.text.font.FontWeight.Companion#W900",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 301,
+          "key": "androidx.compose.ui.text.font.lerp(start:FontWeight,stop:FontWeight,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "FontWeight",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "FontWeight",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.font.GenericFontFamily": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.font.GenericFontFamily",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 266,
+          "key": "androidx.compose.ui.text.font.FontFamily.Companion#Cursive",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 268,
+          "key": "androidx.compose.ui.text.font.FontFamily.Companion#Monospace",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 269,
+          "key": "androidx.compose.ui.text.font.FontFamily.Companion#SansSerif",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 270,
+          "key": "androidx.compose.ui.text.font.FontFamily.Companion#Serif",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.font.SystemFontFamily": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.font.SystemFontFamily",
+      "interface": true,
+      "producers": [
+        {
+          "tag": 267,
+          "key": "androidx.compose.ui.text.font.FontFamily.Companion#Default",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.BaselineShift": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.BaselineShift",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 307,
+          "key": "androidx.compose.ui.text.style.BaselineShift#<init>(multiplier:Float)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "multiplier",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 308,
+          "key": "androidx.compose.ui.text.style.BaselineShift.Companion#None",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 309,
+          "key": "androidx.compose.ui.text.style.BaselineShift.Companion#Subscript",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 310,
+          "key": "androidx.compose.ui.text.style.BaselineShift.Companion#Superscript",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 311,
+          "key": "androidx.compose.ui.text.style.BaselineShift.Companion#Unspecified",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 357,
+          "key": "androidx.compose.ui.text.style.lerp(start:BaselineShift,stop:BaselineShift,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "BaselineShift",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "BaselineShift",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.Hyphens": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.Hyphens",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 312,
+          "key": "androidx.compose.ui.text.style.Hyphens.Companion#Auto",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 313,
+          "key": "androidx.compose.ui.text.style.Hyphens.Companion#None",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 314,
+          "key": "androidx.compose.ui.text.style.Hyphens.Companion#Unspecified",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 315,
+          "key": "androidx.compose.ui.text.style.Hyphens.Companion#valueOf(value:Int)",
+          "call": "static",
+          "params": [
+            {
+              "name": "value",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.LineBreak": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.LineBreak",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 316,
+          "key": "androidx.compose.ui.text.style.LineBreak.Companion#Heading",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 317,
+          "key": "androidx.compose.ui.text.style.LineBreak.Companion#Paragraph",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 318,
+          "key": "androidx.compose.ui.text.style.LineBreak.Companion#Simple",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 319,
+          "key": "androidx.compose.ui.text.style.LineBreak.Companion#Unspecified",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.LineHeightStyle": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.LineHeightStyle",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 320,
+          "key": "androidx.compose.ui.text.style.LineHeightStyle#copy(alignment:LineHeightStyle.Alignment,trim:LineHeightStyle.Trim,mode:LineHeightStyle.Mode)",
+          "call": "member",
+          "params": []
+        },
+        {
+          "tag": 321,
+          "key": "androidx.compose.ui.text.style.LineHeightStyle.Companion#Default",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.ResolvedTextDirection": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.ResolvedTextDirection",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 322,
+          "key": "androidx.compose.ui.text.style.ResolvedTextDirection#Ltr",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 323,
+          "key": "androidx.compose.ui.text.style.ResolvedTextDirection#Rtl",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.TextAlign": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.TextAlign",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 324,
+          "key": "androidx.compose.ui.text.style.TextAlign.Companion#Center",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 325,
+          "key": "androidx.compose.ui.text.style.TextAlign.Companion#End",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 326,
+          "key": "androidx.compose.ui.text.style.TextAlign.Companion#Justify",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 327,
+          "key": "androidx.compose.ui.text.style.TextAlign.Companion#Left",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 328,
+          "key": "androidx.compose.ui.text.style.TextAlign.Companion#Right",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 329,
+          "key": "androidx.compose.ui.text.style.TextAlign.Companion#Start",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 330,
+          "key": "androidx.compose.ui.text.style.TextAlign.Companion#Unspecified",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 331,
+          "key": "androidx.compose.ui.text.style.TextAlign.Companion#valueOf(value:Int)",
+          "call": "static",
+          "params": [
+            {
+              "name": "value",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.TextDecoration": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.TextDecoration",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 332,
+          "key": "androidx.compose.ui.text.style.TextDecoration#plus(decoration:TextDecoration)",
+          "call": "member",
+          "params": [
+            {
+              "name": "decoration",
+              "type": "TextDecoration",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 333,
+          "key": "androidx.compose.ui.text.style.TextDecoration.Companion#LineThrough",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 334,
+          "key": "androidx.compose.ui.text.style.TextDecoration.Companion#None",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 335,
+          "key": "androidx.compose.ui.text.style.TextDecoration.Companion#Underline",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 336,
+          "key": "androidx.compose.ui.text.style.TextDecoration.Companion#combine(decorations:List<TextDecoration>)",
+          "call": "static",
+          "params": [
+            {
+              "name": "decorations",
+              "type": "List<TextDecoration>",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 337,
+          "key": "androidx.compose.ui.text.style.TextDecoration.Companion#valueOf(mask:Int)",
+          "call": "static",
+          "params": [
+            {
+              "name": "mask",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.TextDirection": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.TextDirection",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 338,
+          "key": "androidx.compose.ui.text.style.TextDirection.Companion#Content",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 339,
+          "key": "androidx.compose.ui.text.style.TextDirection.Companion#ContentOrLtr",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 340,
+          "key": "androidx.compose.ui.text.style.TextDirection.Companion#ContentOrRtl",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 341,
+          "key": "androidx.compose.ui.text.style.TextDirection.Companion#Ltr",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 342,
+          "key": "androidx.compose.ui.text.style.TextDirection.Companion#Rtl",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 343,
+          "key": "androidx.compose.ui.text.style.TextDirection.Companion#Unspecified",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 344,
+          "key": "androidx.compose.ui.text.style.TextDirection.Companion#valueOf(value:Int)",
+          "call": "static",
+          "params": [
+            {
+              "name": "value",
+              "type": "Int",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.TextGeometricTransform": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.TextGeometricTransform",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 345,
+          "key": "androidx.compose.ui.text.style.TextGeometricTransform#<init>(scaleX:Float,skewX:Float)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "scaleX",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "skewX",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 346,
+          "key": "androidx.compose.ui.text.style.TextGeometricTransform#copy(scaleX:Float,skewX:Float)",
+          "call": "member",
+          "params": [
+            {
+              "name": "scaleX",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "skewX",
+              "type": "Float",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 358,
+          "key": "androidx.compose.ui.text.style.lerp(start:TextGeometricTransform,stop:TextGeometricTransform,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "TextGeometricTransform",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "TextGeometricTransform",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.TextIndent": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.TextIndent",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 347,
+          "key": "androidx.compose.ui.text.style.TextIndent#<init>(firstLine:TextUnit,restLine:TextUnit)",
+          "call": "ctor",
+          "params": [
+            {
+              "name": "firstLine",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "restLine",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 348,
+          "key": "androidx.compose.ui.text.style.TextIndent#copy(firstLine:TextUnit,restLine:TextUnit)",
+          "call": "member",
+          "params": [
+            {
+              "name": "firstLine",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            },
+            {
+              "name": "restLine",
+              "type": "TextUnit",
+              "optional": true,
+              "vararg": false
+            }
+          ]
+        },
+        {
+          "tag": 349,
+          "key": "androidx.compose.ui.text.style.TextIndent.Companion#None",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 359,
+          "key": "androidx.compose.ui.text.style.lerp(start:TextIndent,stop:TextIndent,fraction:Float)",
+          "call": "package_fn",
+          "params": [
+            {
+              "name": "start",
+              "type": "TextIndent",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "stop",
+              "type": "TextIndent",
+              "optional": false,
+              "vararg": false
+            },
+            {
+              "name": "fraction",
+              "type": "Float",
+              "optional": false,
+              "vararg": false
+            }
+          ]
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.TextMotion": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.TextMotion",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 350,
+          "key": "androidx.compose.ui.text.style.TextMotion.Companion#Animated",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 351,
+          "key": "androidx.compose.ui.text.style.TextMotion.Companion#Static",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.text.style.TextOverflow": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.text.style.TextOverflow",
+      "interface": false,
+      "producers": [
+        {
+          "tag": 352,
+          "key": "androidx.compose.ui.text.style.TextOverflow.Companion#Clip",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 353,
+          "key": "androidx.compose.ui.text.style.TextOverflow.Companion#Ellipsis",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 354,
+          "key": "androidx.compose.ui.text.style.TextOverflow.Companion#MiddleEllipsis",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 355,
+          "key": "androidx.compose.ui.text.style.TextOverflow.Companion#StartEllipsis",
+          "call": "static_prop",
+          "params": []
+        },
+        {
+          "tag": 356,
+          "key": "androidx.compose.ui.text.style.TextOverflow.Companion#Visible",
+          "call": "static_prop",
+          "params": []
+        }
+      ]
+    },
+    "androidx.compose.ui.unit.Density": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.unit.Density",
+      "interface": true,
+      "producers": []
+    },
+    "androidx.compose.ui.unit.FontScalingLinear": {
+      "kind": "call-record",
+      "guest": "dev.keliver.calls.compose.ui.unit.FontScalingLinear",
       "interface": true,
       "producers": []
     }

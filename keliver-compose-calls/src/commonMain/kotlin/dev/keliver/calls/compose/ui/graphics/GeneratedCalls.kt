@@ -6,10 +6,1350 @@ package dev.keliver.calls.compose.ui.graphics
 
 import dev.keliver.calls.runtime.readValues
 
+/** Guest mirror of `androidx.compose.ui.graphics.BlendMode`: a recorded call the host replays (MS4-42, call records). */
+public class BlendMode @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Clear`, recorded: the host makes the same call (lock tag 44). */
+    public val Clear: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(44))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Color`, recorded: the host makes the same call (lock tag 45). */
+    public val Color: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(45))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#ColorBurn`, recorded: the host makes the same call (lock tag 46). */
+    public val ColorBurn: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(46))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#ColorDodge`, recorded: the host makes the same call (lock tag 47). */
+    public val ColorDodge: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(47))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Darken`, recorded: the host makes the same call (lock tag 48). */
+    public val Darken: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(48))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Difference`, recorded: the host makes the same call (lock tag 49). */
+    public val Difference: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(49))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Dst`, recorded: the host makes the same call (lock tag 50). */
+    public val Dst: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(50))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#DstAtop`, recorded: the host makes the same call (lock tag 51). */
+    public val DstAtop: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(51))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#DstIn`, recorded: the host makes the same call (lock tag 52). */
+    public val DstIn: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(52))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#DstOut`, recorded: the host makes the same call (lock tag 53). */
+    public val DstOut: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(53))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#DstOver`, recorded: the host makes the same call (lock tag 54). */
+    public val DstOver: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(54))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Exclusion`, recorded: the host makes the same call (lock tag 55). */
+    public val Exclusion: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(55))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Hardlight`, recorded: the host makes the same call (lock tag 56). */
+    public val Hardlight: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(56))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Hue`, recorded: the host makes the same call (lock tag 57). */
+    public val Hue: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(57))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Lighten`, recorded: the host makes the same call (lock tag 58). */
+    public val Lighten: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(58))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Luminosity`, recorded: the host makes the same call (lock tag 59). */
+    public val Luminosity: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(59))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Modulate`, recorded: the host makes the same call (lock tag 60). */
+    public val Modulate: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(60))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Multiply`, recorded: the host makes the same call (lock tag 61). */
+    public val Multiply: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(61))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Overlay`, recorded: the host makes the same call (lock tag 62). */
+    public val Overlay: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(62))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Plus`, recorded: the host makes the same call (lock tag 63). */
+    public val Plus: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(63))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Saturation`, recorded: the host makes the same call (lock tag 64). */
+    public val Saturation: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(64))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Screen`, recorded: the host makes the same call (lock tag 65). */
+    public val Screen: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(65))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Softlight`, recorded: the host makes the same call (lock tag 66). */
+    public val Softlight: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(66))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Src`, recorded: the host makes the same call (lock tag 67). */
+    public val Src: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(67))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#SrcAtop`, recorded: the host makes the same call (lock tag 68). */
+    public val SrcAtop: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(68))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#SrcIn`, recorded: the host makes the same call (lock tag 69). */
+    public val SrcIn: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(69))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#SrcOut`, recorded: the host makes the same call (lock tag 70). */
+    public val SrcOut: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(70))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#SrcOver`, recorded: the host makes the same call (lock tag 71). */
+    public val SrcOver: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(71))
+    /** `androidx.compose.ui.graphics.BlendMode.Companion#Xor`, recorded: the host makes the same call (lock tag 72). */
+    public val Xor: dev.keliver.calls.compose.ui.graphics.BlendMode get() = dev.keliver.calls.compose.ui.graphics.BlendMode(dev.keliver.calls.runtime.CallRecord(72))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.BlendModeColorFilter`: a recorded call the host replays (MS4-42, call records). */
+public class BlendModeColorFilter @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.ui.graphics.ColorFilter {
+  /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
+  public val color: dev.keliver.compose.ui.graphics.Color get() = (readValues("BlendModeColorFilter.color")["color"] as dev.keliver.compose.ui.graphics.Color?)!!
+  /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
+  public val blendMode: dev.keliver.calls.compose.ui.graphics.BlendMode get() = (readValues("BlendModeColorFilter.blendMode")["blendMode"] as dev.keliver.calls.compose.ui.graphics.BlendMode?)!!
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.BlurEffect`: a recorded call the host replays (MS4-42, call records). */
+public class BlurEffect @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.ui.graphics.RenderEffect {
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.Brush`: a recorded call the host replays (MS4-42, call records). */
+public interface Brush : dev.keliver.calls.runtime.CallRecorded {
+  @Deprecated("Keliver: `Brush.intrinsicSize` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val intrinsicSize: Nothing get() = error("call-recorded")
+  public companion object {
+    /** `androidx.compose.ui.graphics.Brush.Companion#composite(dstBrush:Brush,srcBrush:Brush,blendMode:BlendMode)`, recorded: the host makes the same call (lock tag 76). */
+    public fun composite(
+      dstBrush: dev.keliver.calls.compose.ui.graphics.Brush,
+      srcBrush: dev.keliver.calls.compose.ui.graphics.Brush,
+      blendMode: dev.keliver.calls.compose.ui.graphics.BlendMode,
+    ): dev.keliver.calls.compose.ui.graphics.Brush = dev.keliver.calls.compose.ui.graphics.BrushCall(
+      dev.keliver.calls.runtime.CallRecord(
+        76,
+        kotlinx.serialization.json.buildJsonObject {
+          put("dstBrush", dstBrush.call.toJson())
+          put("srcBrush", srcBrush.call.toJson())
+          put("blendMode", blendMode.call.toJson())
+        },
+      ),
+    )
+    /** `androidx.compose.ui.graphics.Brush.Companion#horizontalGradient(colors:List<Color>,startX:Float,endX:Float,tileMode:TileMode)`, recorded: the host makes the same call (lock tag 77). */
+    public fun horizontalGradient(
+      colors: kotlin.collections.List<dev.keliver.compose.ui.graphics.Color>,
+      startX: kotlin.Float? = null,
+      endX: kotlin.Float? = null,
+      tileMode: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+    ): dev.keliver.calls.compose.ui.graphics.Brush = dev.keliver.calls.compose.ui.graphics.BrushCall(
+      dev.keliver.calls.runtime.CallRecord(
+        77,
+        kotlinx.serialization.json.buildJsonObject {
+          put("colors", kotlinx.serialization.json.JsonArray(colors.map { dev.keliver.compose.ui.graphics.ColorCodec.toJson(it) }))
+          if (startX != null) put("startX", kotlinx.serialization.json.JsonPrimitive(startX))
+          if (endX != null) put("endX", kotlinx.serialization.json.JsonPrimitive(endX))
+          if (tileMode != null) put("tileMode", tileMode.call.toJson())
+        },
+      ),
+    )
+    /** `androidx.compose.ui.graphics.Brush.Companion#linearGradient(colors:List<Color>,start:Offset,end:Offset,tileMode:TileMode)`, recorded: the host makes the same call (lock tag 78). */
+    public fun linearGradient(
+      colors: kotlin.collections.List<dev.keliver.compose.ui.graphics.Color>,
+      start: dev.keliver.calls.compose.ui.geometry.Offset? = null,
+      end: dev.keliver.calls.compose.ui.geometry.Offset? = null,
+      tileMode: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+    ): dev.keliver.calls.compose.ui.graphics.Brush = dev.keliver.calls.compose.ui.graphics.BrushCall(
+      dev.keliver.calls.runtime.CallRecord(
+        78,
+        kotlinx.serialization.json.buildJsonObject {
+          put("colors", kotlinx.serialization.json.JsonArray(colors.map { dev.keliver.compose.ui.graphics.ColorCodec.toJson(it) }))
+          if (start != null) put("start", start.toJson())
+          if (end != null) put("end", end.toJson())
+          if (tileMode != null) put("tileMode", tileMode.call.toJson())
+        },
+      ),
+    )
+    /** `androidx.compose.ui.graphics.Brush.Companion#radialGradient(colors:List<Color>,center:Offset,radius:Float,tileMode:TileMode)`, recorded: the host makes the same call (lock tag 79). */
+    public fun radialGradient(
+      colors: kotlin.collections.List<dev.keliver.compose.ui.graphics.Color>,
+      center: dev.keliver.calls.compose.ui.geometry.Offset? = null,
+      radius: kotlin.Float? = null,
+      tileMode: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+    ): dev.keliver.calls.compose.ui.graphics.Brush = dev.keliver.calls.compose.ui.graphics.BrushCall(
+      dev.keliver.calls.runtime.CallRecord(
+        79,
+        kotlinx.serialization.json.buildJsonObject {
+          put("colors", kotlinx.serialization.json.JsonArray(colors.map { dev.keliver.compose.ui.graphics.ColorCodec.toJson(it) }))
+          if (center != null) put("center", center.toJson())
+          if (radius != null) put("radius", kotlinx.serialization.json.JsonPrimitive(radius))
+          if (tileMode != null) put("tileMode", tileMode.call.toJson())
+        },
+      ),
+    )
+    /** `androidx.compose.ui.graphics.Brush.Companion#sweepGradient(colors:List<Color>,center:Offset)`, recorded: the host makes the same call (lock tag 80). */
+    public fun sweepGradient(
+      colors: kotlin.collections.List<dev.keliver.compose.ui.graphics.Color>,
+      center: dev.keliver.calls.compose.ui.geometry.Offset? = null,
+    ): dev.keliver.calls.compose.ui.graphics.Brush = dev.keliver.calls.compose.ui.graphics.BrushCall(
+      dev.keliver.calls.runtime.CallRecord(
+        80,
+        kotlinx.serialization.json.buildJsonObject {
+          put("colors", kotlinx.serialization.json.JsonArray(colors.map { dev.keliver.compose.ui.graphics.ColorCodec.toJson(it) }))
+          if (center != null) put("center", center.toJson())
+        },
+      ),
+    )
+    /** `androidx.compose.ui.graphics.Brush.Companion#verticalGradient(colors:List<Color>,startY:Float,endY:Float,tileMode:TileMode)`, recorded: the host makes the same call (lock tag 81). */
+    public fun verticalGradient(
+      colors: kotlin.collections.List<dev.keliver.compose.ui.graphics.Color>,
+      startY: kotlin.Float? = null,
+      endY: kotlin.Float? = null,
+      tileMode: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+    ): dev.keliver.calls.compose.ui.graphics.Brush = dev.keliver.calls.compose.ui.graphics.BrushCall(
+      dev.keliver.calls.runtime.CallRecord(
+        81,
+        kotlinx.serialization.json.buildJsonObject {
+          put("colors", kotlinx.serialization.json.JsonArray(colors.map { dev.keliver.compose.ui.graphics.ColorCodec.toJson(it) }))
+          if (startY != null) put("startY", kotlinx.serialization.json.JsonPrimitive(startY))
+          if (endY != null) put("endY", kotlinx.serialization.json.JsonPrimitive(endY))
+          if (tileMode != null) put("tileMode", tileMode.call.toJson())
+        },
+      ),
+    )
+  }
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class BrushCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), Brush
+
+/** Guest mirror of `androidx.compose.ui.graphics.Canvas`: a recorded call the host replays (MS4-42, call records). */
+public interface Canvas : dev.keliver.calls.runtime.CallRecorded {
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class CanvasCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), Canvas
+
+/** Guest mirror of `androidx.compose.ui.graphics.ClipOp`: a recorded call the host replays (MS4-42, call records). */
+public class ClipOp @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.ClipOp.Companion#Difference`, recorded: the host makes the same call (lock tag 83). */
+    public val Difference: dev.keliver.calls.compose.ui.graphics.ClipOp get() = dev.keliver.calls.compose.ui.graphics.ClipOp(dev.keliver.calls.runtime.CallRecord(83))
+    /** `androidx.compose.ui.graphics.ClipOp.Companion#Intersect`, recorded: the host makes the same call (lock tag 84). */
+    public val Intersect: dev.keliver.calls.compose.ui.graphics.ClipOp get() = dev.keliver.calls.compose.ui.graphics.ClipOp(dev.keliver.calls.runtime.CallRecord(84))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.ColorFilter`: a recorded call the host replays (MS4-42, call records). */
+public interface ColorFilter : dev.keliver.calls.runtime.CallRecorded {
+  public companion object {
+    /** `androidx.compose.ui.graphics.ColorFilter.Companion#colorMatrix(colorMatrix:ColorMatrix)`, recorded: the host makes the same call (lock tag 86). */
+    public fun colorMatrix(
+      colorMatrix: dev.keliver.calls.compose.ui.graphics.ColorMatrix,
+    ): dev.keliver.calls.compose.ui.graphics.ColorFilter = dev.keliver.calls.compose.ui.graphics.ColorFilterCall(
+      dev.keliver.calls.runtime.CallRecord(
+        86,
+        kotlinx.serialization.json.buildJsonObject {
+          put("colorMatrix", colorMatrix.call.toJson())
+        },
+      ),
+    )
+    /** `androidx.compose.ui.graphics.ColorFilter.Companion#lighting(multiply:Color,add:Color)`, recorded: the host makes the same call (lock tag 87). */
+    public fun lighting(
+      multiply: dev.keliver.compose.ui.graphics.Color,
+      add: dev.keliver.compose.ui.graphics.Color,
+    ): dev.keliver.calls.compose.ui.graphics.ColorFilter = dev.keliver.calls.compose.ui.graphics.ColorFilterCall(
+      dev.keliver.calls.runtime.CallRecord(
+        87,
+        kotlinx.serialization.json.buildJsonObject {
+          put("multiply", dev.keliver.compose.ui.graphics.ColorCodec.toJson(multiply))
+          put("add", dev.keliver.compose.ui.graphics.ColorCodec.toJson(add))
+        },
+      ),
+    )
+    /** `androidx.compose.ui.graphics.ColorFilter.Companion#tint(color:Color,blendMode:BlendMode)`, recorded: the host makes the same call (lock tag 88). */
+    public fun tint(
+      color: dev.keliver.compose.ui.graphics.Color,
+      blendMode: dev.keliver.calls.compose.ui.graphics.BlendMode? = null,
+    ): dev.keliver.calls.compose.ui.graphics.ColorFilter = dev.keliver.calls.compose.ui.graphics.ColorFilterCall(
+      dev.keliver.calls.runtime.CallRecord(
+        88,
+        kotlinx.serialization.json.buildJsonObject {
+          put("color", dev.keliver.compose.ui.graphics.ColorCodec.toJson(color))
+          if (blendMode != null) put("blendMode", blendMode.call.toJson())
+        },
+      ),
+    )
+  }
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class ColorFilterCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), ColorFilter
+
+/** Guest mirror of `androidx.compose.ui.graphics.ColorMatrix`: a recorded call the host replays (MS4-42, call records). */
+public class ColorMatrix @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  @Deprecated("Keliver: `ColorMatrix.values` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val values: Nothing get() = error("call-recorded")
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.ColorMatrixColorFilter`: a recorded call the host replays (MS4-42, call records). */
+public class ColorMatrixColorFilter @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.ui.graphics.ColorFilter {
+  /** `androidx.compose.ui.graphics.ColorMatrixColorFilter#copyColorMatrix(targetColorMatrix:ColorMatrix)` on a recorded value: the call carries the receiver (lock tag 91). */
+  public fun copyColorMatrix(
+    targetColorMatrix: dev.keliver.calls.compose.ui.graphics.ColorMatrix? = null,
+  ): dev.keliver.calls.compose.ui.graphics.ColorMatrix = dev.keliver.calls.compose.ui.graphics.ColorMatrix(
+    dev.keliver.calls.runtime.CallRecord(
+      91,
+      kotlinx.serialization.json.buildJsonObject {
+        if (targetColorMatrix != null) put("targetColorMatrix", targetColorMatrix.call.toJson())
+      },
+      on = call,
+    ),
+  )
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.CompositingStrategy`: a recorded call the host replays (MS4-42, call records). */
+public class CompositingStrategy @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.CompositingStrategy.Companion#Auto`, recorded: the host makes the same call (lock tag 93). */
+    public val Auto: dev.keliver.calls.compose.ui.graphics.CompositingStrategy get() = dev.keliver.calls.compose.ui.graphics.CompositingStrategy(dev.keliver.calls.runtime.CallRecord(93))
+    /** `androidx.compose.ui.graphics.CompositingStrategy.Companion#ModulateAlpha`, recorded: the host makes the same call (lock tag 94). */
+    public val ModulateAlpha: dev.keliver.calls.compose.ui.graphics.CompositingStrategy get() = dev.keliver.calls.compose.ui.graphics.CompositingStrategy(dev.keliver.calls.runtime.CallRecord(94))
+    /** `androidx.compose.ui.graphics.CompositingStrategy.Companion#Offscreen`, recorded: the host makes the same call (lock tag 95). */
+    public val Offscreen: dev.keliver.calls.compose.ui.graphics.CompositingStrategy get() = dev.keliver.calls.compose.ui.graphics.CompositingStrategy(dev.keliver.calls.runtime.CallRecord(95))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.FilterQuality`: a recorded call the host replays (MS4-42, call records). */
+public class FilterQuality @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  @Deprecated("Keliver: `FilterQuality.value` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val value: Nothing get() = error("call-recorded")
+  public companion object {
+    /** `androidx.compose.ui.graphics.FilterQuality.Companion#High`, recorded: the host makes the same call (lock tag 97). */
+    public val High: dev.keliver.calls.compose.ui.graphics.FilterQuality get() = dev.keliver.calls.compose.ui.graphics.FilterQuality(dev.keliver.calls.runtime.CallRecord(97))
+    /** `androidx.compose.ui.graphics.FilterQuality.Companion#Low`, recorded: the host makes the same call (lock tag 98). */
+    public val Low: dev.keliver.calls.compose.ui.graphics.FilterQuality get() = dev.keliver.calls.compose.ui.graphics.FilterQuality(dev.keliver.calls.runtime.CallRecord(98))
+    /** `androidx.compose.ui.graphics.FilterQuality.Companion#Medium`, recorded: the host makes the same call (lock tag 99). */
+    public val Medium: dev.keliver.calls.compose.ui.graphics.FilterQuality get() = dev.keliver.calls.compose.ui.graphics.FilterQuality(dev.keliver.calls.runtime.CallRecord(99))
+    /** `androidx.compose.ui.graphics.FilterQuality.Companion#None`, recorded: the host makes the same call (lock tag 100). */
+    public val None: dev.keliver.calls.compose.ui.graphics.FilterQuality get() = dev.keliver.calls.compose.ui.graphics.FilterQuality(dev.keliver.calls.runtime.CallRecord(100))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.GraphicsContext`: a recorded call the host replays (MS4-42, call records). */
+public interface GraphicsContext : dev.keliver.calls.runtime.CallRecorded {
+  @Deprecated("Keliver: `GraphicsContext.shadowContext` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val shadowContext: Nothing get() = error("call-recorded")
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.GraphicsLayerScope`: a recorded call the host replays (MS4-42, call records). */
+public interface GraphicsLayerScope : dev.keliver.calls.runtime.CallRecorded, dev.keliver.calls.compose.ui.unit.Density, dev.keliver.calls.compose.ui.unit.FontScalingLinear {
+  @Deprecated("Keliver: `GraphicsLayerScope.scaleX` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val scaleX: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.scaleY` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val scaleY: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.alpha` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val alpha: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.translationX` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val translationX: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.translationY` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val translationY: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.shadowElevation` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val shadowElevation: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.ambientShadowColor` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val ambientShadowColor: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.spotShadowColor` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val spotShadowColor: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.rotationX` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val rotationX: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.rotationY` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val rotationY: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.rotationZ` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val rotationZ: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.cameraDistance` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val cameraDistance: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.transformOrigin` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val transformOrigin: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.shape` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val shape: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.clip` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val clip: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.renderEffect` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val renderEffect: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.blendMode` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val blendMode: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.colorFilter` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val colorFilter: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.compositingStrategy` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val compositingStrategy: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.size` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val size: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `GraphicsLayerScope.outsets` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val outsets: Nothing get() = error("call-recorded")
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class GraphicsLayerScopeCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), GraphicsLayerScope
+
+/** Guest mirror of `androidx.compose.ui.graphics.ImageBitmap`: a recorded call the host replays (MS4-42, call records). */
+public interface ImageBitmap : dev.keliver.calls.runtime.CallRecorded {
+  @Deprecated("Keliver: `ImageBitmap.width` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val width: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `ImageBitmap.height` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val height: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `ImageBitmap.colorSpace` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val colorSpace: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `ImageBitmap.hasAlpha` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val hasAlpha: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `ImageBitmap.config` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val config: Nothing get() = error("call-recorded")
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class ImageBitmapCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), ImageBitmap
+
+/** Guest mirror of `androidx.compose.ui.graphics.ImageBitmapConfig`: a recorded call the host replays (MS4-42, call records). */
+public class ImageBitmapConfig @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  @Deprecated("Keliver: `ImageBitmapConfig.value` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val value: Nothing get() = error("call-recorded")
+  public companion object {
+    /** `androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Alpha8`, recorded: the host makes the same call (lock tag 103). */
+    public val Alpha8: dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig get() = dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig(dev.keliver.calls.runtime.CallRecord(103))
+    /** `androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Argb8888`, recorded: the host makes the same call (lock tag 104). */
+    public val Argb8888: dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig get() = dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig(dev.keliver.calls.runtime.CallRecord(104))
+    /** `androidx.compose.ui.graphics.ImageBitmapConfig.Companion#F16`, recorded: the host makes the same call (lock tag 105). */
+    public val F16: dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig get() = dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig(dev.keliver.calls.runtime.CallRecord(105))
+    /** `androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Gpu`, recorded: the host makes the same call (lock tag 106). */
+    public val Gpu: dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig get() = dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig(dev.keliver.calls.runtime.CallRecord(106))
+    /** `androidx.compose.ui.graphics.ImageBitmapConfig.Companion#Rgb565`, recorded: the host makes the same call (lock tag 107). */
+    public val Rgb565: dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig get() = dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig(dev.keliver.calls.runtime.CallRecord(107))
+  }
+}
+
 /** Guest mirror of `androidx.compose.ui.graphics.Interpolatable`: a recorded call the host replays (MS4-42, call records). */
 public interface Interpolatable : dev.keliver.calls.runtime.CallRecorded {
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.LayerOutsets`: a recorded call the host replays (MS4-42, call records). */
+public class LayerOutsets @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  @Deprecated("Keliver: `LayerOutsets.left` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val left: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `LayerOutsets.top` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val top: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `LayerOutsets.right` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val right: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `LayerOutsets.bottom` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val bottom: Nothing get() = error("call-recorded")
+  public companion object {
+    /** `androidx.compose.ui.graphics.LayerOutsets.Companion#Zero`, recorded: the host makes the same call (lock tag 113). */
+    public val Zero: dev.keliver.calls.compose.ui.graphics.LayerOutsets get() = dev.keliver.calls.compose.ui.graphics.LayerOutsets(dev.keliver.calls.runtime.CallRecord(113))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.LightingColorFilter`: a recorded call the host replays (MS4-42, call records). */
+public class LightingColorFilter @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.ui.graphics.ColorFilter {
+  /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
+  public val multiply: dev.keliver.compose.ui.graphics.Color get() = (readValues("LightingColorFilter.multiply")["multiply"] as dev.keliver.compose.ui.graphics.Color?)!!
+  /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
+  public val add: dev.keliver.compose.ui.graphics.Color get() = (readValues("LightingColorFilter.add")["add"] as dev.keliver.compose.ui.graphics.Color?)!!
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.Matrix`: a recorded call the host replays (MS4-42, call records). */
+public class Matrix @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  @Deprecated("Keliver: `Matrix.values` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val values: Nothing get() = error("call-recorded")
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.OffsetEffect`: a recorded call the host replays (MS4-42, call records). */
+public class OffsetEffect @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.ui.graphics.RenderEffect {
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.Paint`: a recorded call the host replays (MS4-42, call records). */
+public interface Paint : dev.keliver.calls.runtime.CallRecorded {
+  @Deprecated("Keliver: `Paint.alpha` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val alpha: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.isAntiAlias` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val isAntiAlias: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.color` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val color: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.blendMode` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val blendMode: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.style` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val style: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.strokeWidth` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val strokeWidth: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.strokeCap` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val strokeCap: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.strokeJoin` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val strokeJoin: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.strokeMiterLimit` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val strokeMiterLimit: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.filterQuality` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val filterQuality: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.shader` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val shader: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.colorFilter` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val colorFilter: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Paint.pathEffect` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val pathEffect: Nothing get() = error("call-recorded")
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class PaintCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), Paint
+
+/** Guest mirror of `androidx.compose.ui.graphics.PaintingStyle`: a recorded call the host replays (MS4-42, call records). */
+public class PaintingStyle @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.PaintingStyle.Companion#Fill`, recorded: the host makes the same call (lock tag 120). */
+    public val Fill: dev.keliver.calls.compose.ui.graphics.PaintingStyle get() = dev.keliver.calls.compose.ui.graphics.PaintingStyle(dev.keliver.calls.runtime.CallRecord(120))
+    /** `androidx.compose.ui.graphics.PaintingStyle.Companion#Stroke`, recorded: the host makes the same call (lock tag 121). */
+    public val Stroke: dev.keliver.calls.compose.ui.graphics.PaintingStyle get() = dev.keliver.calls.compose.ui.graphics.PaintingStyle(dev.keliver.calls.runtime.CallRecord(121))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.Path`: a recorded call the host replays (MS4-42, call records). */
+public interface Path : dev.keliver.calls.runtime.CallRecorded {
+  @Deprecated("Keliver: `Path.fillType` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val fillType: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Path.isConvex` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val isConvex: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Path.isEmpty` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val isEmpty: Nothing get() = error("call-recorded")
+  /** `androidx.compose.ui.graphics.Path#and(path:Path)` on a recorded value: the call carries the receiver (lock tag 122). */
+  public fun and(
+    path: dev.keliver.calls.compose.ui.graphics.Path,
+  ): dev.keliver.calls.compose.ui.graphics.Path = dev.keliver.calls.compose.ui.graphics.PathCall(
+    dev.keliver.calls.runtime.CallRecord(
+      122,
+      kotlinx.serialization.json.buildJsonObject {
+        put("path", path.call.toJson())
+      },
+      on = call,
+    ),
+  )
+  /** `androidx.compose.ui.graphics.Path#iterator()` on a recorded value: the call carries the receiver (lock tag 123). */
+  public operator fun iterator(
+  ): dev.keliver.calls.compose.ui.graphics.PathIterator = dev.keliver.calls.compose.ui.graphics.PathIteratorCall(
+    dev.keliver.calls.runtime.CallRecord(
+      123,
+      kotlinx.serialization.json.buildJsonObject {
+      },
+      on = call,
+    ),
+  )
+  /** `androidx.compose.ui.graphics.Path#minus(path:Path)` on a recorded value: the call carries the receiver (lock tag 124). */
+  public operator fun minus(
+    path: dev.keliver.calls.compose.ui.graphics.Path,
+  ): dev.keliver.calls.compose.ui.graphics.Path = dev.keliver.calls.compose.ui.graphics.PathCall(
+    dev.keliver.calls.runtime.CallRecord(
+      124,
+      kotlinx.serialization.json.buildJsonObject {
+        put("path", path.call.toJson())
+      },
+      on = call,
+    ),
+  )
+  /** `androidx.compose.ui.graphics.Path#or(path:Path)` on a recorded value: the call carries the receiver (lock tag 125). */
+  public fun or(
+    path: dev.keliver.calls.compose.ui.graphics.Path,
+  ): dev.keliver.calls.compose.ui.graphics.Path = dev.keliver.calls.compose.ui.graphics.PathCall(
+    dev.keliver.calls.runtime.CallRecord(
+      125,
+      kotlinx.serialization.json.buildJsonObject {
+        put("path", path.call.toJson())
+      },
+      on = call,
+    ),
+  )
+  /** `androidx.compose.ui.graphics.Path#plus(path:Path)` on a recorded value: the call carries the receiver (lock tag 126). */
+  public operator fun plus(
+    path: dev.keliver.calls.compose.ui.graphics.Path,
+  ): dev.keliver.calls.compose.ui.graphics.Path = dev.keliver.calls.compose.ui.graphics.PathCall(
+    dev.keliver.calls.runtime.CallRecord(
+      126,
+      kotlinx.serialization.json.buildJsonObject {
+        put("path", path.call.toJson())
+      },
+      on = call,
+    ),
+  )
+  /** `androidx.compose.ui.graphics.Path#xor(path:Path)` on a recorded value: the call carries the receiver (lock tag 127). */
+  public fun xor(
+    path: dev.keliver.calls.compose.ui.graphics.Path,
+  ): dev.keliver.calls.compose.ui.graphics.Path = dev.keliver.calls.compose.ui.graphics.PathCall(
+    dev.keliver.calls.runtime.CallRecord(
+      127,
+      kotlinx.serialization.json.buildJsonObject {
+        put("path", path.call.toJson())
+      },
+      on = call,
+    ),
+  )
+  public companion object {
+    /** `androidx.compose.ui.graphics.Path.Companion#combine(operation:PathOperation,path1:Path,path2:Path)`, recorded: the host makes the same call (lock tag 129). */
+    public fun combine(
+      operation: dev.keliver.calls.compose.ui.graphics.PathOperation,
+      path1: dev.keliver.calls.compose.ui.graphics.Path,
+      path2: dev.keliver.calls.compose.ui.graphics.Path,
+    ): dev.keliver.calls.compose.ui.graphics.Path = dev.keliver.calls.compose.ui.graphics.PathCall(
+      dev.keliver.calls.runtime.CallRecord(
+        129,
+        kotlinx.serialization.json.buildJsonObject {
+          put("operation", operation.call.toJson())
+          put("path1", path1.call.toJson())
+          put("path2", path2.call.toJson())
+        },
+      ),
+    )
+  }
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class PathCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), Path
+
+/** Guest mirror of `androidx.compose.ui.graphics.PathEffect`: a recorded call the host replays (MS4-42, call records). */
+public interface PathEffect : dev.keliver.calls.runtime.CallRecorded {
+  public companion object {
+    /** `androidx.compose.ui.graphics.PathEffect.Companion#chainPathEffect(outer:PathEffect,inner:PathEffect)`, recorded: the host makes the same call (lock tag 130). */
+    public fun chainPathEffect(
+      outer: dev.keliver.calls.compose.ui.graphics.PathEffect,
+      inner: dev.keliver.calls.compose.ui.graphics.PathEffect,
+    ): dev.keliver.calls.compose.ui.graphics.PathEffect = dev.keliver.calls.compose.ui.graphics.PathEffectCall(
+      dev.keliver.calls.runtime.CallRecord(
+        130,
+        kotlinx.serialization.json.buildJsonObject {
+          put("outer", outer.call.toJson())
+          put("inner", inner.call.toJson())
+        },
+      ),
+    )
+    /** `androidx.compose.ui.graphics.PathEffect.Companion#cornerPathEffect(radius:Float)`, recorded: the host makes the same call (lock tag 131). */
+    public fun cornerPathEffect(
+      radius: kotlin.Float,
+    ): dev.keliver.calls.compose.ui.graphics.PathEffect = dev.keliver.calls.compose.ui.graphics.PathEffectCall(
+      dev.keliver.calls.runtime.CallRecord(
+        131,
+        kotlinx.serialization.json.buildJsonObject {
+          put("radius", kotlinx.serialization.json.JsonPrimitive(radius))
+        },
+      ),
+    )
+    /** `androidx.compose.ui.graphics.PathEffect.Companion#stampedPathEffect(shape:Path,advance:Float,phase:Float,style:StampedPathEffectStyle)`, recorded: the host makes the same call (lock tag 132). */
+    public fun stampedPathEffect(
+      shape: dev.keliver.calls.compose.ui.graphics.Path,
+      advance: kotlin.Float,
+      phase: kotlin.Float,
+      style: dev.keliver.calls.compose.ui.graphics.StampedPathEffectStyle,
+    ): dev.keliver.calls.compose.ui.graphics.PathEffect = dev.keliver.calls.compose.ui.graphics.PathEffectCall(
+      dev.keliver.calls.runtime.CallRecord(
+        132,
+        kotlinx.serialization.json.buildJsonObject {
+          put("shape", shape.call.toJson())
+          put("advance", kotlinx.serialization.json.JsonPrimitive(advance))
+          put("phase", kotlinx.serialization.json.JsonPrimitive(phase))
+          put("style", style.call.toJson())
+        },
+      ),
+    )
+  }
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class PathEffectCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), PathEffect
+
+/** Guest mirror of `androidx.compose.ui.graphics.PathFillType`: a recorded call the host replays (MS4-42, call records). */
+public class PathFillType @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.PathFillType.Companion#EvenOdd`, recorded: the host makes the same call (lock tag 133). */
+    public val EvenOdd: dev.keliver.calls.compose.ui.graphics.PathFillType get() = dev.keliver.calls.compose.ui.graphics.PathFillType(dev.keliver.calls.runtime.CallRecord(133))
+    /** `androidx.compose.ui.graphics.PathFillType.Companion#NonZero`, recorded: the host makes the same call (lock tag 134). */
+    public val NonZero: dev.keliver.calls.compose.ui.graphics.PathFillType get() = dev.keliver.calls.compose.ui.graphics.PathFillType(dev.keliver.calls.runtime.CallRecord(134))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.PathHitTester`: a recorded call the host replays (MS4-42, call records). */
+public class PathHitTester @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.PathIterator`: a recorded call the host replays (MS4-42, call records). */
+public interface PathIterator : dev.keliver.calls.runtime.CallRecorded {
+  @Deprecated("Keliver: `PathIterator.path` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val path: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `PathIterator.conicEvaluation` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val conicEvaluation: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `PathIterator.tolerance` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val tolerance: Nothing get() = error("call-recorded")
+  /** `androidx.compose.ui.graphics.PathIterator#next()` on a recorded value: the call carries the receiver (lock tag 137). */
+  public operator fun next(
+  ): dev.keliver.calls.compose.ui.graphics.PathSegment = dev.keliver.calls.compose.ui.graphics.PathSegment(
+    dev.keliver.calls.runtime.CallRecord(
+      137,
+      kotlinx.serialization.json.buildJsonObject {
+      },
+      on = call,
+    ),
+  )
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class PathIteratorCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), PathIterator
+
+/** Guest mirror of `androidx.compose.ui.graphics.PathMeasure`: a recorded call the host replays (MS4-42, call records). */
+public interface PathMeasure : dev.keliver.calls.runtime.CallRecorded {
+  @Deprecated("Keliver: `PathMeasure.length` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val length: Nothing get() = error("call-recorded")
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class PathMeasureCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), PathMeasure
+
+/** Guest mirror of `androidx.compose.ui.graphics.PathOperation`: a recorded call the host replays (MS4-42, call records). */
+public class PathOperation @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.PathOperation.Companion#Difference`, recorded: the host makes the same call (lock tag 140). */
+    public val Difference: dev.keliver.calls.compose.ui.graphics.PathOperation get() = dev.keliver.calls.compose.ui.graphics.PathOperation(dev.keliver.calls.runtime.CallRecord(140))
+    /** `androidx.compose.ui.graphics.PathOperation.Companion#Intersect`, recorded: the host makes the same call (lock tag 141). */
+    public val Intersect: dev.keliver.calls.compose.ui.graphics.PathOperation get() = dev.keliver.calls.compose.ui.graphics.PathOperation(dev.keliver.calls.runtime.CallRecord(141))
+    /** `androidx.compose.ui.graphics.PathOperation.Companion#ReverseDifference`, recorded: the host makes the same call (lock tag 142). */
+    public val ReverseDifference: dev.keliver.calls.compose.ui.graphics.PathOperation get() = dev.keliver.calls.compose.ui.graphics.PathOperation(dev.keliver.calls.runtime.CallRecord(142))
+    /** `androidx.compose.ui.graphics.PathOperation.Companion#Union`, recorded: the host makes the same call (lock tag 143). */
+    public val Union: dev.keliver.calls.compose.ui.graphics.PathOperation get() = dev.keliver.calls.compose.ui.graphics.PathOperation(dev.keliver.calls.runtime.CallRecord(143))
+    /** `androidx.compose.ui.graphics.PathOperation.Companion#Xor`, recorded: the host makes the same call (lock tag 144). */
+    public val Xor: dev.keliver.calls.compose.ui.graphics.PathOperation get() = dev.keliver.calls.compose.ui.graphics.PathOperation(dev.keliver.calls.runtime.CallRecord(144))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.PathSegment`: a recorded call the host replays (MS4-42, call records). */
+public class PathSegment @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  @Deprecated("Keliver: `PathSegment.type` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val type: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `PathSegment.points` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val points: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `PathSegment.weight` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val weight: Nothing get() = error("call-recorded")
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.PointMode`: a recorded call the host replays (MS4-42, call records). */
+public class PointMode @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.PointMode.Companion#Lines`, recorded: the host makes the same call (lock tag 145). */
+    public val Lines: dev.keliver.calls.compose.ui.graphics.PointMode get() = dev.keliver.calls.compose.ui.graphics.PointMode(dev.keliver.calls.runtime.CallRecord(145))
+    /** `androidx.compose.ui.graphics.PointMode.Companion#Points`, recorded: the host makes the same call (lock tag 146). */
+    public val Points: dev.keliver.calls.compose.ui.graphics.PointMode get() = dev.keliver.calls.compose.ui.graphics.PointMode(dev.keliver.calls.runtime.CallRecord(146))
+    /** `androidx.compose.ui.graphics.PointMode.Companion#Polygon`, recorded: the host makes the same call (lock tag 147). */
+    public val Polygon: dev.keliver.calls.compose.ui.graphics.PointMode get() = dev.keliver.calls.compose.ui.graphics.PointMode(dev.keliver.calls.runtime.CallRecord(147))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.RenderEffect`: a recorded call the host replays (MS4-42, call records). */
+public interface RenderEffect : dev.keliver.calls.runtime.CallRecorded {
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.Shader`: a recorded call the host replays (MS4-42, call records). */
+public class Shader @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.ShaderBrush`: a recorded call the host replays (MS4-42, call records). */
+public interface ShaderBrush : dev.keliver.calls.runtime.CallRecorded, dev.keliver.calls.compose.ui.graphics.Brush {
+  @Deprecated("Keliver: `ShaderBrush.transform` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val transform: Nothing get() = error("call-recorded")
+  /** `androidx.compose.ui.graphics.ShaderBrush#createShader(size:Size)` on a recorded value: the call carries the receiver (lock tag 150). */
+  public fun createShader(
+    size: dev.keliver.calls.compose.ui.geometry.Size,
+  ): dev.keliver.calls.compose.ui.graphics.Shader = dev.keliver.calls.compose.ui.graphics.Shader(
+    dev.keliver.calls.runtime.CallRecord(
+      150,
+      kotlinx.serialization.json.buildJsonObject {
+        put("size", size.toJson())
+      },
+      on = call,
+    ),
+  )
+}
+@dev.keliver.calls.runtime.InternalCallApi
+internal class ShaderBrushCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), ShaderBrush
+
+/** Guest mirror of `androidx.compose.ui.graphics.Shadow`: a recorded call the host replays (MS4-42, call records). */
+public class Shadow @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  @Deprecated("Keliver: `Shadow.color` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val color: Nothing get() = error("call-recorded")
+  /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
+  public val offset: dev.keliver.calls.compose.ui.geometry.Offset get() = (readValues("Shadow.offset")["offset"] as dev.keliver.calls.compose.ui.geometry.Offset?) ?: dev.keliver.calls.compose.ui.geometry.Offset.Zero
+  /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
+  public val blurRadius: kotlin.Float get() = (readValues("Shadow.blurRadius")["blurRadius"] as kotlin.Float?) ?: 0.0f
+  /** `androidx.compose.ui.graphics.Shadow#copy(color:Color,offset:Offset,blurRadius:Float)` on a recorded value: the call carries the receiver (lock tag 153). */
+  public fun copy(
+    color: dev.keliver.compose.ui.graphics.Color? = null,
+    offset: dev.keliver.calls.compose.ui.geometry.Offset? = null,
+    blurRadius: kotlin.Float? = null,
+  ): dev.keliver.calls.compose.ui.graphics.Shadow = dev.keliver.calls.compose.ui.graphics.Shadow(
+    dev.keliver.calls.runtime.CallRecord(
+      153,
+      kotlinx.serialization.json.buildJsonObject {
+        if (color != null) put("color", dev.keliver.compose.ui.graphics.ColorCodec.toJson(color))
+        if (offset != null) put("offset", offset.toJson())
+        if (blurRadius != null) put("blurRadius", kotlinx.serialization.json.JsonPrimitive(blurRadius))
+      },
+      on = call,
+    ),
+    fieldValues = fieldValues?.let { old -> old + buildMap<String, Any?> { if (offset != null) put("offset", offset); if (blurRadius != null) put("blurRadius", blurRadius) } },
+  )
+  public companion object {
+    /** `androidx.compose.ui.graphics.Shadow.Companion#None`, recorded: the host makes the same call (lock tag 154). */
+    public val None: dev.keliver.calls.compose.ui.graphics.Shadow get() = dev.keliver.calls.compose.ui.graphics.Shadow(dev.keliver.calls.runtime.CallRecord(154))
+  }
 }
 
 /** Guest mirror of `androidx.compose.ui.graphics.Shape`: a recorded call the host replays (MS4-42, call records). */
 public interface Shape : dev.keliver.calls.runtime.CallRecorded {
 }
+@dev.keliver.calls.runtime.InternalCallApi
+internal class ShapeCall(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), Shape
+
+/** Guest mirror of `androidx.compose.ui.graphics.SkiaGraphicsContext`: a recorded call the host replays (MS4-42, call records). */
+public class SkiaGraphicsContext @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.ui.graphics.GraphicsContext {
+  @Deprecated("Keliver: `SkiaGraphicsContext.activeGraphicsLayersCount` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val activeGraphicsLayersCount: Nothing get() = error("call-recorded")
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.SolidColor`: a recorded call the host replays (MS4-42, call records). */
+public class SolidColor @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues), dev.keliver.calls.compose.ui.graphics.Brush, dev.keliver.calls.compose.ui.graphics.Interpolatable {
+  /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
+  public val value: dev.keliver.compose.ui.graphics.Color get() = (readValues("SolidColor.value")["value"] as dev.keliver.compose.ui.graphics.Color?)!!
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.StampedPathEffectStyle`: a recorded call the host replays (MS4-42, call records). */
+public class StampedPathEffectStyle @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.StampedPathEffectStyle.Companion#Morph`, recorded: the host makes the same call (lock tag 157). */
+    public val Morph: dev.keliver.calls.compose.ui.graphics.StampedPathEffectStyle get() = dev.keliver.calls.compose.ui.graphics.StampedPathEffectStyle(dev.keliver.calls.runtime.CallRecord(157))
+    /** `androidx.compose.ui.graphics.StampedPathEffectStyle.Companion#Rotate`, recorded: the host makes the same call (lock tag 158). */
+    public val Rotate: dev.keliver.calls.compose.ui.graphics.StampedPathEffectStyle get() = dev.keliver.calls.compose.ui.graphics.StampedPathEffectStyle(dev.keliver.calls.runtime.CallRecord(158))
+    /** `androidx.compose.ui.graphics.StampedPathEffectStyle.Companion#Translate`, recorded: the host makes the same call (lock tag 159). */
+    public val Translate: dev.keliver.calls.compose.ui.graphics.StampedPathEffectStyle get() = dev.keliver.calls.compose.ui.graphics.StampedPathEffectStyle(dev.keliver.calls.runtime.CallRecord(159))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.StrokeCap`: a recorded call the host replays (MS4-42, call records). */
+public class StrokeCap @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.StrokeCap.Companion#Butt`, recorded: the host makes the same call (lock tag 160). */
+    public val Butt: dev.keliver.calls.compose.ui.graphics.StrokeCap get() = dev.keliver.calls.compose.ui.graphics.StrokeCap(dev.keliver.calls.runtime.CallRecord(160))
+    /** `androidx.compose.ui.graphics.StrokeCap.Companion#Round`, recorded: the host makes the same call (lock tag 161). */
+    public val Round: dev.keliver.calls.compose.ui.graphics.StrokeCap get() = dev.keliver.calls.compose.ui.graphics.StrokeCap(dev.keliver.calls.runtime.CallRecord(161))
+    /** `androidx.compose.ui.graphics.StrokeCap.Companion#Square`, recorded: the host makes the same call (lock tag 162). */
+    public val Square: dev.keliver.calls.compose.ui.graphics.StrokeCap get() = dev.keliver.calls.compose.ui.graphics.StrokeCap(dev.keliver.calls.runtime.CallRecord(162))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.StrokeJoin`: a recorded call the host replays (MS4-42, call records). */
+public class StrokeJoin @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.StrokeJoin.Companion#Bevel`, recorded: the host makes the same call (lock tag 163). */
+    public val Bevel: dev.keliver.calls.compose.ui.graphics.StrokeJoin get() = dev.keliver.calls.compose.ui.graphics.StrokeJoin(dev.keliver.calls.runtime.CallRecord(163))
+    /** `androidx.compose.ui.graphics.StrokeJoin.Companion#Miter`, recorded: the host makes the same call (lock tag 164). */
+    public val Miter: dev.keliver.calls.compose.ui.graphics.StrokeJoin get() = dev.keliver.calls.compose.ui.graphics.StrokeJoin(dev.keliver.calls.runtime.CallRecord(164))
+    /** `androidx.compose.ui.graphics.StrokeJoin.Companion#Round`, recorded: the host makes the same call (lock tag 165). */
+    public val Round: dev.keliver.calls.compose.ui.graphics.StrokeJoin get() = dev.keliver.calls.compose.ui.graphics.StrokeJoin(dev.keliver.calls.runtime.CallRecord(165))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.TileMode`: a recorded call the host replays (MS4-42, call records). */
+public class TileMode @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.TileMode.Companion#Clamp`, recorded: the host makes the same call (lock tag 167). */
+    public val Clamp: dev.keliver.calls.compose.ui.graphics.TileMode get() = dev.keliver.calls.compose.ui.graphics.TileMode(dev.keliver.calls.runtime.CallRecord(167))
+    /** `androidx.compose.ui.graphics.TileMode.Companion#Decal`, recorded: the host makes the same call (lock tag 168). */
+    public val Decal: dev.keliver.calls.compose.ui.graphics.TileMode get() = dev.keliver.calls.compose.ui.graphics.TileMode(dev.keliver.calls.runtime.CallRecord(168))
+    /** `androidx.compose.ui.graphics.TileMode.Companion#Mirror`, recorded: the host makes the same call (lock tag 169). */
+    public val Mirror: dev.keliver.calls.compose.ui.graphics.TileMode get() = dev.keliver.calls.compose.ui.graphics.TileMode(dev.keliver.calls.runtime.CallRecord(169))
+    /** `androidx.compose.ui.graphics.TileMode.Companion#Repeated`, recorded: the host makes the same call (lock tag 170). */
+    public val Repeated: dev.keliver.calls.compose.ui.graphics.TileMode get() = dev.keliver.calls.compose.ui.graphics.TileMode(dev.keliver.calls.runtime.CallRecord(170))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.TransformOrigin`: a recorded call the host replays (MS4-42, call records). */
+public class TransformOrigin @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  @Deprecated("Keliver: `TransformOrigin.pivotFractionX` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val pivotFractionX: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `TransformOrigin.pivotFractionY` is not readable in the guest: this value is a recorded call (computed by Compose on the host).", level = DeprecationLevel.ERROR)
+  public val pivotFractionY: Nothing get() = error("call-recorded")
+  /** `androidx.compose.ui.graphics.TransformOrigin#copy(pivotFractionX:Float,pivotFractionY:Float)` on a recorded value: the call carries the receiver (lock tag 171). */
+  public fun copy(
+    pivotFractionX: kotlin.Float? = null,
+    pivotFractionY: kotlin.Float? = null,
+  ): dev.keliver.calls.compose.ui.graphics.TransformOrigin = dev.keliver.calls.compose.ui.graphics.TransformOrigin(
+    dev.keliver.calls.runtime.CallRecord(
+      171,
+      kotlinx.serialization.json.buildJsonObject {
+        if (pivotFractionX != null) put("pivotFractionX", kotlinx.serialization.json.JsonPrimitive(pivotFractionX))
+        if (pivotFractionY != null) put("pivotFractionY", kotlinx.serialization.json.JsonPrimitive(pivotFractionY))
+      },
+      on = call,
+    ),
+  )
+  public companion object {
+    /** `androidx.compose.ui.graphics.TransformOrigin.Companion#Center`, recorded: the host makes the same call (lock tag 173). */
+    public val Center: dev.keliver.calls.compose.ui.graphics.TransformOrigin get() = dev.keliver.calls.compose.ui.graphics.TransformOrigin(dev.keliver.calls.runtime.CallRecord(173))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.VertexMode`: a recorded call the host replays (MS4-42, call records). */
+public class VertexMode @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  public companion object {
+    /** `androidx.compose.ui.graphics.VertexMode.Companion#TriangleFan`, recorded: the host makes the same call (lock tag 174). */
+    public val TriangleFan: dev.keliver.calls.compose.ui.graphics.VertexMode get() = dev.keliver.calls.compose.ui.graphics.VertexMode(dev.keliver.calls.runtime.CallRecord(174))
+    /** `androidx.compose.ui.graphics.VertexMode.Companion#TriangleStrip`, recorded: the host makes the same call (lock tag 175). */
+    public val TriangleStrip: dev.keliver.calls.compose.ui.graphics.VertexMode get() = dev.keliver.calls.compose.ui.graphics.VertexMode(dev.keliver.calls.runtime.CallRecord(175))
+    /** `androidx.compose.ui.graphics.VertexMode.Companion#Triangles`, recorded: the host makes the same call (lock tag 176). */
+    public val Triangles: dev.keliver.calls.compose.ui.graphics.VertexMode get() = dev.keliver.calls.compose.ui.graphics.VertexMode(dev.keliver.calls.runtime.CallRecord(176))
+  }
+}
+
+/** Guest mirror of `androidx.compose.ui.graphics.Vertices`: a recorded call the host replays (MS4-42, call records). */
+public class Vertices @dev.keliver.calls.runtime.InternalCallApi constructor(call: dev.keliver.calls.runtime.CallRecord, fieldValues: Map<String, Any?>? = null) : dev.keliver.calls.runtime.CallValue(call, fieldValues) {
+  /** Readable: the guest built this value from a constructor call, so it holds the arguments (design §5, case 1). */
+  public val vertexMode: dev.keliver.calls.compose.ui.graphics.VertexMode get() = (readValues("Vertices.vertexMode")["vertexMode"] as dev.keliver.calls.compose.ui.graphics.VertexMode?)!!
+  @Deprecated("Keliver: `Vertices.positions` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val positions: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Vertices.textureCoordinates` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val textureCoordinates: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Vertices.colors` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val colors: Nothing get() = error("call-recorded")
+  @Deprecated("Keliver: `Vertices.indices` is not readable in the guest: this value is a recorded call (constructor-backed, but its default or its types do not cross).", level = DeprecationLevel.ERROR)
+  public val indices: Nothing get() = error("call-recorded")
+}
+
+/** `androidx.compose.ui.graphics.BlendModeColorFilter#<init>(color:Color,blendMode:BlendMode)`, recorded: the host makes the same call (lock tag 73). */
+public fun BlendModeColorFilter(
+  color: dev.keliver.compose.ui.graphics.Color,
+  blendMode: dev.keliver.calls.compose.ui.graphics.BlendMode,
+): dev.keliver.calls.compose.ui.graphics.BlendModeColorFilter = dev.keliver.calls.compose.ui.graphics.BlendModeColorFilter(
+  dev.keliver.calls.runtime.CallRecord(
+    73,
+    kotlinx.serialization.json.buildJsonObject {
+      put("color", dev.keliver.compose.ui.graphics.ColorCodec.toJson(color))
+      put("blendMode", blendMode.call.toJson())
+    },
+  ),
+  fieldValues = buildMap<String, Any?> { put("color", color); put("blendMode", blendMode) },
+)
+
+/** `androidx.compose.ui.graphics.BlurEffect#<init>(renderEffect:RenderEffect?,radiusX:Float,radiusY:Float,edgeTreatment:TileMode)`, recorded: the host makes the same call (lock tag 74). */
+public fun BlurEffect(
+  renderEffect: dev.keliver.calls.compose.ui.graphics.RenderEffect?,
+  radiusX: kotlin.Float,
+  radiusY: kotlin.Float? = null,
+  edgeTreatment: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+): dev.keliver.calls.compose.ui.graphics.BlurEffect = dev.keliver.calls.compose.ui.graphics.BlurEffect(
+  dev.keliver.calls.runtime.CallRecord(
+    74,
+    kotlinx.serialization.json.buildJsonObject {
+      put("renderEffect", renderEffect?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
+      put("radiusX", kotlinx.serialization.json.JsonPrimitive(radiusX))
+      if (radiusY != null) put("radiusY", kotlinx.serialization.json.JsonPrimitive(radiusY))
+      if (edgeTreatment != null) put("edgeTreatment", edgeTreatment.call.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.BlurEffect(radiusX:Float,radiusY:Float,edgeTreatment:TileMode)`, recorded: the host makes the same call (lock tag 75). */
+public fun BlurEffect(
+  radiusX: kotlin.Float,
+  radiusY: kotlin.Float,
+  edgeTreatment: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+): dev.keliver.calls.compose.ui.graphics.BlurEffect = dev.keliver.calls.compose.ui.graphics.BlurEffect(
+  dev.keliver.calls.runtime.CallRecord(
+    75,
+    kotlinx.serialization.json.buildJsonObject {
+      put("radiusX", kotlinx.serialization.json.JsonPrimitive(radiusX))
+      put("radiusY", kotlinx.serialization.json.JsonPrimitive(radiusY))
+      if (edgeTreatment != null) put("edgeTreatment", edgeTreatment.call.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.Canvas(image:ImageBitmap)`, recorded: the host makes the same call (lock tag 82). */
+public fun Canvas(
+  image: dev.keliver.calls.compose.ui.graphics.ImageBitmap,
+): dev.keliver.calls.compose.ui.graphics.Canvas = dev.keliver.calls.compose.ui.graphics.CanvasCall(
+  dev.keliver.calls.runtime.CallRecord(
+    82,
+    kotlinx.serialization.json.buildJsonObject {
+      put("image", image.call.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.CloseSegment`, recorded: the host makes the same call (lock tag 85). */
+public val CloseSegment: dev.keliver.calls.compose.ui.graphics.PathSegment get() = dev.keliver.calls.compose.ui.graphics.PathSegment(dev.keliver.calls.runtime.CallRecord(85))
+
+/** `androidx.compose.ui.graphics.ColorMatrix#<init>(values:FloatArray)`, recorded: the host makes the same call (lock tag 89). */
+public fun ColorMatrix(
+): dev.keliver.calls.compose.ui.graphics.ColorMatrix = dev.keliver.calls.compose.ui.graphics.ColorMatrix(
+  dev.keliver.calls.runtime.CallRecord(
+    89,
+    kotlinx.serialization.json.buildJsonObject {
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.ColorMatrixColorFilter#<init>(colorMatrix:ColorMatrix)`, recorded: the host makes the same call (lock tag 90). */
+public fun ColorMatrixColorFilter(
+  colorMatrix: dev.keliver.calls.compose.ui.graphics.ColorMatrix,
+): dev.keliver.calls.compose.ui.graphics.ColorMatrixColorFilter = dev.keliver.calls.compose.ui.graphics.ColorMatrixColorFilter(
+  dev.keliver.calls.runtime.CallRecord(
+    90,
+    kotlinx.serialization.json.buildJsonObject {
+      put("colorMatrix", colorMatrix.call.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.CompositeShader(dst:Shader,src:Shader,blendMode:BlendMode)`, recorded: the host makes the same call (lock tag 92). */
+public fun CompositeShader(
+  dst: dev.keliver.calls.compose.ui.graphics.Shader,
+  src: dev.keliver.calls.compose.ui.graphics.Shader,
+  blendMode: dev.keliver.calls.compose.ui.graphics.BlendMode,
+): dev.keliver.calls.compose.ui.graphics.Shader = dev.keliver.calls.compose.ui.graphics.Shader(
+  dev.keliver.calls.runtime.CallRecord(
+    92,
+    kotlinx.serialization.json.buildJsonObject {
+      put("dst", dst.call.toJson())
+      put("src", src.call.toJson())
+      put("blendMode", blendMode.call.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.DoneSegment`, recorded: the host makes the same call (lock tag 96). */
+public val DoneSegment: dev.keliver.calls.compose.ui.graphics.PathSegment get() = dev.keliver.calls.compose.ui.graphics.PathSegment(dev.keliver.calls.runtime.CallRecord(96))
+
+/** `androidx.compose.ui.graphics.GraphicsLayerScope()`, recorded: the host makes the same call (lock tag 101). */
+public fun GraphicsLayerScope(
+): dev.keliver.calls.compose.ui.graphics.GraphicsLayerScope = dev.keliver.calls.compose.ui.graphics.GraphicsLayerScopeCall(
+  dev.keliver.calls.runtime.CallRecord(
+    101,
+    kotlinx.serialization.json.buildJsonObject {
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.ImageBitmap(width:Int,height:Int,config:ImageBitmapConfig,hasAlpha:Boolean,colorSpace:ColorSpace)`, recorded: the host makes the same call (lock tag 102). */
+public fun ImageBitmap(
+  width: kotlin.Int,
+  height: kotlin.Int,
+  config: dev.keliver.calls.compose.ui.graphics.ImageBitmapConfig? = null,
+  hasAlpha: kotlin.Boolean? = null,
+): dev.keliver.calls.compose.ui.graphics.ImageBitmap = dev.keliver.calls.compose.ui.graphics.ImageBitmapCall(
+  dev.keliver.calls.runtime.CallRecord(
+    102,
+    kotlinx.serialization.json.buildJsonObject {
+      put("width", kotlinx.serialization.json.JsonPrimitive(width))
+      put("height", kotlinx.serialization.json.JsonPrimitive(height))
+      if (config != null) put("config", config.call.toJson())
+      if (hasAlpha != null) put("hasAlpha", kotlinx.serialization.json.JsonPrimitive(hasAlpha))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.ImageShader(image:ImageBitmap,tileModeX:TileMode,tileModeY:TileMode)`, recorded: the host makes the same call (lock tag 108). */
+public fun ImageShader(
+  image: dev.keliver.calls.compose.ui.graphics.ImageBitmap,
+  tileModeX: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+  tileModeY: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+): dev.keliver.calls.compose.ui.graphics.Shader = dev.keliver.calls.compose.ui.graphics.Shader(
+  dev.keliver.calls.runtime.CallRecord(
+    108,
+    kotlinx.serialization.json.buildJsonObject {
+      put("image", image.call.toJson())
+      if (tileModeX != null) put("tileModeX", tileModeX.call.toJson())
+      if (tileModeY != null) put("tileModeY", tileModeY.call.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.LayerOutsets#<init>(left:Dp,top:Dp,right:Dp,bottom:Dp)`, recorded: the host makes the same call (lock tag 110). */
+public fun LayerOutsets(
+  left: dev.keliver.compose.ui.unit.Dp? = null,
+  top: dev.keliver.compose.ui.unit.Dp? = null,
+  right: dev.keliver.compose.ui.unit.Dp? = null,
+  bottom: dev.keliver.compose.ui.unit.Dp? = null,
+): dev.keliver.calls.compose.ui.graphics.LayerOutsets = dev.keliver.calls.compose.ui.graphics.LayerOutsets(
+  dev.keliver.calls.runtime.CallRecord(
+    110,
+    kotlinx.serialization.json.buildJsonObject {
+      if (left != null) put("left", dev.keliver.compose.ui.unit.DpCodec.toJson(left))
+      if (top != null) put("top", dev.keliver.compose.ui.unit.DpCodec.toJson(top))
+      if (right != null) put("right", dev.keliver.compose.ui.unit.DpCodec.toJson(right))
+      if (bottom != null) put("bottom", dev.keliver.compose.ui.unit.DpCodec.toJson(bottom))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.LayerOutsets(all:Dp)`, recorded: the host makes the same call (lock tag 111). */
+public fun LayerOutsets(
+  all: dev.keliver.compose.ui.unit.Dp,
+): dev.keliver.calls.compose.ui.graphics.LayerOutsets = dev.keliver.calls.compose.ui.graphics.LayerOutsets(
+  dev.keliver.calls.runtime.CallRecord(
+    111,
+    kotlinx.serialization.json.buildJsonObject {
+      put("all", dev.keliver.compose.ui.unit.DpCodec.toJson(all))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.LayerOutsets(vertical:Dp,horizontal:Dp)`, recorded: the host makes the same call (lock tag 112). */
+public fun LayerOutsets(
+  vertical: dev.keliver.compose.ui.unit.Dp,
+  horizontal: dev.keliver.compose.ui.unit.Dp,
+): dev.keliver.calls.compose.ui.graphics.LayerOutsets = dev.keliver.calls.compose.ui.graphics.LayerOutsets(
+  dev.keliver.calls.runtime.CallRecord(
+    112,
+    kotlinx.serialization.json.buildJsonObject {
+      put("vertical", dev.keliver.compose.ui.unit.DpCodec.toJson(vertical))
+      put("horizontal", dev.keliver.compose.ui.unit.DpCodec.toJson(horizontal))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.LightingColorFilter#<init>(multiply:Color,add:Color)`, recorded: the host makes the same call (lock tag 114). */
+public fun LightingColorFilter(
+  multiply: dev.keliver.compose.ui.graphics.Color,
+  add: dev.keliver.compose.ui.graphics.Color,
+): dev.keliver.calls.compose.ui.graphics.LightingColorFilter = dev.keliver.calls.compose.ui.graphics.LightingColorFilter(
+  dev.keliver.calls.runtime.CallRecord(
+    114,
+    kotlinx.serialization.json.buildJsonObject {
+      put("multiply", dev.keliver.compose.ui.graphics.ColorCodec.toJson(multiply))
+      put("add", dev.keliver.compose.ui.graphics.ColorCodec.toJson(add))
+    },
+  ),
+  fieldValues = buildMap<String, Any?> { put("multiply", multiply); put("add", add) },
+)
+
+/** `androidx.compose.ui.graphics.LinearGradientShader(from:Offset,to:Offset,colors:List<Color>,colorStops:List<Float>?,tileMode:TileMode)`, recorded: the host makes the same call (lock tag 115). */
+public fun LinearGradientShader(
+  from: dev.keliver.calls.compose.ui.geometry.Offset,
+  to: dev.keliver.calls.compose.ui.geometry.Offset,
+  colors: kotlin.collections.List<dev.keliver.compose.ui.graphics.Color>,
+  colorStops: kotlin.collections.List<kotlin.Float>? = null,
+  tileMode: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+): dev.keliver.calls.compose.ui.graphics.Shader = dev.keliver.calls.compose.ui.graphics.Shader(
+  dev.keliver.calls.runtime.CallRecord(
+    115,
+    kotlinx.serialization.json.buildJsonObject {
+      put("from", from.toJson())
+      put("to", to.toJson())
+      put("colors", kotlinx.serialization.json.JsonArray(colors.map { dev.keliver.compose.ui.graphics.ColorCodec.toJson(it) }))
+      if (colorStops != null) put("colorStops", kotlinx.serialization.json.JsonArray(colorStops.map { kotlinx.serialization.json.JsonPrimitive(it) }))
+      if (tileMode != null) put("tileMode", tileMode.call.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.Matrix#<init>(values:FloatArray)`, recorded: the host makes the same call (lock tag 116). */
+public fun Matrix(
+): dev.keliver.calls.compose.ui.graphics.Matrix = dev.keliver.calls.compose.ui.graphics.Matrix(
+  dev.keliver.calls.runtime.CallRecord(
+    116,
+    kotlinx.serialization.json.buildJsonObject {
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.OffsetEffect#<init>(renderEffect:RenderEffect?,offset:Offset)`, recorded: the host makes the same call (lock tag 117). */
+public fun OffsetEffect(
+  renderEffect: dev.keliver.calls.compose.ui.graphics.RenderEffect?,
+  offset: dev.keliver.calls.compose.ui.geometry.Offset,
+): dev.keliver.calls.compose.ui.graphics.OffsetEffect = dev.keliver.calls.compose.ui.graphics.OffsetEffect(
+  dev.keliver.calls.runtime.CallRecord(
+    117,
+    kotlinx.serialization.json.buildJsonObject {
+      put("renderEffect", renderEffect?.let { it.call.toJson() } ?: kotlinx.serialization.json.JsonNull)
+      put("offset", offset.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.OffsetEffect(offsetX:Float,offsetY:Float)`, recorded: the host makes the same call (lock tag 118). */
+public fun OffsetEffect(
+  offsetX: kotlin.Float,
+  offsetY: kotlin.Float,
+): dev.keliver.calls.compose.ui.graphics.OffsetEffect = dev.keliver.calls.compose.ui.graphics.OffsetEffect(
+  dev.keliver.calls.runtime.CallRecord(
+    118,
+    kotlinx.serialization.json.buildJsonObject {
+      put("offsetX", kotlinx.serialization.json.JsonPrimitive(offsetX))
+      put("offsetY", kotlinx.serialization.json.JsonPrimitive(offsetY))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.Paint()`, recorded: the host makes the same call (lock tag 119). */
+public fun Paint(
+): dev.keliver.calls.compose.ui.graphics.Paint = dev.keliver.calls.compose.ui.graphics.PaintCall(
+  dev.keliver.calls.runtime.CallRecord(
+    119,
+    kotlinx.serialization.json.buildJsonObject {
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.Path()`, recorded: the host makes the same call (lock tag 128). */
+public fun Path(
+): dev.keliver.calls.compose.ui.graphics.Path = dev.keliver.calls.compose.ui.graphics.PathCall(
+  dev.keliver.calls.runtime.CallRecord(
+    128,
+    kotlinx.serialization.json.buildJsonObject {
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.PathHitTester#<init>()`, recorded: the host makes the same call (lock tag 135). */
+public fun PathHitTester(
+): dev.keliver.calls.compose.ui.graphics.PathHitTester = dev.keliver.calls.compose.ui.graphics.PathHitTester(
+  dev.keliver.calls.runtime.CallRecord(
+    135,
+    kotlinx.serialization.json.buildJsonObject {
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.PathHitTester(path:Path,tolerance:Float)`, recorded: the host makes the same call (lock tag 136). */
+public fun PathHitTester(
+  path: dev.keliver.calls.compose.ui.graphics.Path,
+  tolerance: kotlin.Float? = null,
+): dev.keliver.calls.compose.ui.graphics.PathHitTester = dev.keliver.calls.compose.ui.graphics.PathHitTester(
+  dev.keliver.calls.runtime.CallRecord(
+    136,
+    kotlinx.serialization.json.buildJsonObject {
+      put("path", path.call.toJson())
+      if (tolerance != null) put("tolerance", kotlinx.serialization.json.JsonPrimitive(tolerance))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.PathIterator(path:Path,conicEvaluation:PathIterator.ConicEvaluation,tolerance:Float)`, recorded: the host makes the same call (lock tag 138). */
+public fun PathIterator(
+  path: dev.keliver.calls.compose.ui.graphics.Path,
+  tolerance: kotlin.Float? = null,
+): dev.keliver.calls.compose.ui.graphics.PathIterator = dev.keliver.calls.compose.ui.graphics.PathIteratorCall(
+  dev.keliver.calls.runtime.CallRecord(
+    138,
+    kotlinx.serialization.json.buildJsonObject {
+      put("path", path.call.toJson())
+      if (tolerance != null) put("tolerance", kotlinx.serialization.json.JsonPrimitive(tolerance))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.PathMeasure()`, recorded: the host makes the same call (lock tag 139). */
+public fun PathMeasure(
+): dev.keliver.calls.compose.ui.graphics.PathMeasure = dev.keliver.calls.compose.ui.graphics.PathMeasureCall(
+  dev.keliver.calls.runtime.CallRecord(
+    139,
+    kotlinx.serialization.json.buildJsonObject {
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.RadialGradientShader(center:Offset,radius:Float,colors:List<Color>,colorStops:List<Float>?,tileMode:TileMode)`, recorded: the host makes the same call (lock tag 148). */
+public fun RadialGradientShader(
+  center: dev.keliver.calls.compose.ui.geometry.Offset,
+  radius: kotlin.Float,
+  colors: kotlin.collections.List<dev.keliver.compose.ui.graphics.Color>,
+  colorStops: kotlin.collections.List<kotlin.Float>? = null,
+  tileMode: dev.keliver.calls.compose.ui.graphics.TileMode? = null,
+): dev.keliver.calls.compose.ui.graphics.Shader = dev.keliver.calls.compose.ui.graphics.Shader(
+  dev.keliver.calls.runtime.CallRecord(
+    148,
+    kotlinx.serialization.json.buildJsonObject {
+      put("center", center.toJson())
+      put("radius", kotlinx.serialization.json.JsonPrimitive(radius))
+      put("colors", kotlinx.serialization.json.JsonArray(colors.map { dev.keliver.compose.ui.graphics.ColorCodec.toJson(it) }))
+      if (colorStops != null) put("colorStops", kotlinx.serialization.json.JsonArray(colorStops.map { kotlinx.serialization.json.JsonPrimitive(it) }))
+      if (tileMode != null) put("tileMode", tileMode.call.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.RectangleShape`, recorded: the host makes the same call (lock tag 149). */
+public val RectangleShape: dev.keliver.calls.compose.ui.graphics.Shape get() = dev.keliver.calls.compose.ui.graphics.ShapeCall(dev.keliver.calls.runtime.CallRecord(149))
+
+/** `androidx.compose.ui.graphics.ShaderBrush(shader:Shader)`, recorded: the host makes the same call (lock tag 151). */
+public fun ShaderBrush(
+  shader: dev.keliver.calls.compose.ui.graphics.Shader,
+): dev.keliver.calls.compose.ui.graphics.ShaderBrush = dev.keliver.calls.compose.ui.graphics.ShaderBrushCall(
+  dev.keliver.calls.runtime.CallRecord(
+    151,
+    kotlinx.serialization.json.buildJsonObject {
+      put("shader", shader.call.toJson())
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.Shadow#<init>(color:Color,offset:Offset,blurRadius:Float)`, recorded: the host makes the same call (lock tag 152). */
+public fun Shadow(
+  color: dev.keliver.compose.ui.graphics.Color? = null,
+  offset: dev.keliver.calls.compose.ui.geometry.Offset? = null,
+  blurRadius: kotlin.Float? = null,
+): dev.keliver.calls.compose.ui.graphics.Shadow = dev.keliver.calls.compose.ui.graphics.Shadow(
+  dev.keliver.calls.runtime.CallRecord(
+    152,
+    kotlinx.serialization.json.buildJsonObject {
+      if (color != null) put("color", dev.keliver.compose.ui.graphics.ColorCodec.toJson(color))
+      if (offset != null) put("offset", offset.toJson())
+      if (blurRadius != null) put("blurRadius", kotlinx.serialization.json.JsonPrimitive(blurRadius))
+    },
+  ),
+  fieldValues = buildMap<String, Any?> { if (offset != null) put("offset", offset); if (blurRadius != null) put("blurRadius", blurRadius) },
+)
+
+/** `androidx.compose.ui.graphics.SkiaGraphicsContext#<init>(measureDrawBounds:Boolean)`, recorded: the host makes the same call (lock tag 155). */
+public fun SkiaGraphicsContext(
+  measureDrawBounds: kotlin.Boolean? = null,
+): dev.keliver.calls.compose.ui.graphics.SkiaGraphicsContext = dev.keliver.calls.compose.ui.graphics.SkiaGraphicsContext(
+  dev.keliver.calls.runtime.CallRecord(
+    155,
+    kotlinx.serialization.json.buildJsonObject {
+      if (measureDrawBounds != null) put("measureDrawBounds", kotlinx.serialization.json.JsonPrimitive(measureDrawBounds))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.SolidColor#<init>(value:Color)`, recorded: the host makes the same call (lock tag 156). */
+public fun SolidColor(
+  value: dev.keliver.compose.ui.graphics.Color,
+): dev.keliver.calls.compose.ui.graphics.SolidColor = dev.keliver.calls.compose.ui.graphics.SolidColor(
+  dev.keliver.calls.runtime.CallRecord(
+    156,
+    kotlinx.serialization.json.buildJsonObject {
+      put("value", dev.keliver.compose.ui.graphics.ColorCodec.toJson(value))
+    },
+  ),
+  fieldValues = buildMap<String, Any?> { put("value", value) },
+)
+
+/** `androidx.compose.ui.graphics.SweepGradientShader(center:Offset,colors:List<Color>,colorStops:List<Float>?)`, recorded: the host makes the same call (lock tag 166). */
+public fun SweepGradientShader(
+  center: dev.keliver.calls.compose.ui.geometry.Offset,
+  colors: kotlin.collections.List<dev.keliver.compose.ui.graphics.Color>,
+  colorStops: kotlin.collections.List<kotlin.Float>? = null,
+): dev.keliver.calls.compose.ui.graphics.Shader = dev.keliver.calls.compose.ui.graphics.Shader(
+  dev.keliver.calls.runtime.CallRecord(
+    166,
+    kotlinx.serialization.json.buildJsonObject {
+      put("center", center.toJson())
+      put("colors", kotlinx.serialization.json.JsonArray(colors.map { dev.keliver.compose.ui.graphics.ColorCodec.toJson(it) }))
+      if (colorStops != null) put("colorStops", kotlinx.serialization.json.JsonArray(colorStops.map { kotlinx.serialization.json.JsonPrimitive(it) }))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.TransformOrigin(pivotFractionX:Float,pivotFractionY:Float)`, recorded: the host makes the same call (lock tag 172). */
+public fun TransformOrigin(
+  pivotFractionX: kotlin.Float,
+  pivotFractionY: kotlin.Float,
+): dev.keliver.calls.compose.ui.graphics.TransformOrigin = dev.keliver.calls.compose.ui.graphics.TransformOrigin(
+  dev.keliver.calls.runtime.CallRecord(
+    172,
+    kotlinx.serialization.json.buildJsonObject {
+      put("pivotFractionX", kotlinx.serialization.json.JsonPrimitive(pivotFractionX))
+      put("pivotFractionY", kotlinx.serialization.json.JsonPrimitive(pivotFractionY))
+    },
+  ),
+)
+
+/** `androidx.compose.ui.graphics.Vertices#<init>(vertexMode:VertexMode,positions:List<Offset>,textureCoordinates:List<Offset>,colors:List<Color>,indices:List<Int>)`, recorded: the host makes the same call (lock tag 177). */
+public fun Vertices(
+  vertexMode: dev.keliver.calls.compose.ui.graphics.VertexMode,
+  positions: kotlin.collections.List<dev.keliver.calls.compose.ui.geometry.Offset>,
+  textureCoordinates: kotlin.collections.List<dev.keliver.calls.compose.ui.geometry.Offset>,
+  colors: kotlin.collections.List<dev.keliver.compose.ui.graphics.Color>,
+  indices: kotlin.collections.List<kotlin.Int>,
+): dev.keliver.calls.compose.ui.graphics.Vertices = dev.keliver.calls.compose.ui.graphics.Vertices(
+  dev.keliver.calls.runtime.CallRecord(
+    177,
+    kotlinx.serialization.json.buildJsonObject {
+      put("vertexMode", vertexMode.call.toJson())
+      put("positions", kotlinx.serialization.json.JsonArray(positions.map { it.toJson() }))
+      put("textureCoordinates", kotlinx.serialization.json.JsonArray(textureCoordinates.map { it.toJson() }))
+      put("colors", kotlinx.serialization.json.JsonArray(colors.map { dev.keliver.compose.ui.graphics.ColorCodec.toJson(it) }))
+      put("indices", kotlinx.serialization.json.JsonArray(indices.map { kotlinx.serialization.json.JsonPrimitive(it) }))
+    },
+  ),
+  fieldValues = buildMap<String, Any?> { put("vertexMode", vertexMode) },
+)
+
+/** `androidx.compose.ui.graphics.lerp(start:Shadow,stop:Shadow,fraction:Float)`, recorded: the host makes the same call (lock tag 184). */
+public fun lerp(
+  start: dev.keliver.calls.compose.ui.graphics.Shadow,
+  stop: dev.keliver.calls.compose.ui.graphics.Shadow,
+  fraction: kotlin.Float,
+): dev.keliver.calls.compose.ui.graphics.Shadow = dev.keliver.calls.compose.ui.graphics.Shadow(
+  dev.keliver.calls.runtime.CallRecord(
+    184,
+    kotlinx.serialization.json.buildJsonObject {
+      put("start", start.call.toJson())
+      put("stop", stop.call.toJson())
+      put("fraction", kotlinx.serialization.json.JsonPrimitive(fraction))
+    },
+  ),
+)

@@ -163,6 +163,7 @@ def valuesArgs = { List extra ->
     '--out-guest', rootProject.file('keliver-compose-calls/src/commonMain/kotlin').absolutePath,
     '--out-host', rootProject.file('keliver-compose-calls-composeui/src/commonMain/kotlin').absolutePath,
     '--out-editor', file('values.editor.json').absolutePath,
+    '--out-report', file('values.report.md').absolutePath,
   ] + extra
 }
 def generateValues = tasks.register('generateComposeApiValues', JavaExec) {
