@@ -166,7 +166,13 @@ New:
     generated root `KeliverCompose`.
   - `keliver-compose-core-schema`, `-widget`, `-modifiers`, `-compose` and `-composeui`: its
     `core` group (Compose's foundation-layout, foundation, ui, material3 and animation, and
-    Keliver's extras), with `keliverComposeWidgetSystem()` for Compose UI hosts.
+    Keliver's extras).
+  - `keliver-compose-root-composeui`: `keliverComposeWidgetSystem(coil = …)` for Compose UI
+    hosts (#327).
+  - `keliver-compose-coil-schema`, `-widget`, `-compose` and `-composeui`: the optional `coil`
+    group (Coil's `AsyncImage`). A host built without it passes no `coil`; a guest's
+    `AsyncImage` is then reported as an unknown widget once and draws nothing, and the rest of
+    the tree renders (#327).
   - `keliver-compose-values` is published for the first time.
   - The generated root has no legacy (`keliver-material`) schema. Tags and the wire may change
     until the 0.5.0 lock freeze.
@@ -180,9 +186,27 @@ New:
   iOS), so a device log shows which Keliver a host runs (#315).
 - `keliver-nav` is also published for wasmJs (browser), so a Kotlin/Wasm editor can depend on it
   (ED2's prerequisite). Its js and jvm artifacts are unchanged (MS4-27, #318).
+- `keliver-nav`: a generated `@ScreenState` registry (experimental,
+  `@OptIn(ExperimentalKeliverNavScreenStateApi::class)`): `ScreenStateRegistry` and
+  `ScreenStateEntry` list an app's named states as ordinary code (no reflection, so Kotlin/JS and
+  wasm guests can use them); `open(screen, name, fixtureSets)` gives the state's `NamedState`,
+  failing with a sealed `ScreenStateException`: `UnknownScreenStateException`,
+  `MissingScreenStateFixturesException` or `StaleScreenStateRegistryException` (#323).
+- Portal: `keliver.portal.json` `screenStateRegistry` (`out`, `packageName`, `valName`): the
+  relay writes the app's registry before each preview build, from the same screen files and
+  reader as `GET /states`; `ScreenStateRegistryKt <app-dir> --check` fails when it is stale
+  (#323).
+- Portal: `GET /states` reports a `@ScreenState` function the generated registry cannot call
+  (`private`, `suspend`, generic or `@Composable`, a return type other than `NamedState`, or an
+  annotation that might ask callers to opt in) as a problem instead of listing it (#323).
 
 Changed:
 
+- keliver-tooling-codegen: **this changes the generated API of any schema with no widgets or
+  modifiers of its own and at least one dependency (a root of groups):** its widget system takes
+  each group as nullable and needs an `absentWidget`, and its host protocol reports an absent
+  group's widgets as unknown, once per tag. Every other schema's generated code is unchanged
+  (#327).
 - `keliver-leak-detector` on wasmJs: `LeakDetector.timeBasedIn` returns a working
   detector, as on js; it uses JS `WeakRef`, and the
   engine's `gc()` when exposed. Without an exposed `gc()` it relies on the engine's own
@@ -214,6 +238,10 @@ Build:
 - CI runs `ziplineApiCheck`, `redwoodApiCheck`, `spotlessCheck` and the Gradle plugin's `validatePlugins`. The
   Zipline service dumps and keliver-material-schema's schema API (`keliver-api.xml`) are committed, so an
   incompatible guest/host service change or a reused widget tag fails the build (#302).
+- CI keeps Kotlin/Native's compiler caches for the iOS simulator between runs, saved from main, and the
+  Build job's debug simulator links always run there (never from Gradle's build cache), so the saved set
+  is complete. `gradle.properties`' `kotlin.native.cacheKind=none`, which does nothing since Kotlin 2.3.20,
+  is gone (#322, #PRNUM).
 
 Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 
