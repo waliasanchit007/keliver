@@ -4325,3 +4325,146 @@ adb shell "$A -e form flutter -e x prewarm"      # pre-warmed: created in bindAp
                                                  # NEXT process on (the setting is saved, as prestart)
 adb shell "$A -e form flutter -e bench nav --ei n 14 --ei warmup 2"   # and every other bench
 ```
+
+## NF5 R1: the reveal-only arm on the A12 (2026-11-28)
+
+R1 ([`docs/nf5-r1/README.md`](nf5-r1/README.md); `SHOW_BEFORE_COMPUTE.md` section 7, R1's row) on the
+Galaxy A12, following the kit's steps 0–7 in order: the eight arms of `run.sh`, step 4b's four no-ripple
+arms, `analyse.sh all`, and one rerun of the two judged arms. Medians over opens 3–14 (n = 12), ms from
+the UP, in one session on one build. Summaries are in
+[`docs/nf5-r1/a12-2026-11-28/`](nf5-r1/a12-2026-11-28/); the traces and the full `analyse-all.txt` stay
+in the session's scratch (sha256 not recorded for the 12 + 2 traces, below).
+
+**Verdict, by the bar the owner decided on 2026-11-28, applied as written:**
+
+| Size | Reveal first draw (`revealDrawn`) vs native's + 16.7 | Reveal buffer (`reveal.q_drew`) vs native's + 16.7 | Reveal `Record View#draw()` < 10 | Bar |
+|---|---|---|---|---|
+| **simple** | 13 against 19 + 16.7 = 35.7: in time | 26.5 against 39.2 + 16.7 = 55.9: in time | 4.5 ms | **MET** |
+| **heavy** | 12 against 24.5 + 16.7 = 41.2: in time | 32.4 against 82.1 + 16.7 = 98.8: in time | 8.2 ms | **MET** |
+
+The rerun of the two idle arms gave the same: simple 12.5 / 26.7 / 4.7, heavy 13 / 32.1 / 8.1. In
+every reveal arm the reveal's own frame queued the buffer (`drew_own` 12 of 12, `q_rt` 0), and the
+reveal's buffer came *before* native's own (26.5 against 39.2 simple, 32.4 against 82.1 heavy).
+
+**But the kit's own validity gate prints "R1: NO VERDICT", and that is reported as it is.** On every
+guest arm, the identity check (the trace's click → composed within 2 ms of the bench's, on 10 of 12
+opens) failed: 0 of 12 on all but `heavy-reveal` (1 of 12), and again on the rerun of both judged arms
+(0 of 12). The difference is a constant 2.3–4.4 ms (the trace's is longer) on every open, **including
+the arms with the reveal off** (`simple-off` 2.8–4.4; `heavy-off`'s medians 56 against 52). So it does not come from the
+reveal, and a rerun cannot change it. What the bar reads (the reveal's own frame, its buffer, its
+`Record View#draw()`) is found by markers inside the open's window and does not use `ec`; but the gate
+exists so that the trace's open is the bench's, and by the kit's rule the two idle arms do not count.
+This is the dry run's emulator tolerance (0.6 ms offset there) meeting a slower phone: the trace's
+click is the start of the first `zl:sendEvent` slice, the bench's is the guest's own clock in whole ms.
+That explanation is **inferred, not shown**. **The owner decides** whether the verdict above stands
+with the gate waived for a method offset of this size, or the gate is re-based and the arms are
+re-judged (the stored traces allow that without another run).
+
+**What the run shows**
+
+1. **The reveal is on the screen before native.** The reveal's buffer is queued 26.5 ms (simple) and
+   32.4 ms (heavy) after the UP, against native's 39.2 and 82.1. The display frame ends (`sf_end`, a
+   reading, not a condition) are 45.1 and 52.1 against native's 65.1 and 106.6. That is the prepared
+   detail against native's first draw with data; the reveal has no shell and shows the predicted item
+   (README, "What it leaves out").
+2. **The idle measure is what keeps bar 2.** `Record View#draw()` of the reveal frame, with / without
+   it: simple 4.5 / 12.8, heavy 8.2 / 29.8. Without it, bar 2's 10 ms fails on both sizes (bar 2 judges
+   the idle arm; the arms without it are reported). Bar 1's two readings hold with or without it
+   (simple 34.5, heavy 54.7 for the buffer). Measure and layout inside that draw: 2.0 / 10.6 simple,
+   3.3 / 24.8 heavy.
+3. **The emulator's lost frame did not happen on the A12.** q4 over all 14 opens of every one of the
+   12 arms: no RenderThread-only buffer in the 200 ms before the DOWN, none in the tap's hold, and the
+   first frame after the UP queued a buffer in every open, on native, `off`, reveal, and idle arms
+   alike, with the ripple on. The dry run's mechanism (a ripple animation holding the vsync) was found
+   on an Android 15 emulator and is not seen on this Android 12 phone. The no-ripple arms are therefore
+   close to their ripple twins (below).
+4. **The reveal adds to the guest's own step after the click** (appendix B assumed nothing): click →
+   composed, bench (trace `ec`), off / reveal / reveal + idle: simple 39.5 / 46 / 43.5 (43.5 / 49.2 /
+   46.7), heavy 52 / 87 / 63.5 (56 / 89.6 / 66.6). With the idle measure that is +4 ms on simple and
+   +11.5 ms on heavy; without it, +6.5 and +35. `count.k_reveal` is 0 in every arm: the reveal's frame
+   is not the one that ticked the guest, so the cost is in the frame before it or in the main thread's
+   queue, not shown here. The rerun: 43 / 45.8 (simple), 63 / 66.2 (heavy). The guest's own detail
+   drawn (bench `drawn`), off / reveal / idle: simple 62.5 / 66 / 66.5, heavy 114 / 111.5 / 90.5.
+
+**The tables.** `rv` is the reveal's frame, `nat` native's (`drawn`). Opens 3–14, n = 12 for every cell shown.
+
+| Arm | first draw | `q_drew` | `rec_ms` (`ml_ms`) | `row_end` | `sf_end` | `q_vs` | main `f_end` |
+|---|---|---|---|---|---|---|---|
+| `native-simple` | 19 | 39.2 | 12.1 (10.2) | 39.3 | 65.1 | 2.5 | 31.7 |
+| `simple-reveal-idle` rv | 13 | 26.5 | 4.5 (2.0) | 26.2 | 45.1 | 1.5 | 18.3 |
+| `simple-reveal` rv | 14 | 34.5 | 12.8 (10.6) | 34.3 | 59.8 | 2.0 | 26.9 |
+| `native-heavy` | 24.5 | 82.1 | 47.7 (42.7) | 83.8 | 106.6 | 5 | 74.7 |
+| `heavy-reveal-idle` rv | 12 | 32.4 | 8.2 (3.3) | 32.8 | 52.1 | 2.0 | 22.0 |
+| `heavy-reveal` rv | 14 | 54.7 | 29.8 (24.8) | 55.5 | 80.2 | 3.0 | 44.6 |
+
+The guest's own live detail (`drawn` in the guest arms), `q_drew` / `sf_end`: `simple-off` 96.8 / 86.7,
+`simple-reveal` 73.3 / 110.2, `simple-reveal-idle` 75.2 / 95.1; `heavy-off` 127.1 / 116.0,
+`heavy-reveal` 129.7 / 163.7, `heavy-reveal-idle` 104.7 / 135.8. Per-open vsync reading, the reveal's
+buffer no later than the vsync after native's own (`q_vs` ≤ native's + 1): 12 of 12 in all four reveal
+arms. Counts: `count.opens` 14 everywhere, reveals 12 of 12 (trace and bench), lowest `nextHit` 1,
+every results file 14 opens, `{"done":true}`, no timeout; every guest arm's `drew_own` 12 of 12 and
+`q_rt` 0.
+
+**The phone state per arm** (all 8 + 4 arms: **unplugged**, AC and USB off, thermal status 0; level %
+at the arm's start, battery temperature °C, CPU idle of the 800% in `top`, up 6 d 15 h–16 h). The
+Galaxy A12, Android 12, 17:57–18:12 IST, 18:29–18:36 for the rerun:
+
+| Arm | level | temp | idle | Arm | level | temp | idle |
+|---|---|---|---|---|---|---|---|
+| `native-simple` | 57 | 22.4 | 436 | `native-heavy` | 57 | 23.4 | 546 |
+| `simple-reveal-idle` | 57 | 22.5 | 511 | `heavy-reveal-idle` | 57 | 23.4 | 538 |
+| `simple-reveal` | 57 | 23.1 | 476 | `heavy-reveal` | 56 | 23.5 | 537 |
+| `simple-off` | 57 | 23.3 | 531 | `heavy-off` | 56 | 23.6 | 454 |
+| `native-simple-noripple` | 56 | 23.4 | 556 | `native-heavy-noripple` | 56 | 23.5 | 551 |
+| `simple-reveal-idle-noripple` | 56 | 23.3 | 511 | `heavy-reveal-idle-noripple` | 55 | 23.5 | 457 |
+
+The rerun arms ran at 54%, 22.5–22.7 °C, thermal 0. The battery never fell below 54%. The first arm,
+`native-simple`, had the lowest idle (436 against 454–556 for the rest); its `q_drew` is within 1.1 ms
+of `native-simple-noripple`'s (38.1, idle 556), so that did not visibly move native's reading.
+
+**Step 4b, the no-ripple diagnostic** (it never changes the verdict). The reveal's frame without the
+theme ripple, against its native without it: simple first draw 12 against 17, `q_drew` 25.1 against
+38.1, `rec_ms` 4.3 (< 10), `q_vs` 1 against 2.5; heavy first draw 12 against 23.5, `q_drew` 29.9 against
+84, `rec_ms` 7.1, `q_vs` 2 against 5. Both would meet the bar by the same margins. The ripple's effect
+on the reveal's frame is 0.4–2.5 ms of `q_drew` (26.5 → 25.1, 32.4 → 29.9) and 0.1–1.1 ms of
+`rec_ms`; the first frame after the UP queued its buffer with or without it. The step-4b arms'
+identity check fails like the others (0 of 12). The README's other controls (`simple-reveal-noripple`,
+`simple-off-noripple`, `simple-listen`) were not in the eight or in step 4b and were not run.
+
+**Build.** From `e9dcfc7d6` (main), the maintainer's build, step 1's record (`BUILD.txt` in
+[`a12-2026-11-28/`](nf5-r1/a12-2026-11-28/), copied here):
+
+```
+built: 2026-11-28 17:56:23 by the maintainer, sample's own wrapper (Gradle 9.0.0), --no-daemon -PkeliverComposePrototype -Dmaven.repo.local=<scratch m2>
+commit: e9dcfc7d6163bee900f8544478374d6ceb212e7f (origin/main e9dcfc7d6; m2 published from this worktree)
+local change for the build only: sample/settings.gradle.kts without the two maven.pkg.jetbrains.space lines (host gone, NXDOMAIN; PR #335). Restored after the build.
+host-android-benchmark.apk: 26078199 bytes, sha256 06226f540dc263633d5822a98a1658137fd2f4a6182eec0574d14175b4486a01
+  lib/arm64-v8a/libquickjs.so: 2618992 bytes   (armeabi-v7a 1903900, x86 2097092, x86_64 2465256)
+tp (trace_processor_shell_aarch64 from the benchmarks APK): sha256 ae2f18ff9cbcad67edc28b5d6ac4364f696afbcc1364680752c2159b668a0e7d
+```
+
+The sample was built with its own wrapper (Gradle 9.0.0, because its AGP 8.13.2 needs it, and not the
+root's 9.7.1), with the sample's two dead `maven.pkg.jetbrains.space` lines removed for the build only
+(PR #335). The installed copy's sha256 on the phone (`06226f54…486a01`) was read back by the run's
+`state.txt` in every arm. Install: `install -r -d`, profileinstaller's broadcast (result 1),
+`speed-profile`.
+
+**Unverified, and caveats**
+- **The identity gate** (above): the two judged arms do not count by the kit's rule, twice. The bar's
+  readings are as printed. Whether the offset is the trace's slice start against the guest's whole-ms
+  clock is inferred.
+- **The idle reading is the driver's.** The driver's tap blocks the main thread for 40 ms and lifts in
+  one message, so the first frame after the UP starts 6–8 ms after it on both sides (q4's `f1_start`, 6–11 ms in the one arm read).
+  With a finger the main thread is free; this is not measured here.
+- **One session, one phone, on battery** (54–57%), with no charger: R0 and the C11 reference ran on
+  the charger, so the numbers here are not comparable across those (native runs in the same session, so
+  the bar does not cross power states).
+- **The prepared detail is the predicted item** (the driver's next row is known); a real tap on any
+  other row is not R1. No shell, token, answer or cancel, no back handling.
+- **The rerun covers the two judged arms only.** The other arms that fail the gate were not rerun
+  (the failure is constant across them).
+- The emulator's lost frame (point 3) is not reproduced on this phone; whether it appears with a
+  finger's tap or on Android 15 hardware is not measured.
+- The 12 traces' and 2 rerun traces' sha256 were not recorded (the shell does not allow `shasum`
+  over many paths); they sit in the scratch directory with their results.
+- `sf_end` has n = 11 (one open without a display frame) on `native-heavy`, `simple-off` and `heavy-off`.

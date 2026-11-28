@@ -1,0 +1,36 @@
+== bar (pre-registered, docs/nf5-r1/README.md; bar 1 read on both readings, the maintainer's ruling of
+   2026-11-26, which the owner may still change before the run): medians over opens 3-14, ms from the UP
+-- simple: native-simple: valid (results opens 14, done 1, timeouts 0; trace opens (count.opens) 14)
+   native-simple: first draw (drawn) 19 (n=12); buffer queued (drawn.q_drew) 39.2; q_vs (vsyncs, UP -> its buffer) median 2.5; q4, all 14 opens: a RenderThread-only buffer in the 200 ms before the DOWN in 0, in the tap's hold in 0; the first frame after the UP queued no buffer in 0
+   native-simple frame: main-thread end 31.7, R0's rule 39.2, row end 39.3, display frame end 65.1, Record View#draw() 12.1; queued by its own vsync 12 of 12
+   simple-reveal-idle: INVALID ( identity check pass 0 (0 of 12 opens 3-14 within 2 ms); ) (results opens 14, done 1, timeouts 0; trace opens (count.opens) 14; reveals of opens 3-14: trace (count.reveal) 12, bench (revealed) 12; lowest nextHit 1; identity check: pass 0 (0 of 12 opens 3-14 within 2 ms))
+   simple-reveal-idle: bar 1 INVALID (no verdict: simple-reveal-idle  does not count): (a) first draw (revealDrawn) 12.5 <= native's 19 + 16.7: yes; (b) buffer queued (reveal.q_drew) 26.7 <= native's 39.2 + 16.7: yes
+   simple-reveal-idle: bar 2 INVALID: the reveal's Record View#draw() (reveal.rec_ms) 4.7 < 10
+   simple-reveal-idle: per open, in vsyncs: the reveal's buffer queued no later than the vsync after native's own (q_vs <= 2.5 + 1) in 12 of 12 opens; q_vs, opens 3-14: 2 1 2 1 2 1 2 2 1 1 1 1
+   simple-reveal-idle: reveal's frame: main-thread end 17.7, R0's rule 26.7, row end 26.3, display frame end 45; queued by its own vsync 12 of 12, by a RenderThread-only frame 0 (q_src); q4, all 14 opens: a RenderThread-only buffer in the 200 ms before the DOWN in 0, in the tap's hold in 0; the first frame after the UP queued no buffer in 0
+   simple-reveal: INVALID ( identity check pass 0 (0 of 12 opens 3-14 within 2 ms); ) (results opens 14, done 1, timeouts 0; trace opens (count.opens) 14; reveals of opens 3-14: trace (count.reveal) 12, bench (revealed) 12; lowest nextHit 1; identity check: pass 0 (0 of 12 opens 3-14 within 2 ms))
+   simple-reveal: bar 1 INVALID (no verdict: simple-reveal  does not count): (a) first draw (revealDrawn) 14 <= native's 19 + 16.7: yes; (b) buffer queued (reveal.q_drew) 34.5 <= native's 39.2 + 16.7: yes
+   simple-reveal: Record View#draw() (reveal.rec_ms) 12.8 (bar 2 judges the idle arm; reported)
+   simple-reveal: per open, in vsyncs: the reveal's buffer queued no later than the vsync after native's own (q_vs <= 2.5 + 1) in 12 of 12 opens; q_vs, opens 3-14: 3 3 3 2 2 2 2 2 2 2 2 2
+   simple-reveal: reveal's frame: main-thread end 26.9, R0's rule 34.5, row end 34.3, display frame end 59.8; queued by its own vsync 12 of 12, by a RenderThread-only frame 0 (q_src); q4, all 14 opens: a RenderThread-only buffer in the 200 ms before the DOWN in 0, in the tap's hold in 0; the first frame after the UP queued no buffer in 0
+   simple-off: INVALID ( identity check pass 0 (0 of 12 opens 3-14 within 2 ms); ) (results opens 14, done 1, timeouts 0; trace opens (count.opens) 14; lowest nextHit 1; identity check: pass 0 (0 of 12 opens 3-14 within 2 ms)); q4, all 14 opens: a RenderThread-only buffer in the 200 ms before the DOWN in 0, in the tap's hold in 0; the first frame after the UP queued no buffer in 0
+   click -> composed (bench composed_click; trace guest.ec), reveal off / on / on with the idle measure: 39.5 / 46 / 43; trace 43.5 / 49.2 / 45.8
+   the guest's detail drawn (bench drawn), off / on / idle: 62.5 / 66 / 65
+-- heavy: native-heavy: valid (results opens 14, done 1, timeouts 0; trace opens (count.opens) 14)
+   native-heavy: first draw (drawn) 24.5 (n=12); buffer queued (drawn.q_drew) 82.1; q_vs (vsyncs, UP -> its buffer) median 5; q4, all 14 opens: a RenderThread-only buffer in the 200 ms before the DOWN in 0, in the tap's hold in 0; the first frame after the UP queued no buffer in 0
+   native-heavy frame: main-thread end 74.7, R0's rule 82.1, row end 83.8, display frame end 106.6, Record View#draw() 47.7; queued by its own vsync 12 of 12
+   heavy-reveal-idle: INVALID ( identity check pass 0 (0 of 12 opens 3-14 within 2 ms); ) (results opens 14, done 1, timeouts 0; trace opens (count.opens) 14; reveals of opens 3-14: trace (count.reveal) 12, bench (revealed) 12; lowest nextHit 1; identity check: pass 0 (0 of 12 opens 3-14 within 2 ms))
+   heavy-reveal-idle: bar 1 INVALID (no verdict: heavy-reveal-idle  does not count): (a) first draw (revealDrawn) 13 <= native's 24.5 + 16.7: yes; (b) buffer queued (reveal.q_drew) 32.1 <= native's 82.1 + 16.7: yes
+   heavy-reveal-idle: bar 2 INVALID: the reveal's Record View#draw() (reveal.rec_ms) 8.1 < 10
+   heavy-reveal-idle: per open, in vsyncs: the reveal's buffer queued no later than the vsync after native's own (q_vs <= 5 + 1) in 12 of 12 opens; q_vs, opens 3-14: 3 2 2 2 2 2 2 2 2 2 2 2
+   heavy-reveal-idle: reveal's frame: main-thread end 22.4, R0's rule 32.1, row end 32.8, display frame end 54.9; queued by its own vsync 12 of 12, by a RenderThread-only frame 0 (q_src); q4, all 14 opens: a RenderThread-only buffer in the 200 ms before the DOWN in 0, in the tap's hold in 0; the first frame after the UP queued no buffer in 0
+   heavy-reveal: INVALID ( identity check pass 0 (1 of 12 opens 3-14 within 2 ms); ) (results opens 14, done 1, timeouts 0; trace opens (count.opens) 14; reveals of opens 3-14: trace (count.reveal) 12, bench (revealed) 12; lowest nextHit 1; identity check: pass 0 (1 of 12 opens 3-14 within 2 ms))
+   heavy-reveal: bar 1 INVALID (no verdict: heavy-reveal  does not count): (a) first draw (revealDrawn) 14 <= native's 24.5 + 16.7: yes; (b) buffer queued (reveal.q_drew) 54.7 <= native's 82.1 + 16.7: yes
+   heavy-reveal: Record View#draw() (reveal.rec_ms) 29.8 (bar 2 judges the idle arm; reported)
+   heavy-reveal: per open, in vsyncs: the reveal's buffer queued no later than the vsync after native's own (q_vs <= 5 + 1) in 12 of 12 opens; q_vs, opens 3-14: 4 3 3 3 4 3 3 4 3 3 4 3
+   heavy-reveal: reveal's frame: main-thread end 44.6, R0's rule 54.7, row end 55.5, display frame end 80.2; queued by its own vsync 12 of 12, by a RenderThread-only frame 0 (q_src); q4, all 14 opens: a RenderThread-only buffer in the 200 ms before the DOWN in 0, in the tap's hold in 0; the first frame after the UP queued no buffer in 0
+   heavy-off: INVALID ( identity check pass 0 (0 of 12 opens 3-14 within 2 ms); ) (results opens 14, done 1, timeouts 0; trace opens (count.opens) 14; lowest nextHit 1; identity check: pass 0 (0 of 12 opens 3-14 within 2 ms)); q4, all 14 opens: a RenderThread-only buffer in the 200 ms before the DOWN in 0, in the tap's hold in 0; the first frame after the UP queued no buffer in 0
+   click -> composed (bench composed_click; trace guest.ec), reveal off / on / on with the idle measure: 52 / 87 / 63; trace 56 / 89.6 / 66.2
+   the guest's detail drawn (bench drawn), off / on / idle: 114 / 111.5 / 94
+-- R1: NO VERDICT (an arm the verdict rests on does not count; README: rerun it once)
+   The arms without the idle measure say whether that measure is needed (README).
