@@ -1,0 +1,6 @@
+public final class dev/keliver/calls/composeui/GeneratedReplay {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/calls/composeui/GeneratedReplay;
+	public final fun replay (Lkotlinx/serialization/json/JsonElement;)Ljava/lang/Object;
+}
+

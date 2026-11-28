@@ -404,7 +404,7 @@ class CallRecordEmitter(
           s in set && index.classes[s]?.functions?.any { g -> g.name == f.name && g.valueParameters.map { typeText(it.type) } == sig } == true
         }
         if (overrides) continue
-        members +=Cand(Kind.MEMBER, pkg, fq, f.name, r, f.valueParameters, f.isOperator)
+        members += Cand(Kind.MEMBER, pkg, fq, f.name, r, f.valueParameters, f.isOperator)
       }
     }
     for (c in members.filter { cfg.excludeKeys[it.key] == null }) {
@@ -510,7 +510,10 @@ class CallRecordEmitter(
     // mirrored type; a carrier class (`<Name>Call`) makes its values.
     fun abstractMirror(fq: String): Boolean {
       val k = index.classes.getValue(fq)
-      return k.kind == ClassKind.INTERFACE || k.modality == Modality.ABSTRACT || k.modality == Modality.SEALED || k.modality == Modality.OPEN ||
+      return k.kind == ClassKind.INTERFACE ||
+        k.modality == Modality.ABSTRACT ||
+        k.modality == Modality.SEALED ||
+        k.modality == Modality.OPEN ||
         types.any { it != fq && fq in index.allSupertypes(it) }
     }
 
@@ -657,7 +660,7 @@ class CallRecordEmitter(
     val g = guestParams(c.params)
     val keep = readable[c.returns].orEmpty().keys
     val values = if (c.kind == Kind.CTOR && keep.isNotEmpty()) {
-      ", fieldValues = buildMap<String, Any?> { " +g.carried.filter { it.name in keep }.joinToString("; ") { p ->
+      ", fieldValues = buildMap<String, Any?> { " + g.carried.filter { it.name in keep }.joinToString("; ") { p ->
         if (p.declaresDefaultValue) "if (${p.name} != null) put(\"${p.name}\", ${p.name})" else "put(\"${p.name}\", ${p.name})"
       } + " }"
     } else {

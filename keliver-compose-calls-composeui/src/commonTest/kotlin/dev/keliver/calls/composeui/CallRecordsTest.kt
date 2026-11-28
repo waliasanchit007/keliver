@@ -65,7 +65,7 @@ class CallRecordsTest {
   @Test fun roundedCornerShape() {
     val guest = RoundedCornerShape(8.dp)
     // The wire: the declaration's tag in the shared values lock, not a string id; arguments by parameter name.
-    assertEquals("""{"call":${Tags.RoundedCornerShapeSize},"args":{"size":8}}""", guest.call.toJson().toString())
+    assertEquals("""{"call":${Tags.ROUNDED_CORNER_SHAPE_SIZE},"args":{"size":8}}""", guest.call.toJson().toString())
     assertEquals(HostRoundedCornerShape(8.hostDp), replay(guest))
     // A RoundedCornerShape is a Shape in the guest too (its mirror implements Shape's mirror).
     val shape: Shape = guest
@@ -82,7 +82,7 @@ class CallRecordsTest {
 
   @Test fun leftOutArgumentsTakeComposesDefaultOnTheHost() {
     // TextStyle() crosses with no arguments.
-    assertEquals("""{"call":${Tags.TextStyleCtor}}""", TextStyle().call.toJson().toString())
+    assertEquals("""{"call":${Tags.TEXT_STYLE_CTOR}}""", TextStyle().call.toJson().toString())
     assertEquals(HostTextStyle.Default, replay(TextStyle()))
     // Brush.linearGradient's start, end and tileMode defaults (Offset.Zero, Offset.Infinite, TileMode.Clamp) are the host's.
     assertEquals(HostBrush.linearGradient(listOf(HostColor.Red, HostColor.Blue)), replay(Brush.linearGradient(listOf(Color.Red, Color.Blue))))
@@ -136,6 +136,6 @@ class CallRecordsTest {
 
 /** Lock tags the test pins (values.lock.json never changes a tag). */
 private object Tags {
-  const val RoundedCornerShapeSize = 216
-  const val TextStyleCtor = 653
+  const val ROUNDED_CORNER_SHAPE_SIZE = 216
+  const val TEXT_STYLE_CTOR = 653
 }

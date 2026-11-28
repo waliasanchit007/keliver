@@ -84,6 +84,7 @@ public abstract class CallValue @InternalCallApi constructor(
   fieldValues: Map<String, Any?>? = null,
 ) : CallRecorded {
   @InternalCallApi override val call: CallRecord = call
+
   @InternalCallApi override val fieldValues: Map<String, Any?>? = fieldValues
 
   override fun equals(other: Any?): Boolean = other is CallValue && other::class == this::class && other.call == call
