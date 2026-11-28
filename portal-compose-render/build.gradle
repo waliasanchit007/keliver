@@ -1,8 +1,8 @@
 // ED0 spike (docs/ED0_SPIKE.md): the editor canvas for Compose-shaped screens. A document read from
 // Compose-shaped code (portal-ingest, behind its ED0 flag) is drawn by calling the generated guest
 // stubs, so its changes travel the protocol into the generated host renderers as a device's do.
-// src/commonMain/…/Generated.kt is written by :keliver-compose-generator:generateComposeApi; the
-// rest is hand-written. A spike on a branch: not published, and nothing shipped depends on it.
+// src/commonMain/…/GeneratedEditorRender_<Group>.kt (each group's interpreter) and Generated.kt (the
+// dispatcher over them) are written by :keliver-compose-generator:generateComposeApi; the rest is hand-written. A spike on a branch: not published, and nothing shipped depends on it.
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
@@ -65,12 +65,13 @@ tasks.named('jvmTest').configure {
   inputs.file(new File(samples, 'guest/SampleCard.kt'))
 }
 
-// The generator writes Generated.kt (its staleness guard compares it byte for byte) and the JVM
-// test writes the golden document: no spotless on either.
+// The generator writes the dispatcher Generated.kt and each group's GeneratedEditorRender_<Group>.kt
+// (its staleness guard compares them byte for byte) and the JVM test writes the golden document: no
+// spotless on any of them.
 afterEvaluate {
   spotless {
     kotlin {
-      targetExclude('src/**/Generated.kt', 'src/commonTest/**/SampleCardDocument.kt')
+      targetExclude('src/**/Generated.kt', 'src/**/GeneratedEditorRender_*.kt', 'src/commonTest/**/SampleCardDocument.kt')
     }
   }
 }
