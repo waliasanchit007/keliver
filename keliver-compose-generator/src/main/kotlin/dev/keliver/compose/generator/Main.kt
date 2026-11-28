@@ -46,6 +46,7 @@ fun loadConfig(file: File): Config {
     scrollContainers = strings("scrollContainers"),
     base = o["base"]?.jsonPrimitive?.content,
     sharedRuntime = o["sharedRuntime"]?.jsonPrimitive?.boolean ?: false,
+    frameRules = o["frameRules"]?.jsonObject?.let(::loadFrameRules),
   ).also { c ->
     val unknown = c.animated.filter { it !in c.declarations }
     require(unknown.isEmpty()) { "animated: not in declarations: $unknown" }

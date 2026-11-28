@@ -73,7 +73,7 @@ internal fun Project.registerFrameRulesTasks(
   extension.frameRules.strict.convention(false)
   val reviewFile = extension.type.map { layout.projectDirectory.file("${flatName(it)}FrameRules.review.txt") }
 
-  tasks.register(FRAME_RULES_GENERATE_TASK_NAME, RedwoodFrameRulesGenerateTask::class.java) {
+  val generate = tasks.register(FRAME_RULES_GENERATE_TASK_NAME, RedwoodFrameRulesGenerateTask::class.java) {
     it.group = BUILD_GROUP
     it.description = "Write the schema's frame-rules review list (the values a Shell frame keeps)"
     it.toolClasspath.from(toolClasspath)
@@ -90,6 +90,8 @@ internal fun Project.registerFrameRulesTasks(
     it.reviewFile.set(reviewFile)
     it.strict.set(extension.frameRules.strict)
     it.dummyOutputFile.set(layout.buildDirectory.file("tmp/redwoodFrameRulesCheckDummy.txt"))
+    // Checks what a regeneration in the same build wrote.
+    it.mustRunAfter(generate)
   }
   tasks.matching { it.name == CHECK_TASK_NAME }.configureEach { it.dependsOn(check) }
 }

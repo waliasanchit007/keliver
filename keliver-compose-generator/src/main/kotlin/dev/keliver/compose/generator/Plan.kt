@@ -85,6 +85,8 @@ class Config(
    * renderers of a group based on it ([base]) apply the guest's modifiers as this group's own do.
    */
   val sharedRuntime: Boolean = false,
+  /** NF5 A1: the group's frame rules, or null for none (FrameRules.kt). */
+  val frameRules: FrameRulesConfig? = null,
 ) {
   /** The Compose versions read (for the schema's header), or null. */
   var input: String? = null
