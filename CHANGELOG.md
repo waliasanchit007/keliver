@@ -241,7 +241,7 @@ Build:
 - CI keeps Kotlin/Native's compiler caches for the iOS simulator between runs, saved from main, and the
   Build job's debug simulator links always run there (never from Gradle's build cache), so the saved set
   is complete. `gradle.properties`' `kotlin.native.cacheKind=none`, which does nothing since Kotlin 2.3.20,
-  is gone (#322, #PRNUM).
+  is gone (#322, #328).
 
 Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 

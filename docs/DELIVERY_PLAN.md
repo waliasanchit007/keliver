@@ -1056,10 +1056,10 @@ their required checks pass (Standing constraints, below).
 
 **2026-11-28 (MS4-03 and MS4-28 in; the CI cache fixed; three lanes on A1, MS4-06 and MS4-04).**
 - **Merged on 2026-11-26/27:** plan revision 4 (#314), NF5 R1's bench arm (#321), the Kotlin/Native
-  CI cache (#322), MS4-28 (#323) and MS4-03 (#327). Their records are folded above (this PR).
+  CI cache (#322), MS4-28 (#323) and MS4-03 (#327). Their records are folded above (#328).
 - **CI:** #322's cache saved nothing at first: main's first save was partial (8.8 MiB of about 129),
   because Gradle's build cache served the simulator links. Three Build runs then reached the
-  150-minute limit. This PR makes those links always run on CI, starts a "v2" key and raises the
+  150-minute limit. #328 makes those links always run on CI, starts a "v2" key and raises the
   limit to 180 minutes. The time saved shows on the second pull request after it merges.
 - **In progress:**
   - Track A: NF5's A1, the frame rules on the prototype's generated group (it builds what every
