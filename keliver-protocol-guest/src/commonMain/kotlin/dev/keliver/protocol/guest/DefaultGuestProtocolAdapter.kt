@@ -17,6 +17,7 @@ package dev.keliver.protocol.guest
 
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.ChildrenChange
@@ -26,6 +27,7 @@ import dev.keliver.protocol.Event
 import dev.keliver.protocol.Id
 import dev.keliver.protocol.ModifierChange
 import dev.keliver.protocol.ModifierElement
+import dev.keliver.protocol.ModifierTag
 import dev.keliver.protocol.PropertyChange
 import dev.keliver.protocol.PropertyTag
 import dev.keliver.protocol.RedwoodVersion
@@ -125,7 +127,14 @@ public class DefaultGuestProtocolAdapter(
     changes.add(ModifierChange(id, elements))
   }
 
+  @OptIn(ExperimentalKeliverHostFeaturesApi::class)
   private fun <T : Modifier.Element> modifierElement(element: T): ModifierElement {
+    // The cached-frame markers are framework elements, not schema ones (FrameCacheTags).
+    val marker = FrameCacheMarkerEncoding.markerOrNull(element)
+    if (marker != null) {
+      val value = FrameCacheMarkerEncoding.json(marker) ?: return ModifierElement(ModifierTag(marker.tag))
+      return ModifierElement(ModifierTag(marker.tag), value)
+    }
     val (tag, serializer) = widgetSystemFactory.modifierTagAndSerializationStrategy(element)
     if (serializer == null) return ModifierElement(tag)
     return ModifierElement(tag, json.encodeToJsonElement(serializer, element))

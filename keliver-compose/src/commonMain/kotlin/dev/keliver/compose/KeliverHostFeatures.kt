@@ -46,6 +46,20 @@ public object KeliverHostFeatures {
   public const val PRESS_1: String = "keliver.press@1"
 
   /**
+   * NF5 (A), the cached first frame: the host reads the marker modifiers of
+   * `dev.keliver.protocol.FrameCacheTags` (consumed before widget dispatch, so they never reach a
+   * widget or the mismatch handler). Required by [CachedFrame], [cached] and [notCached].
+   */
+  public const val CACHED_FRAME_1: String = "keliver.cachedFrame@1"
+
+  /**
+   * NF5 (A): the host accepts [FrameScope.sessionChanged] and [FrameScope.variantChanged] from the
+   * guest and handles them as `KeliverHost.session()` does. Requires `keliver.cachedFrame@1`,
+   * because only a host that stores frames has anything to delete.
+   */
+  public const val FRAME_SCOPE_1: String = "keliver.frameScope@1"
+
+  /**
    * Schema-mismatch reports (MS4-04): the host reports each unknown widget, modifier, property,
    * children or event tag a loaded bundle uses once (keliver-treehouse-host's
    * `EventListener.schemaMismatch`), with the report reason `schema-mismatch`, instead of ignoring
@@ -63,6 +77,8 @@ public object KeliverHostFeatures {
   public val requirements: Map<String, Set<String>> = mapOf(
     NAV_RETAINED_CONTAINER_1 to emptySet(),
     PRESS_1 to emptySet(),
+    CACHED_FRAME_1 to emptySet(),
+    FRAME_SCOPE_1 to setOf(CACHED_FRAME_1),
     SCHEMA_MISMATCH_REPORTS_1 to emptySet(),
   )
 

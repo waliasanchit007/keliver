@@ -15,12 +15,62 @@ open annotation class dev.keliver.compose/ExperimentalKeliverHostFeaturesApi : k
     constructor <init>() // dev.keliver.compose/ExperimentalKeliverHostFeaturesApi.<init>|<init>(){}[0]
 }
 
+final enum class dev.keliver.compose/FrameContent : kotlin/Enum<dev.keliver.compose/FrameContent> { // dev.keliver.compose/FrameContent|null[0]
+    enum entry Shell // dev.keliver.compose/FrameContent.Shell|null[0]
+    enum entry Whole // dev.keliver.compose/FrameContent.Whole|null[0]
+
+    final val entries // dev.keliver.compose/FrameContent.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.keliver.compose/FrameContent> // dev.keliver.compose/FrameContent.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.keliver.compose/FrameContent // dev.keliver.compose/FrameContent.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.keliver.compose/FrameContent> // dev.keliver.compose/FrameContent.values|values#static(){}[0]
+}
+
+abstract interface dev.keliver.compose/FrameScopeSink { // dev.keliver.compose/FrameScopeSink|null[0]
+    abstract fun sessionChanged(kotlin/String?) // dev.keliver.compose/FrameScopeSink.sessionChanged|sessionChanged(kotlin.String?){}[0]
+    abstract fun variantChanged(kotlin/String?) // dev.keliver.compose/FrameScopeSink.variantChanged|variantChanged(kotlin.String?){}[0]
+}
+
 abstract interface dev.keliver.compose/RedwoodComposition { // dev.keliver.compose/RedwoodComposition|null[0]
     abstract fun cancel() // dev.keliver.compose/RedwoodComposition.cancel|cancel(){}[0]
     abstract fun setContent(kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>) // dev.keliver.compose/RedwoodComposition.setContent|setContent(kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>){}[0]
 }
 
+abstract class dev.keliver.compose/FrameCacheMarker : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose/FrameCacheMarker|null[0]
+    abstract val fields // dev.keliver.compose/FrameCacheMarker.fields|{}fields[0]
+        abstract fun <get-fields>(): kotlin.collections/Map<kotlin/String, kotlin/Any?> // dev.keliver.compose/FrameCacheMarker.fields.<get-fields>|<get-fields>(){}[0]
+    abstract val tag // dev.keliver.compose/FrameCacheMarker.tag|{}tag[0]
+        abstract fun <get-tag>(): kotlin/Int // dev.keliver.compose/FrameCacheMarker.tag.<get-tag>|<get-tag>(){}[0]
+}
+
+final class dev.keliver.compose/FrameCachePolicy { // dev.keliver.compose/FrameCachePolicy|null[0]
+    constructor <init>(dev.keliver.compose/FrameContent, kotlin.time/Duration) // dev.keliver.compose/FrameCachePolicy.<init>|<init>(dev.keliver.compose.FrameContent;kotlin.time.Duration){}[0]
+
+    final val content // dev.keliver.compose/FrameCachePolicy.content|{}content[0]
+        final fun <get-content>(): dev.keliver.compose/FrameContent // dev.keliver.compose/FrameCachePolicy.content.<get-content>|<get-content>(){}[0]
+    final val maxAge // dev.keliver.compose/FrameCachePolicy.maxAge|{}maxAge[0]
+        final fun <get-maxAge>(): kotlin.time/Duration // dev.keliver.compose/FrameCachePolicy.maxAge.<get-maxAge>|<get-maxAge>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.compose/FrameCachePolicy.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.compose/FrameCachePolicy.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.compose/FrameCachePolicy.toString|toString(){}[0]
+
+    final object Companion { // dev.keliver.compose/FrameCachePolicy.Companion|null[0]
+        final val MAX_AGE // dev.keliver.compose/FrameCachePolicy.Companion.MAX_AGE|{}MAX_AGE[0]
+            final fun <get-MAX_AGE>(): kotlin.time/Duration // dev.keliver.compose/FrameCachePolicy.Companion.MAX_AGE.<get-MAX_AGE>|<get-MAX_AGE>(){}[0]
+    }
+}
+
+final class dev.keliver.compose/FrameScope { // dev.keliver.compose/FrameScope|null[0]
+    final fun sessionChanged(kotlin/String?) // dev.keliver.compose/FrameScope.sessionChanged|sessionChanged(kotlin.String?){}[0]
+    final fun variantChanged(kotlin/String?) // dev.keliver.compose/FrameScope.variantChanged|variantChanged(kotlin.String?){}[0]
+}
+
 final object dev.keliver.compose/KeliverHostFeatures { // dev.keliver.compose/KeliverHostFeatures|null[0]
+    final const val CACHED_FRAME_1 // dev.keliver.compose/KeliverHostFeatures.CACHED_FRAME_1|{}CACHED_FRAME_1[0]
+        final fun <get-CACHED_FRAME_1>(): kotlin/String // dev.keliver.compose/KeliverHostFeatures.CACHED_FRAME_1.<get-CACHED_FRAME_1>|<get-CACHED_FRAME_1>(){}[0]
+    final const val FRAME_SCOPE_1 // dev.keliver.compose/KeliverHostFeatures.FRAME_SCOPE_1|{}FRAME_SCOPE_1[0]
+        final fun <get-FRAME_SCOPE_1>(): kotlin/String // dev.keliver.compose/KeliverHostFeatures.FRAME_SCOPE_1.<get-FRAME_SCOPE_1>|<get-FRAME_SCOPE_1>(){}[0]
     final const val NAV_RETAINED_CONTAINER_1 // dev.keliver.compose/KeliverHostFeatures.NAV_RETAINED_CONTAINER_1|{}NAV_RETAINED_CONTAINER_1[0]
         final fun <get-NAV_RETAINED_CONTAINER_1>(): kotlin/String // dev.keliver.compose/KeliverHostFeatures.NAV_RETAINED_CONTAINER_1.<get-NAV_RETAINED_CONTAINER_1>|<get-NAV_RETAINED_CONTAINER_1>(){}[0]
     final const val PRESS_1 // dev.keliver.compose/KeliverHostFeatures.PRESS_1|{}PRESS_1[0]
@@ -54,17 +104,27 @@ final val dev.keliver.compose/current // dev.keliver.compose/current|@dev.kelive
     final fun (dev.keliver.ui/OnBackPressedDispatcher.Companion).<get-current>(androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.ui/OnBackPressedDispatcher // dev.keliver.compose/current.<get-current>|<get-current>@dev.keliver.ui.OnBackPressedDispatcher.Companion(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final val dev.keliver.compose/current // dev.keliver.compose/current|@dev.keliver.ui.UiConfiguration.Companion{}current[0]
     final fun (dev.keliver.ui/UiConfiguration.Companion).<get-current>(androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.ui/UiConfiguration // dev.keliver.compose/current.<get-current>|<get-current>@dev.keliver.ui.UiConfiguration.Companion(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+final val dev.keliver.compose/dev_keliver_compose_FrameCacheMarker$stableprop // dev.keliver.compose/dev_keliver_compose_FrameCacheMarker$stableprop|#static{}dev_keliver_compose_FrameCacheMarker$stableprop[0]
+final val dev.keliver.compose/dev_keliver_compose_FrameCachePolicy$stableprop // dev.keliver.compose/dev_keliver_compose_FrameCachePolicy$stableprop|#static{}dev_keliver_compose_FrameCachePolicy$stableprop[0]
+final val dev.keliver.compose/dev_keliver_compose_FrameScope$stableprop // dev.keliver.compose/dev_keliver_compose_FrameScope$stableprop|#static{}dev_keliver_compose_FrameScope$stableprop[0]
 final val dev.keliver.compose/dev_keliver_compose_KeliverHostFeatures$stableprop // dev.keliver.compose/dev_keliver_compose_KeliverHostFeatures$stableprop|#static{}dev_keliver_compose_KeliverHostFeatures$stableprop[0]
 final val dev.keliver.compose/dev_keliver_compose_RedwoodComposeContent$stableprop // dev.keliver.compose/dev_keliver_compose_RedwoodComposeContent$stableprop|#static{}dev_keliver_compose_RedwoodComposeContent$stableprop[0]
 final val dev.keliver.compose/dev_keliver_compose_WidgetNode$stableprop // dev.keliver.compose/dev_keliver_compose_WidgetNode$stableprop|#static{}dev_keliver_compose_WidgetNode$stableprop[0]
 
+final fun (dev.keliver/Modifier).dev.keliver.compose/cached(androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver/Modifier // dev.keliver.compose/cached|cached@dev.keliver.Modifier(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+final fun (dev.keliver/Modifier).dev.keliver.compose/cachedFrame(dev.keliver.compose/FrameCachePolicy, kotlin/Boolean, kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver/Modifier // dev.keliver.compose/cachedFrame|cachedFrame@dev.keliver.Modifier(dev.keliver.compose.FrameCachePolicy;kotlin.Boolean;kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+final fun (dev.keliver/Modifier).dev.keliver.compose/notCached(androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver/Modifier // dev.keliver.compose/notCached|notCached@dev.keliver.Modifier(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun <#A: kotlin/Any> dev.keliver.compose/RedwoodComposition(kotlinx.coroutines/CoroutineScope, dev.keliver.widget/RedwoodView<#A>, dev.keliver.widget/WidgetSystem<#A>, kotlin/Function0<kotlin/Unit> = ...): dev.keliver.compose/RedwoodComposition // dev.keliver.compose/RedwoodComposition|RedwoodComposition(kotlinx.coroutines.CoroutineScope;dev.keliver.widget.RedwoodView<0:0>;dev.keliver.widget.WidgetSystem<0:0>;kotlin.Function0<kotlin.Unit>){0§<kotlin.Any>}[0]
 final fun <#A: kotlin/Any> dev.keliver.compose/RedwoodComposition(kotlinx.coroutines/CoroutineScope, dev.keliver.widget/Widget.Children<#A>, dev.keliver.ui/OnBackPressedDispatcher, androidx.compose.runtime.saveable/SaveableStateRegistry?, kotlinx.coroutines.flow/StateFlow<dev.keliver.ui/UiConfiguration>, dev.keliver.widget/WidgetSystem<#A>, kotlin/Function0<kotlin/Unit> = ...): dev.keliver.compose/RedwoodComposition // dev.keliver.compose/RedwoodComposition|RedwoodComposition(kotlinx.coroutines.CoroutineScope;dev.keliver.widget.Widget.Children<0:0>;dev.keliver.ui.OnBackPressedDispatcher;androidx.compose.runtime.saveable.SaveableStateRegistry?;kotlinx.coroutines.flow.StateFlow<dev.keliver.ui.UiConfiguration>;dev.keliver.widget.WidgetSystem<0:0>;kotlin.Function0<kotlin.Unit>){0§<kotlin.Any>}[0]
 final fun dev.keliver.compose/BackHandler(kotlin/Boolean, kotlin/Function0<kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose/BackHandler|BackHandler(kotlin.Boolean;kotlin.Function0<kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.keliver.compose/ConsumeInsets(dev.keliver.ui/Margin?, kotlin/Function3<dev.keliver.ui/Margin, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.compose/ConsumeInsets|ConsumeInsets(dev.keliver.ui.Margin?;kotlin.Function3<dev.keliver.ui.Margin,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun dev.keliver.compose/dev_keliver_compose_FrameCacheMarker$stableprop_getter(): kotlin/Int // dev.keliver.compose/dev_keliver_compose_FrameCacheMarker$stableprop_getter|dev_keliver_compose_FrameCacheMarker$stableprop_getter(){}[0]
+final fun dev.keliver.compose/dev_keliver_compose_FrameCachePolicy$stableprop_getter(): kotlin/Int // dev.keliver.compose/dev_keliver_compose_FrameCachePolicy$stableprop_getter|dev_keliver_compose_FrameCachePolicy$stableprop_getter(){}[0]
+final fun dev.keliver.compose/dev_keliver_compose_FrameScope$stableprop_getter(): kotlin/Int // dev.keliver.compose/dev_keliver_compose_FrameScope$stableprop_getter|dev_keliver_compose_FrameScope$stableprop_getter(){}[0]
 final fun dev.keliver.compose/dev_keliver_compose_KeliverHostFeatures$stableprop_getter(): kotlin/Int // dev.keliver.compose/dev_keliver_compose_KeliverHostFeatures$stableprop_getter|dev_keliver_compose_KeliverHostFeatures$stableprop_getter(){}[0]
 final fun dev.keliver.compose/dev_keliver_compose_RedwoodComposeContent$stableprop_getter(): kotlin/Int // dev.keliver.compose/dev_keliver_compose_RedwoodComposeContent$stableprop_getter|dev_keliver_compose_RedwoodComposeContent$stableprop_getter(){}[0]
 final fun dev.keliver.compose/dev_keliver_compose_WidgetNode$stableprop_getter(): kotlin/Int // dev.keliver.compose/dev_keliver_compose_WidgetNode$stableprop_getter|dev_keliver_compose_WidgetNode$stableprop_getter(){}[0]
+final fun dev.keliver.compose/rememberFrameScope(androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.compose/FrameScope // dev.keliver.compose/rememberFrameScope|rememberFrameScope(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 
 // Targets: [ios]
 final object dev.keliver.compose/DisplayLinkClock : androidx.compose.runtime/MonotonicFrameClock { // dev.keliver.compose/DisplayLinkClock|null[0]

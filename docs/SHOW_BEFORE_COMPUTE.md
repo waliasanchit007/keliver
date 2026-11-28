@@ -185,18 +185,24 @@ cold start
 - **Opt-in, per screen.** A screen that may be shown from storage says so at its root:
 
   ```kotlin
-  CachedFrame(
-    policy = FrameCachePolicy(content = FrameContent.Shell, maxAge = 12.hours),
-    ready = page != null,      // the guest's "first meaningful" signal (I4)
-    paneTitle = "Orders",      // announced at the swap (I3); stored, so not data
-  ) {
-    OrdersScreen(page)
-  }
+  OrdersScreen(
+    page,
+    modifier = Modifier.cachedFrame(
+      policy = FrameCachePolicy(content = FrameContent.Shell, maxAge = 12.hours),
+      ready = page != null,      // the guest's "first meaningful" signal (I4)
+      paneTitle = "Orders",      // announced at the swap (I3); stored, so not data
+    ),
+  )
   ```
 
-  `CachedFrame` is new, in `keliver-compose`, next to `LocalHostFeatures` (`HostFeatures.kt`). It
-  emits only when the host declares `keliver.cachedFrame@1` (I8). It adds one marker modifier to
-  the screen's root node, carrying the policy, `ready` and `paneTitle`.
+  `Modifier.cachedFrame(...)` is a `@Composable` modifier function in `keliver-compose`, next to
+  `cached()` and `notCached()` (`CachedFrame.kt`; `LocalHostFeatures` is in `HostFeatures.kt`). It
+  returns the marker element, carrying the policy, `ready` and `paneTitle`, only when the host
+  declares `keliver.cachedFrame@1` (I8); otherwise it returns the modifier unchanged. Put it on the
+  screen's root widget and on no other node. Forgetting it simply means the screen does not opt in:
+  nothing is stored (there is no wrapper whose content could ignore it). `FrameCachePolicy`
+  requires a finite, positive `maxAge` of at most a year: the protocol carries the age as a
+  JavaScript number.
 - **Two content levels.** The author must choose; there is no default.
   - `FrameContent.Shell`: an allowlist **for strings**. Every text and URL value in the subtree is
     replaced by a placeholder, unless its node is marked `Modifier.cached()` (a title, a label, a
@@ -215,8 +221,11 @@ cold start
   handles both as `KeliverHost.session()` does (2.9).
 - **Protocol.** The marker modifiers use tags in a reserved framework range, defined in
   `keliver-protocol` (`FrameCacheTags.kt`) and covered by a lock test, as schema tags are.
-  `HostProtocolAdapter` consumes these tags before widget dispatch, so they never reach a widget or
-  the mismatch handler. That is the one change on the content path.
+  `UiChange.fromProtocol` drops these tags before widget dispatch, so they never reach a widget or
+  the mismatch handler. That is the one change on the content path. Both guest adapters (the
+  default one and the JavaScript `FastGuestProtocolAdapter`) write them through one shared helper,
+  `FrameCacheMarkerEncoding` (keliver-protocol-guest). The host keeps no per-node marks: the
+  recorder reads them from the raw changes with `FrameMarks.read` (keliver-protocol).
 - **No other guest change.** The guest's composition, ids and batches are as today.
 
 ### 2.3 Which tree is recorded, and when
@@ -224,7 +233,7 @@ cold start
 This is the rule that makes I1 and I11 hold. The recorder is the only writer.
 
 **What is recorded:**
-- Only the subtree under the node that carries the `CachedFrame` marker. Not the whole content.
+- Only the subtree under the node that carries the `Modifier.cachedFrame(…)` marker. Not the whole content.
 - Inside it, only what is shown. Every hidden child of a retained container (NF1's retained entries
   below the top) and every prepared entry of (B) is pruned. The pruning uses the host's explicit
   entry state (section 3.6), not the children's order.
@@ -451,7 +460,7 @@ on iOS), so most of the host side is common code.
   opens. Its semantics are one node, "Loading", polite live region, no actions. (I3)
 - **Accessibility at the swap.** When the guest's tree replaces the frame, the screen reader's
   focus is on the "Loading" node, which disappears. So the swap announces the new pane. On Android
-  the guest's content root carries `paneTitle` (the `CachedFrame`'s `paneTitle`) from the swap's
+  the guest's content root carries `paneTitle` (the `Modifier.cachedFrame(…)`'s `paneTitle`) from the swap's
   frame on; a new pane title makes the platform send a window-state change, which TalkBack
   announces. That does not promise to move TalkBack's focus, so the screen's heading is made the
   first node in the pane's traversal order, and the test checks that order, not focus movement
@@ -1138,7 +1147,7 @@ the frame goes in that frame; a host test binding with a non-null `StateSnapshot
 
 ### I2. Data freshness is the guest's choice
 
-- **Off by default.** A screen without `CachedFrame` is never stored.
+- **Off by default.** A screen without `Modifier.cachedFrame(…)` is never stored.
 - **Two levels, no default.** `Shell` (an allowlist: only `cached()` texts survive) and `Whole`.
   For money and personal data: `Shell`. The docs show it.
 - **What `Shell` does not hide, stated plainly: `Shell` removes strings; the structure and every
@@ -1706,10 +1715,10 @@ and 6), with no new design round needed.
 |---|---|---|---|---|
 | **H0** | templates, `keliver-treehouse-host-composeui` | host feature names as constants in one place; templates declare what they implement; `TreehouseContent(backEnabled)` and its use for hidden content; the lastGood record with sequence and module digest, written with `commit()` | a test that each template declares exactly its features; back with hidden content reaches no guest | apiCheck; reference-app and ios-host workflows |
 | **A1** (retargeted under Q17, [`MS4_PLAN.md`](MS4_PLAN.md) 2.2) | `keliver-schema` annotations, `keliver-tooling-schema` (parsing), `keliver-tooling-codegen`, `keliver-gradle-plugin` (strict), `keliver-compose-generator` (the frame-rule emitter), the prototype's `gatea` group | `@Replayable`, `@Scrolls`, `@NeverCached`, `@BlocksFrameWhenTrue`, `@StyleToken`, `@NotData`; generated `FrameRules` and the checked-in review list, strict mode (`redwoodSchema { frameRules { strict = true } }`); **the prototype's group classified** by the generator from each parameter's category, with `gatea.json`'s exceptions, and strict (2.4). Legacy's schemas are not annotated (Q17 (iii); (i) alone adds them); the product's groups are MS4-36's | codegen tests (the lists for a test schema; strict mode fails on an unclassified property; the review list's content); parser tests (each annotation's check; the `String` walk); the emitter's tests; `checkComposeApi` (the generated schema's staleness guard) and the review list's strict check | apiCheck |
-| **A2** | `keliver-protocol`, `keliver-compose`, `keliver-protocol-host` | `FrameCacheTags` (lock test); `CachedFrame` (with `paneTitle`), `cached()`, `notCached()`, `FrameScope`; `HostProtocolAdapter` consumes the reserved tags | batches byte-identical without the feature; with it, only the markers; reserved tags never reach the mismatch handler | apiCheck |
+| **A2** | `keliver-protocol`, `keliver-compose`, `keliver-protocol-host` | `FrameCacheTags` (lock test); `Modifier.cachedFrame(policy, ready, paneTitle)`, `cached()`, `notCached()`, `FrameScope`; `UiChange.fromProtocol` drops the reserved tags; both guest adapters write them through one helper; `FrameMarks.read` | batches byte-identical without the feature; with it, only the markers; reserved tags never reach the mismatch handler | apiCheck |
 | **A3a** | `keliver-treehouse-host` | `ChangeFolder`: the fold, pruning by entry state, `Shell` (placeholders by line count, strings inside structured values, `@StyleToken` kept), `notCached`, `@NeverCached`, position keys | the round-trip tests of I11 (raw batches on one host, the folded snapshot on another, trees compared); random batch sequences; I2's byte searches | apiCheck; unit tests on JVM, Android and the iOS simulator |
 | **A3b** | `keliver-treehouse-host` | `FrameStore`, the format, the key and invalidation, the session record and fail-closed rule, the off switch, clearing, size caps | I1's key tests, I5, I10 | the same |
-| **A3c** | `keliver-treehouse-host`, `keliver-widget`, `keliver-protocol-host` | `FrameRecorder`: the rule of 2.3 with all seven conditions, `inputSeen()`, `ScrollOrigin` and `TextLines` (the interfaces) and `widgetsUnder(id)`, `writeSkipped(reason)` | I11's navigation test; one blocked write per condition, each recording its reason; a scroller tag without `ScrollOrigin` blocks the write | the same |
+| **A3c** | `keliver-treehouse-host`, `keliver-widget`, `keliver-protocol-host` | `FrameRecorder`: the rule of 2.3 with all seven conditions, `inputSeen()`, `ScrollOrigin` and `TextLines` (the interfaces) and `widgetsUnder(id)`, `writeSkipped(reason)`; record only when exactly one node carries the `CACHED_FRAME` mark and it is the root's direct child, otherwise `writeSkipped(reason)` | I11's navigation test; one blocked write per condition, each recording its reason; a scroller tag without `ScrollOrigin` blocks the write | the same |
 | **A4a** (retargeted under Q17) | `keliver-treehouse-host-composeui`; the prototype's composeui module and the product's `LazyRuntime` copy; the generator's host emitter | the root input observer in `TreehouseContent`; `ScrollOrigin` on `LazyColumn`/`LazyRow` (the hand `LazyRuntime`'s two copies) and on `verticalScroll`/`horizontalScroll`; `TextLines` on `Text`; replay snapping for `AnimatedVisibility` and `animateContentSize` (2.4). Hooks in generated renderers come from the generator's host emitter, so they reach both copies by regeneration. Legacy's `AnimatedBorder` clock phase and its pager's auto-advance are not built (MS4-36 builds the generated pagers') | per scroller: scrolled by a pixel blocks the write; I4's height-equality test; the snapping tests (2.4); input observer tests | apiCheck; the height test |
 | **A4b** | `keliver-treehouse-host-composeui` | `CachedFrameContent` (inert, cache-only images, indicator slot, no frame for a restored binding), `FrameHandOff` (both limits, deferred update, `LocalContentShown`), the swap's accessibility | I3, I4, I12 host tests; **0 differing pixels on the prototype's generated widgets** (retargeted under Q17, as appendix C's table A), replayed against live, on real multi-batch sequences from the sample app's screens | the host tests; the pixel gate |
 | **A5** | templates (Android, iOS), docs | the start table on `StartChoice.mode` (and option (c) if decision 8 takes it), the `codeLoadSuccess` check, `session()` and `accounts = NONE`, storage dirs, the off switch from the index, adopter docs (what `Shell` does not hide, I2) | template tests (start table; backup exclusion; fail closed) | reference-app and ios-host workflows |

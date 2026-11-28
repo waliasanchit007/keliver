@@ -21,6 +21,7 @@ import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.ChildrenChange
 import dev.keliver.protocol.Create
+import dev.keliver.protocol.FrameCacheTags
 import dev.keliver.protocol.Id
 import dev.keliver.protocol.ModifierChange
 import dev.keliver.protocol.PropertyChange
@@ -65,7 +66,11 @@ public sealed interface UiChange {
         }
         is ModifierChange -> {
           var reuse = false
+          // The reserved framework tags are dropped here, before createModifier, so they reach
+          // neither a widget nor the mismatch handler (NF5 A2). The recorder (A3) reads them from
+          // the raw changes with FrameMarks.read, before this runs. Nothing is allocated for them.
           val modifier = change.elements.fold<_, Modifier>(Modifier) { outer, element ->
+            if (FrameCacheTags.isReserved(element.tag.value)) return@fold outer
             if (element.tag.value == REUSE_MODIFIER_TAG) {
               reuse = true
             }

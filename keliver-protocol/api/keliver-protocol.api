@@ -1,3 +1,7 @@
+public final class dev/keliver/protocol/CachedFrameMark$Companion {
+	public final fun read (Lkotlinx/serialization/json/JsonElement;)Ldev/keliver/protocol/CachedFrameMark;
+}
+
 public abstract interface class dev/keliver/protocol/Change {
 	public static final field Companion Ldev/keliver/protocol/Change$Companion;
 	public abstract fun getId-dcWScHk ()I
@@ -218,6 +222,21 @@ public final class dev/keliver/protocol/EventTag$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class dev/keliver/protocol/FrameCacheTags {
+	public static final field CACHED I
+	public static final field CACHED_FRAME I
+	public static final field INSTANCE Ldev/keliver/protocol/FrameCacheTags;
+	public static final field NOT_CACHED I
+	public static final field RANGE_END I
+	public static final field RANGE_START I
+	public final fun getRange ()Lkotlin/ranges/IntRange;
+	public final fun isReserved (I)Z
+}
+
+public final class dev/keliver/protocol/FrameMarks$Companion {
+	public final fun read (Ljava/util/List;)Ldev/keliver/protocol/FrameMarks;
+}
+
 public final class dev/keliver/protocol/Id {
 	public static final field Companion Ldev/keliver/protocol/Id$Companion;
 	public static final synthetic fun box-impl (I)Ldev/keliver/protocol/Id;
@@ -246,6 +265,9 @@ public final synthetic class dev/keliver/protocol/Id$$serializer : kotlinx/seria
 public final class dev/keliver/protocol/Id$Companion {
 	public final fun getRoot-dcWScHk ()I
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface annotation class dev/keliver/protocol/KeliverFrameMarksApi : java/lang/annotation/Annotation {
 }
 
 public final class dev/keliver/protocol/ModifierChange : dev/keliver/protocol/ValueChange {

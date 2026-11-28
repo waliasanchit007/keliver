@@ -6,6 +6,10 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-protocol>
+open annotation class dev.keliver.protocol/KeliverFrameMarksApi : kotlin/Annotation { // dev.keliver.protocol/KeliverFrameMarksApi|null[0]
+    constructor <init>() // dev.keliver.protocol/KeliverFrameMarksApi.<init>|<init>(){}[0]
+}
+
 abstract fun interface dev.keliver.protocol/ChangesSink { // dev.keliver.protocol/ChangesSink|null[0]
     abstract fun sendChanges(kotlin.collections/List<dev.keliver.protocol/Change>) // dev.keliver.protocol/ChangesSink.sendChanges|sendChanges(kotlin.collections.List<dev.keliver.protocol.Change>){}[0]
 }
@@ -452,4 +456,22 @@ final value class dev.keliver.protocol/WidgetTag { // dev.keliver.protocol/Widge
     final object Companion { // dev.keliver.protocol/WidgetTag.Companion|null[0]
         final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.protocol/WidgetTag> // dev.keliver.protocol/WidgetTag.Companion.serializer|serializer(){}[0]
     }
+}
+
+final object dev.keliver.protocol/FrameCacheTags { // dev.keliver.protocol/FrameCacheTags|null[0]
+    final const val CACHED // dev.keliver.protocol/FrameCacheTags.CACHED|{}CACHED[0]
+        final fun <get-CACHED>(): kotlin/Int // dev.keliver.protocol/FrameCacheTags.CACHED.<get-CACHED>|<get-CACHED>(){}[0]
+    final const val CACHED_FRAME // dev.keliver.protocol/FrameCacheTags.CACHED_FRAME|{}CACHED_FRAME[0]
+        final fun <get-CACHED_FRAME>(): kotlin/Int // dev.keliver.protocol/FrameCacheTags.CACHED_FRAME.<get-CACHED_FRAME>|<get-CACHED_FRAME>(){}[0]
+    final const val NOT_CACHED // dev.keliver.protocol/FrameCacheTags.NOT_CACHED|{}NOT_CACHED[0]
+        final fun <get-NOT_CACHED>(): kotlin/Int // dev.keliver.protocol/FrameCacheTags.NOT_CACHED.<get-NOT_CACHED>|<get-NOT_CACHED>(){}[0]
+    final const val RANGE_END // dev.keliver.protocol/FrameCacheTags.RANGE_END|{}RANGE_END[0]
+        final fun <get-RANGE_END>(): kotlin/Int // dev.keliver.protocol/FrameCacheTags.RANGE_END.<get-RANGE_END>|<get-RANGE_END>(){}[0]
+    final const val RANGE_START // dev.keliver.protocol/FrameCacheTags.RANGE_START|{}RANGE_START[0]
+        final fun <get-RANGE_START>(): kotlin/Int // dev.keliver.protocol/FrameCacheTags.RANGE_START.<get-RANGE_START>|<get-RANGE_START>(){}[0]
+
+    final val range // dev.keliver.protocol/FrameCacheTags.range|{}range[0]
+        final fun <get-range>(): kotlin.ranges/IntRange // dev.keliver.protocol/FrameCacheTags.range.<get-range>|<get-range>(){}[0]
+
+    final fun isReserved(kotlin/Int): kotlin/Boolean // dev.keliver.protocol/FrameCacheTags.isReserved|isReserved(kotlin.Int){}[0]
 }
