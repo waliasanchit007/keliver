@@ -17,7 +17,8 @@
 #   8. W8, a signing-key rotation (ci/w8/android-rotation.sh): K1-K8
 # On the local-maven route (prepare.sh's; ci/local-maven/route.sh) the libraries are this
 # checkout's: 1 and D3 are skipped (the generic development host is on the 0.4 line), 3 also
-# checks that the host logged this checkout's keliver-treehouse-host version, and 4-8 are skipped.
+# checks that the host logged this checkout's keliver-treehouse-host version, then MS4-04's
+# schema-mismatch report runs (ci/ms4-04/android-mismatch.sh: S1-S4), and 4-8 are skipped.
 #
 #   ci/device.sh <work-dir> <evidence-dir> [serial]
 #
@@ -329,12 +330,13 @@ shot P4-stockroom-production
 # V2 (W6): this host reports to the relay. A relay that collects reports
 # (GET /reports; not in tools 0.3.8 candidate 2 or earlier) must have counted
 # v1's and v2's loads. An older relay is a SKIP, not a pass.
-if [ "$(curl -s -o /dev/null -w '%{http_code}' -m 5 http://localhost:$RELAY_PORT/reports)" = 200 ]; then
+V2_HTTP="$(curl -s -o "$EV/relay-reports-v2-probe.txt" -w '%{http_code}' -m 5 http://localhost:$RELAY_PORT/reports)"
+if [ "$V2_HTTP" = 200 ]; then
   curl -s -m 5 http://localhost:$RELAY_PORT/reports > "$EV/relay-reports.json"
   python3 "$HERE/w5/relay_reports.py" "$EV/relay-reports.json" android > "$EV/relay-reports.txt" 2>&1 \
     && ok "V2: the relay counted this host's loads of v1 and v2 (GET /reports)" || bad "V2: $(tail -1 "$EV/relay-reports.txt")"
 else
-  echo "  SKIP  V2: this relay serves no /reports (it predates W6); not counted"
+  echo "  SKIP  V2: this relay serves no /reports (it predates W6); not counted (GET /reports answered $V2_HTTP: $(head -c 200 "$EV/relay-reports-v2-probe.txt" | tr '\n' ' '))"
 fi
 portal_down "$APP"
 
@@ -394,8 +396,11 @@ grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/log
 drive title Stockroom P7; fold "P7: Stockroom offline" $?
 
 # local-maven: prepare.sh built only the production host; the rows after P7 stay on the other two
-# routes for now (prepare.results lists them).
+# routes for now (prepare.results lists them). MS4-04's S1-S4 need this checkout's libraries (the
+# 0.5 line's schema-mismatch reports), so they run on this route only.
 if [ "$LIBRARIES" = local-maven ]; then
+  # shellcheck source=ms4-04/android-mismatch.sh
+  . "$HERE/ms4-04/android-mismatch.sh"
   skip "W3, W2, W5, WS6, M0, W8 and A1: not on the local-maven route yet (prepare.sh built none of their hosts); the repo-scaffold job runs them"
   echo "device: passed $pass, failed $fail"
   [ "$fail" -eq 0 ]; exit $?

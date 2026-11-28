@@ -82,6 +82,14 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
                     rs.groupingBy { it.str("outcome") ?: "" }.eachCount().toSortedMap().forEach { (o, n) -> put(o, n) }
                   },
                 )
+                // Why, where a report says (MS4-04: schema-mismatch among them); a plain load says nothing.
+                put(
+                  "reasons",
+                  buildJsonObject {
+                    rs.mapNotNull { r -> r.str("reason")?.takeIf { it.isNotEmpty() } }.groupingBy { it }.eachCount().toSortedMap()
+                      .forEach { (o, n) -> put(o, n) }
+                  },
+                )
               },
             )
           }
@@ -98,13 +106,14 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
     val rows = (s["bundles"] as JsonArray).joinToString("") { b ->
       b as JsonObject
       val outcomes = (b["outcomes"] as JsonObject).entries.joinToString(", ") { (o, n) -> "${esc(o)} $n" }
+      val reasons = (b["reasons"] as JsonObject).entries.joinToString(", ") { (o, n) -> "${esc(o)} $n" }
       "<tr><td>${esc(b.str("platform") ?: "")}</td><td>${esc(b.str("channel") ?: "")}</td>" +
-        "<td>${b.num("sequence") ?: "—"}</td><td>${b.num("installs")}</td><td>$outcomes</td></tr>"
+        "<td>${b.num("sequence") ?: "—"}</td><td>${b.num("installs")}</td><td>$outcomes</td><td>$reasons</td></tr>"
     }
     return """<!doctype html><html><head><meta charset="utf-8"><title>Keliver host reports</title>
       |<style>body{font:14px system-ui,sans-serif;margin:24px}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px;text-align:left}</style>
       |</head><body><h1>Host reports</h1><p>${s.num("total")} reports from ${s.num("installs")} installs.</p>
-      |<table><tr><th>platform</th><th>channel</th><th>sequence</th><th>installs</th><th>outcomes</th></tr>$rows</table>
+      |<table><tr><th>platform</th><th>channel</th><th>sequence</th><th>installs</th><th>outcomes</th><th>reasons</th></tr>$rows</table>
       |</body></html>
     """.trimMargin()
   }
@@ -115,11 +124,15 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
 
     // Every outcome and reason the hosts' reportReason (BundleIndex.kt) can send; HostReportsTest
     // holds the two together. screen-failed/exception (K1/K2) were missing until B4. WS6's crash
-    // rollback adds crash-rollback (previous-good, newer-bundle, app-view) and set-aside.
-    private val OUTCOMES = setOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed", "crash-rollback")
+    // rollback adds crash-rollback (previous-good, newer-bundle, app-view) and set-aside. MS4-04
+    // adds schema-mismatch, as an outcome and its reason: a bundle used a tag the host lacks.
+    private val OUTCOMES = setOf(
+      "loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed", "crash-rollback",
+      "schema-mismatch",
+    )
     private val REASONS = setOf(
       "", "sha256-mismatch", "below-floor", "set-aside", "bridge-missing", "bridge-shape", "bridge-bind", "engine", "signature", "lookup-failed",
-      "network", "config", "exception", "previous-good", "newer-bundle", "app-view", "other",
+      "network", "config", "exception", "previous-good", "newer-bundle", "app-view", "schema-mismatch", "other",
     )
     private val INSTALL_ID = Regex("[A-Za-z0-9-]{1,64}")
     private val CHANNEL = Regex("[a-z0-9][a-z0-9-]{0,31}")

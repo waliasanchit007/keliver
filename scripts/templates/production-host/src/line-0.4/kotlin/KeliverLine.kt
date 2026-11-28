@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.DynamicContentWidgetFactory
+import dev.keliver.treehouse.EventListener
 import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
@@ -24,6 +25,16 @@ internal const val KELIVER_LINE = "0.4"
  * and this line's HostFeatures.kt declares none (from 0.5 the spec hands them over).
  */
 internal abstract class KeliverSpec<A : AppService> : TreehouseApp.Spec<A>()
+
+/**
+ * The base of the host's code-load listener (KeliverHost.kt, MainViewController.kt). The 0.4
+ * line's Treehouse does not name a schema mismatch once per tag, and this line declares no
+ * schema-mismatch reports, so [onSchemaMismatch] is never called: an unknown tag is ignored
+ * silently, as it always was on this line (from 0.5 it is reported, MS4-04).
+ */
+internal abstract class KeliverEventListener : EventListener() {
+  open fun onSchemaMismatch(detail: String) {}
+}
 
 /**
  * Treehouse's content. The 0.4 line's TreehouseContent has no back gate, so [backEnabled] changes

@@ -8,11 +8,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineService
+import dev.keliver.Modifier
+import dev.keliver.RedwoodCodegenApi
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
 import dev.keliver.layout.compose.Column
 import dev.keliver.material.compose.StyledText
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
+import dev.keliver.protocol.ModifierTag
+import dev.keliver.protocol.guest.ProtocolWidgetSystemFactory
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.StandardAppLifecycle
 import dev.keliver.treehouse.TreehouseUi
@@ -21,6 +25,7 @@ import dev.keliver.treehouse.asZiplineTreehouseUi
 import dev.keliver.hostkit.KeliverScreenHost
 import inventory.logic.InventoryApp
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.SerializationStrategy
 
 /**
  * The service the generic keliver device host take()s.
@@ -37,6 +42,8 @@ interface PortalPresenter : AppService, ZiplineService {
 private class AppUi(val route: String = "", private val screen: KeliverScreenHost? = null) : TreehouseUi {
   @Composable
   override fun Show() {
+    // MS4-04's device check only (SCHEMA_MISMATCH_PROBE, below): two texts with a modifier the host lacks.
+    if (SCHEMA_MISMATCH_PROBE) MismatchProbe()
     // Hand-edited: the scaffolder wires one screen + one presenter; this app
     // navigates between two, so it mounts its own root (logic/InventoryApp.kt).
     // K4's k4/policy route shows the request-policy check in its place.
@@ -116,9 +123,44 @@ private suspend fun policyAttempt(http: HostHttpProvider, method: String, path: 
 private fun routeMark(route: String): String =
   ("route-" + route.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')).take(32)
 
+/**
+ * MS4-04 (schema-mismatch reports), the local-maven route's device check
+ * (ci/ms4-04/android-mismatch.sh): that check alone switches this on, for one
+ * bundle it publishes and loads, and then switches it off again. With it on, the
+ * screen also shows two texts that carry [UnknownToHost], a modifier sent with a
+ * tag no host schema has, so the host must ignore it, show the rest, and report
+ * it exactly once. Off, this file's bundle is what it always was.
+ */
+private const val SCHEMA_MISMATCH_PROBE = false
+
+/** The probe's modifier: [ProbeProtocol] sends it as [UNKNOWN_MODIFIER_TAG]. */
+private object UnknownToHost : Modifier.UnscopedElement
+
+/** A modifier tag in no schema: tags are a schema's own below 1,000,000, and its dependency's N × 1,000,000 + tag above. */
+private const val UNKNOWN_MODIFIER_TAG = 777_000_001
+
+@Composable
+private fun MismatchProbe() {
+  Column {
+    StyledText(text = "Schema mismatch probe", modifier = Modifier.then(UnknownToHost))
+    StyledText(text = "Schema mismatch probe, again", modifier = Modifier.then(UnknownToHost))
+  }
+}
+
+/** The app's protocol, except that it sends [UnknownToHost] with a tag no schema has. */
+@OptIn(RedwoodCodegenApi::class)
+private object ProbeProtocol : ProtocolWidgetSystemFactory by KeliverMaterialProtocolWidgetSystemFactory {
+  override fun <T : Modifier.Element> modifierTagAndSerializationStrategy(element: T): Pair<ModifierTag, SerializationStrategy<T>?> =
+    if (element === UnknownToHost) {
+      ModifierTag(UNKNOWN_MODIFIER_TAG) to null
+    } else {
+      KeliverMaterialProtocolWidgetSystemFactory.modifierTagAndSerializationStrategy(element)
+    }
+}
+
 private class AppPresenter(json: kotlinx.serialization.json.Json) : PortalPresenter {
   override val appLifecycle = StandardAppLifecycle(
-    protocolWidgetSystemFactory = KeliverMaterialProtocolWidgetSystemFactory,
+    protocolWidgetSystemFactory = if (SCHEMA_MISMATCH_PROBE) ProbeProtocol else KeliverMaterialProtocolWidgetSystemFactory,
     json = json,
     widgetVersion = 1U,
   )

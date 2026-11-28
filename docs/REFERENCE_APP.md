@@ -82,7 +82,14 @@ apart from the CI harness.**
     one line naming its build when a host creates its `TreehouseApp.Factory`
     (`keliver-treehouse-host <version>`: on Android `Log.d` with the logcat tag
     `Keliver`, which release builds print too; on iOS standard output); P2 fails
-    without this checkout's version.
+    without this checkout's version;
+  - on the emulator, after P7, MS4-04's schema-mismatch report (S1–S4,
+    `ci/ms4-04/android-mismatch.sh`): the guest's probe (`SCHEMA_MISMATCH_PROBE`
+    in `device/Main.kt`, off in every other bundle) is switched on and published
+    as the next version. Two of its texts carry one modifier sent with a tag no
+    schema has. The host must load it, still show Stockroom and draw both texts, log exactly one
+    `report: schema-mismatch` for that sequence, and the relay must count exactly
+    one (`GET /reports`, outcome and reason). The probe is switched off again.
   The rows after P7, the development route (the zip's generic host is on the 0.4
   line) and W2 (`reference/embed/android` is on AGP 8.12) stay on the central leg
   for now, listed as SKIP; MS4-32 ports the app. Each results file has a `ROUTE`
