@@ -18,14 +18,14 @@ index f3ffcb7..aa02e1c 100644
 --- a/zipline-android-ndk/src/main/CMakeLists.txt
 +++ b/zipline-android-ndk/src/main/CMakeLists.txt
 @@ -1,3 +1,4 @@
-+# Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (-fwrapv).
++# Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (-fwrapv, -Wl,--strip-all).
  cmake_minimum_required(VERSION 3.4.1)
  
  set(CMAKE_C_STANDARD 99)
 @@ -9,4 +10,11 @@ add_library(quickjs SHARED ${sources})
-
+ 
  target_link_libraries(quickjs)
-
+ 
 +# QuickJS 2026 relies on signed overflow wrapping (its Makefile builds with -fwrapv).
 +target_compile_options(quickjs PRIVATE -fwrapv)
 +
