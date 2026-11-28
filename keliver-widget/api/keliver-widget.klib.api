@@ -7,6 +7,10 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-widget>
+open annotation class dev.keliver.widget/KeliverFrameWidgetApi : kotlin/Annotation { // dev.keliver.widget/KeliverFrameWidgetApi|null[0]
+    constructor <init>() // dev.keliver.widget/KeliverFrameWidgetApi.<init>|<init>(){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.widget/RedwoodView { // dev.keliver.widget/RedwoodView|null[0]
     abstract val children // dev.keliver.widget/RedwoodView.children|{}children[0]
         abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.widget/RedwoodView.children.<get-children>|<get-children>(){}[0]
@@ -55,6 +59,15 @@ abstract interface dev.keliver.widget/SavedStateRegistry { // dev.keliver.widget
     abstract fun unregisterSavedStateProvider() // dev.keliver.widget/SavedStateRegistry.unregisterSavedStateProvider|unregisterSavedStateProvider(){}[0]
 }
 
+abstract interface dev.keliver.widget/ScrollOrigin { // dev.keliver.widget/ScrollOrigin|null[0]
+    abstract val atOrigin // dev.keliver.widget/ScrollOrigin.atOrigin|{}atOrigin[0]
+        abstract fun <get-atOrigin>(): kotlin/Boolean // dev.keliver.widget/ScrollOrigin.atOrigin.<get-atOrigin>|<get-atOrigin>(){}[0]
+}
+
+abstract interface dev.keliver.widget/TextLines { // dev.keliver.widget/TextLines|null[0]
+    abstract fun lines(kotlin/Int): kotlin.collections/List<dev.keliver.widget/TextLine>? // dev.keliver.widget/TextLines.lines|lines(kotlin.Int){}[0]
+}
+
 final class <#A: kotlin/Any> dev.keliver.widget/MutableListChildren : dev.keliver.widget/Widget.Children<#A>, kotlin.collections/MutableList<dev.keliver.widget/Widget<#A>> { // dev.keliver.widget/MutableListChildren|null[0]
     constructor <init>(kotlin.collections/MutableList<dev.keliver.widget/Widget<#A>> = ..., kotlin/Function0<kotlin/Unit> = ...) // dev.keliver.widget/MutableListChildren.<init>|<init>(kotlin.collections.MutableList<dev.keliver.widget.Widget<1:0>>;kotlin.Function0<kotlin.Unit>){}[0]
 
@@ -94,6 +107,19 @@ final class <#A: kotlin/Any> dev.keliver.widget/MutableListChildren : dev.kelive
 
     // Targets: [js]
     final fun asJsReadonlyArrayView(): kotlin.js.collections/JsReadonlyArray<dev.keliver.widget/Widget<#A>> // dev.keliver.widget/MutableListChildren.asJsReadonlyArrayView|asJsReadonlyArrayView(){}[0]
+}
+
+final class dev.keliver.widget/TextLine { // dev.keliver.widget/TextLine|null[0]
+    constructor <init>(kotlin/Float, kotlin/Int) // dev.keliver.widget/TextLine.<init>|<init>(kotlin.Float;kotlin.Int){}[0]
+
+    final val characterCount // dev.keliver.widget/TextLine.characterCount|{}characterCount[0]
+        final fun <get-characterCount>(): kotlin/Int // dev.keliver.widget/TextLine.characterCount.<get-characterCount>|<get-characterCount>(){}[0]
+    final val widthPx // dev.keliver.widget/TextLine.widthPx|{}widthPx[0]
+        final fun <get-widthPx>(): kotlin/Float // dev.keliver.widget/TextLine.widthPx.<get-widthPx>|<get-widthPx>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.widget/TextLine.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.widget/TextLine.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.widget/TextLine.toString|toString(){}[0]
 }
 
 // Targets: [ios]

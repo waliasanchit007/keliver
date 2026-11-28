@@ -44,12 +44,16 @@ import kotlin.test.Test
 import kotlinx.serialization.json.JsonPrimitive
 import okio.FileSystem
 
-private class FakeScroller(override var atOrigin: Boolean) : Widget<Any>, ScrollOrigin {
+private class FakeScroller(override var atOrigin: Boolean) :
+  Widget<Any>,
+  ScrollOrigin {
   override val value: Any get() = this
   override var modifier: Modifier = Modifier
 }
 
-private class FakeText(val lines: Map<Int, List<TextLine>>) : Widget<Any>, TextLines {
+private class FakeText(val lines: Map<Int, List<TextLine>>) :
+  Widget<Any>,
+  TextLines {
   override val value: Any get() = this
   override var modifier: Modifier = Modifier
 

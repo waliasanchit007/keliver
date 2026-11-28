@@ -31,7 +31,9 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import okio.FileSystem
 
-private class OriginWidget(override var atOrigin: Boolean) : Widget<Any>, ScrollOrigin {
+private class OriginWidget(override var atOrigin: Boolean) :
+  Widget<Any>,
+  ScrollOrigin {
   override val value: Any get() = this
   override var modifier: Modifier = Modifier
 }

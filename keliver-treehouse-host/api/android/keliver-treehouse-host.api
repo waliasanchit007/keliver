@@ -8,6 +8,10 @@ public final class dev/keliver/treehouse/ChangeFolder {
 	public synthetic fun <init> (Ldev/keliver/treehouse/FrameFoldRules;Ldev/keliver/treehouse/HiddenEntryPolicy;Ldev/keliver/treehouse/TextLineShapes;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun apply (Ljava/util/List;)V
 	public final fun fold ()Ldev/keliver/treehouse/FoldResult;
+	public final fun isInconsistent ()Z
+	public final fun marks ()Ljava/util/List;
+	public final fun shownSubtree-bJ_u3iY (I)Ljava/util/List;
+	public final fun widgetTagOf-jqTA6_Q (I)Ldev/keliver/protocol/WidgetTag;
 }
 
 public final class dev/keliver/treehouse/ChangeListRenderer {
@@ -100,7 +104,10 @@ public abstract interface class dev/keliver/treehouse/EventListener$Factory : ja
 }
 
 public abstract interface class dev/keliver/treehouse/FoldNode {
+	public abstract fun children (I)Ljava/util/List;
+	public abstract fun getChildrenTags ()Ljava/util/Set;
 	public abstract fun getId-dcWScHk ()I
+	public abstract fun getModifierElements ()Ljava/util/List;
 	public abstract fun getWidgetTag-j4hTL_I ()I
 	public abstract fun property (I)Lkotlinx/serialization/json/JsonElement;
 }
@@ -194,6 +201,41 @@ public final class dev/keliver/treehouse/FrameRead$Hit : dev/keliver/treehouse/F
 public final class dev/keliver/treehouse/FrameRead$Miss : dev/keliver/treehouse/FrameRead {
 	public fun <init> (Ldev/keliver/treehouse/FrameMiss;)V
 	public final fun getReason ()Ldev/keliver/treehouse/FrameMiss;
+}
+
+public final class dev/keliver/treehouse/FrameRecorder {
+	public fun <init> (Ldev/keliver/treehouse/RecordingRules;Ldev/keliver/treehouse/FrameStore;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/treehouse/HostedWidgets;Ldev/keliver/treehouse/HiddenEntryPolicy;Ldev/keliver/treehouse/RetainedNavigation;Lkotlin/jvm/functions/Function0;Ljava/util/Map;Ldev/keliver/treehouse/FrameRecorderListener;)V
+	public synthetic fun <init> (Ldev/keliver/treehouse/RecordingRules;Ldev/keliver/treehouse/FrameStore;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/treehouse/HostedWidgets;Ldev/keliver/treehouse/HiddenEntryPolicy;Ldev/keliver/treehouse/RetainedNavigation;Lkotlin/jvm/functions/Function0;Ljava/util/Map;Ldev/keliver/treehouse/FrameRecorderListener;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun batchApplied ()V
+	public final fun batchReceived (Ljava/util/List;)V
+	public final fun eventSink (Ldev/keliver/protocol/host/UiEventSink;)Ldev/keliver/protocol/host/UiEventSink;
+	public final fun getFinished ()Z
+	public final fun getRecording ()Ldev/keliver/treehouse/FrameRecording;
+	public final fun inputSeen ()V
+	public final fun onBatch (Ljava/util/List;Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class dev/keliver/treehouse/FrameRecorderListener {
+	public static final field Companion Ldev/keliver/treehouse/FrameRecorderListener$Companion;
+	public fun writeSkipped (Ljava/lang/String;)V
+	public fun written (I)V
+}
+
+public final class dev/keliver/treehouse/FrameRecorderListener$Companion {
+	public final fun getNone ()Ldev/keliver/treehouse/FrameRecorderListener;
+}
+
+public abstract interface class dev/keliver/treehouse/FrameRecording {
+}
+
+public final class dev/keliver/treehouse/FrameRecording$Skipped : dev/keliver/treehouse/FrameRecording {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun getReason ()Ljava/lang/String;
+}
+
+public final class dev/keliver/treehouse/FrameRecording$Written : dev/keliver/treehouse/FrameRecording {
+	public fun <init> (I)V
+	public final fun getBytes ()I
 }
 
 public final class dev/keliver/treehouse/FrameReject : java/lang/Enum {
@@ -290,10 +332,23 @@ public final class dev/keliver/treehouse/HiddenEntryPolicy$Companion {
 	public final fun getNothingHidden ()Ldev/keliver/treehouse/HiddenEntryPolicy;
 }
 
+public abstract interface class dev/keliver/treehouse/HostedWidgets {
+	public abstract fun widgetsUnder-bJ_u3iY (I)Ljava/util/Map;
+}
+
 public abstract interface annotation class dev/keliver/treehouse/KeliverFrameFoldApi : java/lang/annotation/Annotation {
 }
 
 public abstract interface class dev/keliver/treehouse/Loading : dev/keliver/widget/Widget {
+}
+
+public final class dev/keliver/treehouse/MarkedNode {
+	public synthetic fun <init> (IIZZZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getId-dcWScHk ()I
+	public final fun getReady ()Z
+	public final fun getRootChild ()Z
+	public final fun getShown ()Z
+	public final fun getWidgetTag-j4hTL_I ()I
 }
 
 public final class dev/keliver/treehouse/MemoryStateStore : dev/keliver/treehouse/StateStore {
@@ -305,6 +360,36 @@ public final class dev/keliver/treehouse/MemoryStateStore : dev/keliver/treehous
 public final class dev/keliver/treehouse/MissingSerializerException : java/lang/RuntimeException {
 	public fun <init> (Ljava/lang/String;Lkotlinx/serialization/SerializationException;)V
 	public fun <init> (Lkotlin/reflect/KClass;Lkotlinx/serialization/SerializationException;)V
+}
+
+public final class dev/keliver/treehouse/RecordingRules {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun foldRules ()Ldev/keliver/treehouse/FrameFoldRules;
+	public final fun getBlockingModifierProperties ()Ljava/util/Map;
+	public final fun getBlockingWidgetProperties ()Ljava/util/Map;
+	public final fun getNeverCachedModifierProperties ()Ljava/util/Map;
+	public final fun getNeverCachedWidgetProperties ()Ljava/util/Map;
+	public final fun getPositionKeyModifierProperties ()Ljava/util/Map;
+	public final fun getPositionKeyWidgetProperties ()Ljava/util/Map;
+	public final fun getReplayableModifiers ()Ljava/util/Set;
+	public final fun getReplayableWidgets ()Ljava/util/Set;
+	public final fun getScrollingModifiers ()Ljava/util/Set;
+	public final fun getScrollingWidgets ()Ljava/util/Set;
+	public final fun getTextModifierProperties ()Ljava/util/Map;
+	public final fun getTextWidgetProperties ()Ljava/util/Map;
+	public final fun getUrlModifierProperties ()Ljava/util/Map;
+	public final fun getUrlWidgetProperties ()Ljava/util/Map;
+}
+
+public abstract interface class dev/keliver/treehouse/RetainedNavigation {
+	public static final field Companion Ldev/keliver/treehouse/RetainedNavigation$Companion;
+	public abstract fun isNavigatedInside (Ldev/keliver/treehouse/FoldNode;I)Z
+}
+
+public final class dev/keliver/treehouse/RetainedNavigation$Companion {
+	public final fun getNeverNavigated ()Ldev/keliver/treehouse/RetainedNavigation;
 }
 
 public abstract interface class dev/keliver/treehouse/StateStore {

@@ -64,6 +64,19 @@ abstract fun interface dev.keliver.treehouse/HiddenEntryPolicy { // dev.keliver.
     }
 }
 
+abstract fun interface dev.keliver.treehouse/HostedWidgets { // dev.keliver.treehouse/HostedWidgets|null[0]
+    abstract fun widgetsUnder(dev.keliver.protocol/Id): kotlin.collections/Map<kotlin/Int, dev.keliver.widget/Widget<*>> // dev.keliver.treehouse/HostedWidgets.widgetsUnder|widgetsUnder(dev.keliver.protocol.Id){}[0]
+}
+
+abstract fun interface dev.keliver.treehouse/RetainedNavigation { // dev.keliver.treehouse/RetainedNavigation|null[0]
+    abstract fun isNavigatedInside(dev.keliver.treehouse/FoldNode, kotlin/Int): kotlin/Boolean // dev.keliver.treehouse/RetainedNavigation.isNavigatedInside|isNavigatedInside(dev.keliver.treehouse.FoldNode;kotlin.Int){}[0]
+
+    final object Companion { // dev.keliver.treehouse/RetainedNavigation.Companion|null[0]
+        final val NeverNavigated // dev.keliver.treehouse/RetainedNavigation.Companion.NeverNavigated|{}NeverNavigated[0]
+            final fun <get-NeverNavigated>(): dev.keliver.treehouse/RetainedNavigation // dev.keliver.treehouse/RetainedNavigation.Companion.NeverNavigated.<get-NeverNavigated>|<get-NeverNavigated>(){}[0]
+    }
+}
+
 abstract fun interface dev.keliver.treehouse/TextLineShapes { // dev.keliver.treehouse/TextLineShapes|null[0]
     abstract fun lineLengths(dev.keliver.protocol/Id, kotlin/Int, kotlin/String): kotlin.collections/List<kotlin/Int>? // dev.keliver.treehouse/TextLineShapes.lineLengths|lineLengths(dev.keliver.protocol.Id;kotlin.Int;kotlin.String){}[0]
 }
@@ -138,12 +151,27 @@ abstract interface dev.keliver.treehouse/Content { // dev.keliver.treehouse/Cont
 }
 
 abstract interface dev.keliver.treehouse/FoldNode { // dev.keliver.treehouse/FoldNode|null[0]
+    abstract val childrenTags // dev.keliver.treehouse/FoldNode.childrenTags|{}childrenTags[0]
+        abstract fun <get-childrenTags>(): kotlin.collections/Set<kotlin/Int> // dev.keliver.treehouse/FoldNode.childrenTags.<get-childrenTags>|<get-childrenTags>(){}[0]
     abstract val id // dev.keliver.treehouse/FoldNode.id|{}id[0]
         abstract fun <get-id>(): dev.keliver.protocol/Id // dev.keliver.treehouse/FoldNode.id.<get-id>|<get-id>(){}[0]
+    abstract val modifierElements // dev.keliver.treehouse/FoldNode.modifierElements|{}modifierElements[0]
+        abstract fun <get-modifierElements>(): kotlin.collections/List<dev.keliver.protocol/ModifierElement> // dev.keliver.treehouse/FoldNode.modifierElements.<get-modifierElements>|<get-modifierElements>(){}[0]
     abstract val widgetTag // dev.keliver.treehouse/FoldNode.widgetTag|{}widgetTag[0]
         abstract fun <get-widgetTag>(): dev.keliver.protocol/WidgetTag // dev.keliver.treehouse/FoldNode.widgetTag.<get-widgetTag>|<get-widgetTag>(){}[0]
 
+    abstract fun children(kotlin/Int): kotlin.collections/List<dev.keliver.treehouse/FoldNode> // dev.keliver.treehouse/FoldNode.children|children(kotlin.Int){}[0]
     abstract fun property(kotlin/Int): kotlinx.serialization.json/JsonElement? // dev.keliver.treehouse/FoldNode.property|property(kotlin.Int){}[0]
+}
+
+abstract interface dev.keliver.treehouse/FrameRecorderListener { // dev.keliver.treehouse/FrameRecorderListener|null[0]
+    open fun writeSkipped(kotlin/String) // dev.keliver.treehouse/FrameRecorderListener.writeSkipped|writeSkipped(kotlin.String){}[0]
+    open fun written(kotlin/Int) // dev.keliver.treehouse/FrameRecorderListener.written|written(kotlin.Int){}[0]
+
+    final object Companion { // dev.keliver.treehouse/FrameRecorderListener.Companion|null[0]
+        final val None // dev.keliver.treehouse/FrameRecorderListener.Companion.None|{}None[0]
+            final fun <get-None>(): dev.keliver.treehouse/FrameRecorderListener // dev.keliver.treehouse/FrameRecorderListener.Companion.None.<get-None>|<get-None>(){}[0]
+    }
 }
 
 abstract interface dev.keliver.treehouse/FrameStoreClock { // dev.keliver.treehouse/FrameStoreClock|null[0]
@@ -204,6 +232,22 @@ sealed interface dev.keliver.treehouse/FrameRead { // dev.keliver.treehouse/Fram
 
         final val reason // dev.keliver.treehouse/FrameRead.Miss.reason|{}reason[0]
             final fun <get-reason>(): dev.keliver.treehouse/FrameMiss // dev.keliver.treehouse/FrameRead.Miss.reason.<get-reason>|<get-reason>(){}[0]
+    }
+}
+
+sealed interface dev.keliver.treehouse/FrameRecording { // dev.keliver.treehouse/FrameRecording|null[0]
+    final class Skipped : dev.keliver.treehouse/FrameRecording { // dev.keliver.treehouse/FrameRecording.Skipped|null[0]
+        constructor <init>(kotlin/String) // dev.keliver.treehouse/FrameRecording.Skipped.<init>|<init>(kotlin.String){}[0]
+
+        final val reason // dev.keliver.treehouse/FrameRecording.Skipped.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // dev.keliver.treehouse/FrameRecording.Skipped.reason.<get-reason>|<get-reason>(){}[0]
+    }
+
+    final class Written : dev.keliver.treehouse/FrameRecording { // dev.keliver.treehouse/FrameRecording.Written|null[0]
+        constructor <init>(kotlin/Int) // dev.keliver.treehouse/FrameRecording.Written.<init>|<init>(kotlin.Int){}[0]
+
+        final val bytes // dev.keliver.treehouse/FrameRecording.Written.bytes|{}bytes[0]
+            final fun <get-bytes>(): kotlin/Int // dev.keliver.treehouse/FrameRecording.Written.bytes.<get-bytes>|<get-bytes>(){}[0]
     }
 }
 
@@ -281,8 +325,14 @@ final class <#A: kotlin/Any> dev.keliver.treehouse/ChangeListRenderer { // dev.k
 final class dev.keliver.treehouse/ChangeFolder { // dev.keliver.treehouse/ChangeFolder|null[0]
     constructor <init>(dev.keliver.treehouse/FrameFoldRules, dev.keliver.treehouse/HiddenEntryPolicy = ..., dev.keliver.treehouse/TextLineShapes? = ...) // dev.keliver.treehouse/ChangeFolder.<init>|<init>(dev.keliver.treehouse.FrameFoldRules;dev.keliver.treehouse.HiddenEntryPolicy;dev.keliver.treehouse.TextLineShapes?){}[0]
 
+    final val isInconsistent // dev.keliver.treehouse/ChangeFolder.isInconsistent|{}isInconsistent[0]
+        final fun <get-isInconsistent>(): kotlin/Boolean // dev.keliver.treehouse/ChangeFolder.isInconsistent.<get-isInconsistent>|<get-isInconsistent>(){}[0]
+
     final fun apply(kotlin.collections/List<dev.keliver.protocol/Change>) // dev.keliver.treehouse/ChangeFolder.apply|apply(kotlin.collections.List<dev.keliver.protocol.Change>){}[0]
     final fun fold(): dev.keliver.treehouse/FoldResult // dev.keliver.treehouse/ChangeFolder.fold|fold(){}[0]
+    final fun marks(): kotlin.collections/List<dev.keliver.treehouse/MarkedNode> // dev.keliver.treehouse/ChangeFolder.marks|marks(){}[0]
+    final fun shownSubtree(dev.keliver.protocol/Id): kotlin.collections/List<dev.keliver.treehouse/FoldNode> // dev.keliver.treehouse/ChangeFolder.shownSubtree|shownSubtree(dev.keliver.protocol.Id){}[0]
+    final fun widgetTagOf(dev.keliver.protocol/Id): dev.keliver.protocol/WidgetTag? // dev.keliver.treehouse/ChangeFolder.widgetTagOf|widgetTagOf(dev.keliver.protocol.Id){}[0]
 }
 
 final class dev.keliver.treehouse/FrameFoldRules { // dev.keliver.treehouse/FrameFoldRules|null[0]
@@ -339,6 +389,22 @@ final class dev.keliver.treehouse/FrameKey { // dev.keliver.treehouse/FrameKey|n
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.treehouse/FrameKey.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.keliver.treehouse/FrameKey.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.keliver.treehouse/FrameKey.toString|toString(){}[0]
+}
+
+final class dev.keliver.treehouse/FrameRecorder { // dev.keliver.treehouse/FrameRecorder|null[0]
+    constructor <init>(dev.keliver.treehouse/RecordingRules, dev.keliver.treehouse/FrameStore, kotlin/String, kotlin/Function0<dev.keliver.treehouse/FrameKey>, dev.keliver.treehouse/HostedWidgets, dev.keliver.treehouse/HiddenEntryPolicy = ..., dev.keliver.treehouse/RetainedNavigation = ..., kotlin/Function0<kotlin/Boolean> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., dev.keliver.treehouse/FrameRecorderListener = ...) // dev.keliver.treehouse/FrameRecorder.<init>|<init>(dev.keliver.treehouse.RecordingRules;dev.keliver.treehouse.FrameStore;kotlin.String;kotlin.Function0<dev.keliver.treehouse.FrameKey>;dev.keliver.treehouse.HostedWidgets;dev.keliver.treehouse.HiddenEntryPolicy;dev.keliver.treehouse.RetainedNavigation;kotlin.Function0<kotlin.Boolean>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;dev.keliver.treehouse.FrameRecorderListener){}[0]
+
+    final val finished // dev.keliver.treehouse/FrameRecorder.finished|{}finished[0]
+        final fun <get-finished>(): kotlin/Boolean // dev.keliver.treehouse/FrameRecorder.finished.<get-finished>|<get-finished>(){}[0]
+
+    final var recording // dev.keliver.treehouse/FrameRecorder.recording|{}recording[0]
+        final fun <get-recording>(): dev.keliver.treehouse/FrameRecording? // dev.keliver.treehouse/FrameRecorder.recording.<get-recording>|<get-recording>(){}[0]
+
+    final fun batchApplied() // dev.keliver.treehouse/FrameRecorder.batchApplied|batchApplied(){}[0]
+    final fun batchReceived(kotlin.collections/List<dev.keliver.protocol/Change>) // dev.keliver.treehouse/FrameRecorder.batchReceived|batchReceived(kotlin.collections.List<dev.keliver.protocol.Change>){}[0]
+    final fun eventSink(dev.keliver.protocol.host/UiEventSink): dev.keliver.protocol.host/UiEventSink // dev.keliver.treehouse/FrameRecorder.eventSink|eventSink(dev.keliver.protocol.host.UiEventSink){}[0]
+    final fun inputSeen() // dev.keliver.treehouse/FrameRecorder.inputSeen|inputSeen(){}[0]
+    final inline fun onBatch(kotlin.collections/List<dev.keliver.protocol/Change>, kotlin/Function0<kotlin/Unit>) // dev.keliver.treehouse/FrameRecorder.onBatch|onBatch(kotlin.collections.List<dev.keliver.protocol.Change>;kotlin.Function0<kotlin.Unit>){}[0]
 }
 
 final class dev.keliver.treehouse/FrameRelease { // dev.keliver.treehouse/FrameRelease|null[0]
@@ -398,6 +464,21 @@ final class dev.keliver.treehouse/FrameStoreLimits { // dev.keliver.treehouse/Fr
         final fun <get-maxFrameBytes>(): kotlin/Int // dev.keliver.treehouse/FrameStoreLimits.maxFrameBytes.<get-maxFrameBytes>|<get-maxFrameBytes>(){}[0]
 }
 
+final class dev.keliver.treehouse/MarkedNode { // dev.keliver.treehouse/MarkedNode|null[0]
+    constructor <init>(dev.keliver.protocol/Id, dev.keliver.protocol/WidgetTag, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean) // dev.keliver.treehouse/MarkedNode.<init>|<init>(dev.keliver.protocol.Id;dev.keliver.protocol.WidgetTag;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
+
+    final val id // dev.keliver.treehouse/MarkedNode.id|{}id[0]
+        final fun <get-id>(): dev.keliver.protocol/Id // dev.keliver.treehouse/MarkedNode.id.<get-id>|<get-id>(){}[0]
+    final val ready // dev.keliver.treehouse/MarkedNode.ready|{}ready[0]
+        final fun <get-ready>(): kotlin/Boolean // dev.keliver.treehouse/MarkedNode.ready.<get-ready>|<get-ready>(){}[0]
+    final val rootChild // dev.keliver.treehouse/MarkedNode.rootChild|{}rootChild[0]
+        final fun <get-rootChild>(): kotlin/Boolean // dev.keliver.treehouse/MarkedNode.rootChild.<get-rootChild>|<get-rootChild>(){}[0]
+    final val shown // dev.keliver.treehouse/MarkedNode.shown|{}shown[0]
+        final fun <get-shown>(): kotlin/Boolean // dev.keliver.treehouse/MarkedNode.shown.<get-shown>|<get-shown>(){}[0]
+    final val widgetTag // dev.keliver.treehouse/MarkedNode.widgetTag|{}widgetTag[0]
+        final fun <get-widgetTag>(): dev.keliver.protocol/WidgetTag // dev.keliver.treehouse/MarkedNode.widgetTag.<get-widgetTag>|<get-widgetTag>(){}[0]
+}
+
 final class dev.keliver.treehouse/MemoryStateStore : dev.keliver.treehouse/StateStore { // dev.keliver.treehouse/MemoryStateStore|null[0]
     constructor <init>() // dev.keliver.treehouse/MemoryStateStore.<init>|<init>(){}[0]
 
@@ -408,6 +489,41 @@ final class dev.keliver.treehouse/MemoryStateStore : dev.keliver.treehouse/State
 final class dev.keliver.treehouse/MissingSerializerException : kotlin/RuntimeException { // dev.keliver.treehouse/MissingSerializerException|null[0]
     constructor <init>(kotlin.reflect/KClass<*>, kotlinx.serialization/SerializationException) // dev.keliver.treehouse/MissingSerializerException.<init>|<init>(kotlin.reflect.KClass<*>;kotlinx.serialization.SerializationException){}[0]
     constructor <init>(kotlin/String, kotlinx.serialization/SerializationException) // dev.keliver.treehouse/MissingSerializerException.<init>|<init>(kotlin.String;kotlinx.serialization.SerializationException){}[0]
+}
+
+final class dev.keliver.treehouse/RecordingRules { // dev.keliver.treehouse/RecordingRules|null[0]
+    constructor <init>(kotlin.collections/Set<kotlin/Int> = ..., kotlin.collections/Set<kotlin/Int> = ..., kotlin.collections/Set<kotlin/Int> = ..., kotlin.collections/Set<kotlin/Int> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> = ...) // dev.keliver.treehouse/RecordingRules.<init>|<init>(kotlin.collections.Set<kotlin.Int>;kotlin.collections.Set<kotlin.Int>;kotlin.collections.Set<kotlin.Int>;kotlin.collections.Set<kotlin.Int>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.String>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.String>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.String>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.String>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.String>>){}[0]
+
+    final val blockingModifierProperties // dev.keliver.treehouse/RecordingRules.blockingModifierProperties|{}blockingModifierProperties[0]
+        final fun <get-blockingModifierProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> // dev.keliver.treehouse/RecordingRules.blockingModifierProperties.<get-blockingModifierProperties>|<get-blockingModifierProperties>(){}[0]
+    final val blockingWidgetProperties // dev.keliver.treehouse/RecordingRules.blockingWidgetProperties|{}blockingWidgetProperties[0]
+        final fun <get-blockingWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/RecordingRules.blockingWidgetProperties.<get-blockingWidgetProperties>|<get-blockingWidgetProperties>(){}[0]
+    final val neverCachedModifierProperties // dev.keliver.treehouse/RecordingRules.neverCachedModifierProperties|{}neverCachedModifierProperties[0]
+        final fun <get-neverCachedModifierProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> // dev.keliver.treehouse/RecordingRules.neverCachedModifierProperties.<get-neverCachedModifierProperties>|<get-neverCachedModifierProperties>(){}[0]
+    final val neverCachedWidgetProperties // dev.keliver.treehouse/RecordingRules.neverCachedWidgetProperties|{}neverCachedWidgetProperties[0]
+        final fun <get-neverCachedWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/RecordingRules.neverCachedWidgetProperties.<get-neverCachedWidgetProperties>|<get-neverCachedWidgetProperties>(){}[0]
+    final val positionKeyModifierProperties // dev.keliver.treehouse/RecordingRules.positionKeyModifierProperties|{}positionKeyModifierProperties[0]
+        final fun <get-positionKeyModifierProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> // dev.keliver.treehouse/RecordingRules.positionKeyModifierProperties.<get-positionKeyModifierProperties>|<get-positionKeyModifierProperties>(){}[0]
+    final val positionKeyWidgetProperties // dev.keliver.treehouse/RecordingRules.positionKeyWidgetProperties|{}positionKeyWidgetProperties[0]
+        final fun <get-positionKeyWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/RecordingRules.positionKeyWidgetProperties.<get-positionKeyWidgetProperties>|<get-positionKeyWidgetProperties>(){}[0]
+    final val replayableModifiers // dev.keliver.treehouse/RecordingRules.replayableModifiers|{}replayableModifiers[0]
+        final fun <get-replayableModifiers>(): kotlin.collections/Set<kotlin/Int> // dev.keliver.treehouse/RecordingRules.replayableModifiers.<get-replayableModifiers>|<get-replayableModifiers>(){}[0]
+    final val replayableWidgets // dev.keliver.treehouse/RecordingRules.replayableWidgets|{}replayableWidgets[0]
+        final fun <get-replayableWidgets>(): kotlin.collections/Set<kotlin/Int> // dev.keliver.treehouse/RecordingRules.replayableWidgets.<get-replayableWidgets>|<get-replayableWidgets>(){}[0]
+    final val scrollingModifiers // dev.keliver.treehouse/RecordingRules.scrollingModifiers|{}scrollingModifiers[0]
+        final fun <get-scrollingModifiers>(): kotlin.collections/Set<kotlin/Int> // dev.keliver.treehouse/RecordingRules.scrollingModifiers.<get-scrollingModifiers>|<get-scrollingModifiers>(){}[0]
+    final val scrollingWidgets // dev.keliver.treehouse/RecordingRules.scrollingWidgets|{}scrollingWidgets[0]
+        final fun <get-scrollingWidgets>(): kotlin.collections/Set<kotlin/Int> // dev.keliver.treehouse/RecordingRules.scrollingWidgets.<get-scrollingWidgets>|<get-scrollingWidgets>(){}[0]
+    final val textModifierProperties // dev.keliver.treehouse/RecordingRules.textModifierProperties|{}textModifierProperties[0]
+        final fun <get-textModifierProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> // dev.keliver.treehouse/RecordingRules.textModifierProperties.<get-textModifierProperties>|<get-textModifierProperties>(){}[0]
+    final val textWidgetProperties // dev.keliver.treehouse/RecordingRules.textWidgetProperties|{}textWidgetProperties[0]
+        final fun <get-textWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/RecordingRules.textWidgetProperties.<get-textWidgetProperties>|<get-textWidgetProperties>(){}[0]
+    final val urlModifierProperties // dev.keliver.treehouse/RecordingRules.urlModifierProperties|{}urlModifierProperties[0]
+        final fun <get-urlModifierProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> // dev.keliver.treehouse/RecordingRules.urlModifierProperties.<get-urlModifierProperties>|<get-urlModifierProperties>(){}[0]
+    final val urlWidgetProperties // dev.keliver.treehouse/RecordingRules.urlWidgetProperties|{}urlWidgetProperties[0]
+        final fun <get-urlWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/RecordingRules.urlWidgetProperties.<get-urlWidgetProperties>|<get-urlWidgetProperties>(){}[0]
+
+    final fun foldRules(): dev.keliver.treehouse/FrameFoldRules // dev.keliver.treehouse/RecordingRules.foldRules|foldRules(){}[0]
 }
 
 final class dev.keliver.treehouse/StoredFrame { // dev.keliver.treehouse/StoredFrame|null[0]
