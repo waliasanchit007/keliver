@@ -71,6 +71,7 @@ import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import org.jetbrains.kotlin.gradle.tasks.FatFrameworkTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+import org.jetbrains.kotlin.konan.target.KonanTarget
 
 // Default Gradle coordinate group. `dev.keliver` is the project's own
 // reverse-DNS namespace, verified on Maven Central via the keliver.dev
@@ -96,6 +97,9 @@ private fun Project.keliverVersion(): String =
   providers.gradleProperty("keliverVersion").getOrElse(KELIVER_VERSION)
 
 private val isCiEnvironment = System.getenv("CI") == "true"
+
+/** Set by ci.yml's Build job: debug iOS simulator links never come from the build cache. */
+private const val LINK_WITHOUT_BUILD_CACHE_ENV = "KELIVER_CI_LINK_WITHOUT_BUILD_CACHE"
 
 /**
  * Matches a file that gets the Keliver license header: every file that does NOT start with a
@@ -387,6 +391,30 @@ class RedwoodBuildPlugin : Plugin<Project> {
       tasks.withType(FatFrameworkTask::class.java).configureEach {
         if (it.name.contains("Release")) {
           it.enabled = false
+        }
+      }
+
+      // ci.yml's Build job keeps Kotlin/Native's library caches between runs (its kn-caches
+      // steps) and sets this variable. Kotlin/Native builds a library's cache only while a link
+      // that needs it runs, so a debug simulator link that Gradle's build cache serves FROM-CACHE
+      // builds none. The first save from main after #322 took all six simulator test links from
+      // the build cache and kept 8.8 MiB of about 129. With this, those links always run on CI:
+      // on warm caches a link takes about a minute, and a link whose inputs changed (most pull
+      // requests change one) gains nothing from the build cache anyway.
+      if (providers.environmentVariable(LINK_WITHOUT_BUILD_CACHE_ENV).orNull == "true") {
+        kotlin.targets.withType(KotlinNativeTarget::class.java) { target ->
+          if (target.konanTarget == KonanTarget.IOS_SIMULATOR_ARM64) {
+            target.binaries.configureEach { binary ->
+              if (binary.buildType == NativeBuildType.DEBUG) {
+                binary.linkTaskProvider.configure { link ->
+                  link.outputs.doNotCacheIf(
+                    "$LINK_WITHOUT_BUILD_CACHE_ENV: Kotlin/Native builds its library caches " +
+                      "only while a link runs",
+                  ) { true }
+                }
+              }
+            }
+          }
         }
       }
     }
