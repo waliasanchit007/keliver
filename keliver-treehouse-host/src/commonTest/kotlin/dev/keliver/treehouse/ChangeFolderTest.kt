@@ -110,12 +110,36 @@ class ChangeFolderTest {
     listOf(
       create(2, TestSchema.TEXT),
       prop(2, 2, 1, str(secretText)),
-      prop(2, 2, 2, JsonArray(listOf(buildJsonObject { put("t", secretSpan); put("size", 12); put("bold", true) }))),
+      prop(
+        2,
+        2,
+        2,
+        JsonArray(
+          listOf(
+            buildJsonObject {
+              put("t", secretSpan)
+              put("size", 12)
+              put("bold", true)
+            },
+          ),
+        ),
+      ),
       prop(2, 2, 3, str("icon-check")),
       prop(2, 2, 4, str(secretUrl)),
       prop(2, 2, 5, str("NEVER-pin-0000")),
       prop(2, 2, 6, JsonPrimitive(42)),
-      modifier(2, ModifierElement(ModifierTag(7), buildJsonObject { put("desc", "SECRETDESC-a"); put("tag", "KEY-a"); put("secret", "NEVERMOD"); put("w", 4) })),
+      modifier(
+        2,
+        ModifierElement(
+          ModifierTag(7),
+          buildJsonObject {
+            put("desc", "SECRETDESC-a")
+            put("tag", "KEY-a")
+            put("secret", "NEVERMOD")
+            put("w", 4)
+          },
+        ),
+      ),
       add(1, 1, 2, 0),
       create(3, TestSchema.BOX),
       prop(3, 1, 1, str("KEY-box")),
@@ -331,8 +355,11 @@ class ChangeFolderTest {
     val widget = ChangeFolder(TestSchema.rules)
     widget.apply(
       listOf(
-        create(1, TestSchema.BOX), modifier(1, cachedFrameElement("whole")), addRoot(1),
-        create(2, TestSchema.OPAQUE), add(1, 1, 2, 0),
+        create(1, TestSchema.BOX),
+        modifier(1, cachedFrameElement("whole")),
+        addRoot(1),
+        create(2, TestSchema.OPAQUE),
+        add(1, 1, 2, 0),
       ),
     )
     assertThat((widget.fold() as FoldResult.Blocked).reason).isEqualTo("notReplayable:widget:3")
@@ -340,7 +367,9 @@ class ChangeFolderTest {
     val mod = ChangeFolder(TestSchema.rules)
     mod.apply(
       listOf(
-        create(1, TestSchema.BOX), modifier(1, cachedFrameElement("whole"), ModifierElement(ModifierTag(9))), addRoot(1),
+        create(1, TestSchema.BOX),
+        modifier(1, cachedFrameElement("whole"), ModifierElement(ModifierTag(9))),
+        addRoot(1),
       ),
     )
     assertThat((mod.fold() as FoldResult.Blocked).reason).isEqualTo("notReplayable:modifier:9")
@@ -360,8 +389,12 @@ class ChangeFolderTest {
     val two = ChangeFolder(TestSchema.rules)
     two.apply(
       listOf(
-        create(1, TestSchema.BOX), modifier(1, cachedFrameElement("whole")), addRoot(1),
-        create(2, TestSchema.BOX), modifier(2, cachedFrameElement("whole")), addRoot(2, 1),
+        create(1, TestSchema.BOX),
+        modifier(1, cachedFrameElement("whole")),
+        addRoot(1),
+        create(2, TestSchema.BOX),
+        modifier(2, cachedFrameElement("whole")),
+        addRoot(2, 1),
       ),
     )
     assertThat((two.fold() as FoldResult.Blocked).reason).isEqualTo("multipleMarks")
@@ -369,8 +402,11 @@ class ChangeFolderTest {
     val nested = ChangeFolder(TestSchema.rules)
     nested.apply(
       listOf(
-        create(1, TestSchema.BOX), addRoot(1),
-        create(2, TestSchema.BOX), modifier(2, cachedFrameElement("whole")), add(1, 1, 2, 0),
+        create(1, TestSchema.BOX),
+        addRoot(1),
+        create(2, TestSchema.BOX),
+        modifier(2, cachedFrameElement("whole")),
+        add(1, 1, 2, 0),
       ),
     )
     assertThat((nested.fold() as FoldResult.Blocked).reason).isEqualTo("notRootChild")

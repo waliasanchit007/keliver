@@ -47,7 +47,7 @@ import kotlinx.serialization.json.JsonPrimitive
  * fresh host can apply (a node's Create, its modifier and properties, then each child followed by its
  * Add), applying these rules:
  *
- * - **Pruning.** Children [entryPolicy] calls hidden (NF1's retained entries below the top, (B)'s
+ * - **Pruning.** Children the entry policy calls hidden (NF1's retained entries below the top, (B)'s
  *   prepared entries) are dropped with their subtrees. So are `notCached()` subtrees, in both
  *   levels. Detached nodes are not attached, so they never appear.
  * - **Replayable only.** A widget or modifier that the rules do not list blocks the fold
@@ -66,6 +66,9 @@ import kotlinx.serialization.json.JsonPrimitive
  *
  * The snapshot keeps the guest's node ids. The marked node must be a direct child of the root and
  * the only marked one in what is shown; the recorder (A3c) holds the other conditions of 2.3.
+ *
+ * Limit: the keys of a JSON object inside a structured text value are kept (they are the value
+ * class's field names). A `Map<String, String>` typed text value would keep its keys.
  */
 @KeliverFrameFoldApi
 @OptIn(KeliverFrameMarksApi::class)
@@ -135,6 +138,7 @@ public class ChangeFolder(
 
       is ChildrenChange.Remove -> {
         val list = nodes[change.id.value]?.children?.get(change.tag.value) ?: return false
+
         @Suppress("DEPRECATION") // Old guests send counts above one.
         val count = change.count
         if (count < 1 || change.index < 0 || change.index + count > list.size) return false
@@ -187,8 +191,9 @@ public class ChangeFolder(
     if (!root.children.values.any { list -> list.any { it === top } }) {
       return FoldResult.Blocked("notRootChild")
     }
-    val mark = marksOf(top)!!.cachedFrame!!
-    if (marksOf(top)!!.notCached) return FoldResult.Blocked("notCachedRoot")
+    val marks = marksOf(top)!!
+    if (marks.notCached) return FoldResult.Blocked("notCachedRoot")
+    val mark = marks.cachedFrame!!
     val content = if (mark.content == "shell") FrameFoldContent.Shell else FrameFoldContent.Whole
 
     val out = mutableListOf<Change>()
@@ -216,7 +221,7 @@ public class ChangeFolder(
   private class BlockedException(val reason: String) : RuntimeException(reason)
 
   private inner class Emitter(
-    private val content: FrameFoldContent,
+    content: FrameFoldContent,
     private val out: MutableList<Change>,
   ) {
     private val shell = content == FrameFoldContent.Shell
@@ -304,45 +309,43 @@ public class ChangeFolder(
 
     override fun property(tag: Int): JsonElement? = properties[tag]
   }
+}
 
-  private companion object {
-    /** The host adapter's widget-reuse modifier; a recycling hint, not part of the drawn tree. */
-    const val REUSE_MODIFIER_TAG = -4_543_827
+/** The host adapter's widget-reuse modifier; a recycling hint, not part of the drawn tree. */
+private const val REUSE_MODIFIER_TAG = -4_543_827
 
-    /** U+2007, which is as wide as a digit and does not collapse. */
-    const val FIGURE_SPACE = ' '
+/** The figure space (the code point 0x2007), as wide as a digit and not collapsed. Spelled as a number. */
+private val FIGURE_SPACE: Char = 0x2007.toChar()
 
-    fun replaceStrings(value: JsonElement, replace: (String) -> String): JsonElement = when (value) {
-      is JsonPrimitive -> if (value.isString) JsonPrimitive(replace(value.content)) else value
-      is JsonArray -> JsonArray(value.map { replaceStrings(it, replace) })
-      is JsonObject -> JsonObject(value.mapValues { (_, v) -> replaceStrings(v, replace) })
-    }
+private fun replaceStrings(value: JsonElement, replace: (String) -> String): JsonElement = when (value) {
+  is JsonPrimitive -> if (value.isString) JsonPrimitive(replace(value.content)) else value
+  is JsonArray -> JsonArray(value.map { replaceStrings(it, replace) })
+  is JsonObject -> JsonObject(value.mapValues { (_, v) -> replaceStrings(v, replace) })
+}
 
-    fun positionKey(value: JsonElement, position: Int): JsonElement = when {
-      value is JsonNull -> value
-      value is JsonPrimitive && !value.isString && value.content.toLongOrNull() != null -> JsonPrimitive(position)
-      else -> JsonPrimitive(position.toString())
-    }
+private fun positionKey(value: JsonElement, position: Int): JsonElement = when {
+  value is JsonNull -> value
+  value is JsonPrimitive && !value.isString && value.content.toLongOrNull() != null -> JsonPrimitive(position)
+  else -> JsonPrimitive(position.toString())
+}
 
-    /**
-     * A placeholder with the same lines as [text] (or [lineLengths]' count): each line is groups of
-     * four figure spaces joined by spaces, with at most that line's own characters. Empty lines stay
-     * empty, so the line count survives and nothing else of the text does.
-     */
-    fun placeholder(text: String, lineLengths: List<Int>?): String {
-      val lengths = lineLengths ?: text.split('\n').map { it.length }
-      return lengths.joinToString("\n") { line(it) }
-    }
+/**
+ * A placeholder with the same lines as [text] (or [lineLengths]' count): each line is groups of four
+ * figure spaces joined by spaces, with at most that line's own characters. Empty lines stay empty,
+ * so the line count survives and nothing else of the text does.
+ */
+private fun placeholder(text: String, lineLengths: List<Int>?): String {
+  val lengths = lineLengths ?: text.split('\n').map { it.length }
+  return lengths.joinToString("\n") { placeholderLine(it) }
+}
 
-    fun line(length: Int): String {
-      val builder = StringBuilder()
-      var i = 0
-      while (builder.length < length) {
-        builder.append(if (i % 5 == 4) ' ' else FIGURE_SPACE)
-        i++
-      }
-      if (builder.isNotEmpty() && builder.last() == ' ') builder.setLength(builder.length - 1)
-      return builder.toString()
-    }
+private fun placeholderLine(length: Int): String {
+  val builder = StringBuilder()
+  var i = 0
+  while (builder.length < length) {
+    builder.append(if (i % 5 == 4) ' ' else FIGURE_SPACE)
+    i++
   }
+  if (builder.isNotEmpty() && builder.last() == ' ') builder.setLength(builder.length - 1)
+  return builder.toString()
 }

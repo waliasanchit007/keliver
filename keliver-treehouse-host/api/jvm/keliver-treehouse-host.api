@@ -1,3 +1,10 @@
+public final class dev/keliver/treehouse/ChangeFolder {
+	public fun <init> (Ldev/keliver/treehouse/FrameFoldRules;Ldev/keliver/treehouse/HiddenEntryPolicy;Ldev/keliver/treehouse/TextLineShapes;)V
+	public synthetic fun <init> (Ldev/keliver/treehouse/FrameFoldRules;Ldev/keliver/treehouse/HiddenEntryPolicy;Ldev/keliver/treehouse/TextLineShapes;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun apply (Ljava/util/List;)V
+	public final fun fold ()Ldev/keliver/treehouse/FoldResult;
+}
+
 public final class dev/keliver/treehouse/ChangeListRenderer {
 	public fun <init> (Ldev/keliver/protocol/host/HostProtocol;)V
 	public final fun render-cdj8p0U (Ldev/keliver/treehouse/TreehouseView;Ljava/util/List;)V
@@ -87,6 +94,65 @@ public abstract interface class dev/keliver/treehouse/EventListener$Factory : ja
 	public abstract fun create (Ldev/keliver/treehouse/TreehouseApp;Ljava/lang/String;)Ldev/keliver/treehouse/EventListener;
 }
 
+public abstract interface class dev/keliver/treehouse/FoldNode {
+	public abstract fun getId-dcWScHk ()I
+	public abstract fun getWidgetTag-j4hTL_I ()I
+	public abstract fun property (I)Lkotlinx/serialization/json/JsonElement;
+}
+
+public abstract interface class dev/keliver/treehouse/FoldResult {
+}
+
+public final class dev/keliver/treehouse/FoldResult$Blocked : dev/keliver/treehouse/FoldResult {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun getReason ()Ljava/lang/String;
+}
+
+public final class dev/keliver/treehouse/FoldResult$Folded : dev/keliver/treehouse/FoldResult {
+	public synthetic fun <init> (Ljava/util/List;Ldev/keliver/treehouse/FrameFoldContent;JZLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getContent ()Ldev/keliver/treehouse/FrameFoldContent;
+	public final fun getMaxAgeMillis ()J
+	public final fun getPaneTitle ()Ljava/lang/String;
+	public final fun getReady ()Z
+	public final fun getSnapshot-mlyyLFU ()Ljava/util/List;
+}
+
+public final class dev/keliver/treehouse/FrameFoldContent : java/lang/Enum {
+	public static final field Shell Ldev/keliver/treehouse/FrameFoldContent;
+	public static final field Whole Ldev/keliver/treehouse/FrameFoldContent;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/treehouse/FrameFoldContent;
+	public static fun values ()[Ldev/keliver/treehouse/FrameFoldContent;
+}
+
+public final class dev/keliver/treehouse/FrameFoldRules {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Set;Ljava/util/Set;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Set;Ljava/util/Set;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getNeverCachedModifierProperties ()Ljava/util/Map;
+	public final fun getNeverCachedWidgetProperties ()Ljava/util/Map;
+	public final fun getPositionKeyModifierProperties ()Ljava/util/Map;
+	public final fun getPositionKeyWidgetProperties ()Ljava/util/Map;
+	public final fun getReplayableModifiers ()Ljava/util/Set;
+	public final fun getReplayableWidgets ()Ljava/util/Set;
+	public final fun getTextModifierProperties ()Ljava/util/Map;
+	public final fun getTextWidgetProperties ()Ljava/util/Map;
+	public final fun getUrlModifierProperties ()Ljava/util/Map;
+	public final fun getUrlWidgetProperties ()Ljava/util/Map;
+}
+
+public abstract interface class dev/keliver/treehouse/HiddenEntryPolicy {
+	public static final field Companion Ldev/keliver/treehouse/HiddenEntryPolicy$Companion;
+	public abstract fun isHidden (Ldev/keliver/treehouse/FoldNode;ILdev/keliver/treehouse/FoldNode;I)Z
+}
+
+public final class dev/keliver/treehouse/HiddenEntryPolicy$Companion {
+	public final fun getNothingHidden ()Ldev/keliver/treehouse/HiddenEntryPolicy;
+}
+
+public abstract interface annotation class dev/keliver/treehouse/KeliverFrameFoldApi : java/lang/annotation/Annotation {
+}
+
 public abstract interface class dev/keliver/treehouse/Loading : dev/keliver/widget/Widget {
 }
 
@@ -104,6 +170,10 @@ public final class dev/keliver/treehouse/MissingSerializerException : java/lang/
 public abstract interface class dev/keliver/treehouse/StateStore {
 	public abstract fun get (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun put (Ljava/lang/String;Ldev/keliver/treehouse/StateSnapshot;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class dev/keliver/treehouse/TextLineShapes {
+	public abstract fun lineLengths-Vxt3KSw (IILjava/lang/String;)Ljava/util/List;
 }
 
 public abstract class dev/keliver/treehouse/TreehouseApp : java/lang/AutoCloseable {

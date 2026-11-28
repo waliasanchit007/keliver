@@ -87,7 +87,19 @@ class ChangeFolderRandomTest {
     fun propsFor(m: M): List<Change> = if (m.tag == TestSchema.TEXT) {
       listOf(
         prop(m.id, 2, 1, str(secret("T") + if (random.nextBoolean()) "\n" + secret("T2") else "")),
-        prop(m.id, 2, 2, JsonArray(listOf(buildJsonObject { put("t", secret("S")); put("size", random.nextInt(20)) }))),
+        prop(
+          m.id,
+          2,
+          2,
+          JsonArray(
+            listOf(
+              buildJsonObject {
+                put("t", secret("S"))
+                put("size", random.nextInt(20))
+              },
+            ),
+          ),
+        ),
         prop(m.id, 2, 3, str("icon-${random.nextInt(5)}")),
         prop(m.id, 2, 4, str("https://" + secret("U"))),
         prop(m.id, 2, 5, str(secret("N"))),

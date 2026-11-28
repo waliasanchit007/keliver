@@ -6,8 +6,36 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-treehouse-host>
+open annotation class dev.keliver.treehouse/KeliverFrameFoldApi : kotlin/Annotation { // dev.keliver.treehouse/KeliverFrameFoldApi|null[0]
+    constructor <init>() // dev.keliver.treehouse/KeliverFrameFoldApi.<init>|<init>(){}[0]
+}
+
+final enum class dev.keliver.treehouse/FrameFoldContent : kotlin/Enum<dev.keliver.treehouse/FrameFoldContent> { // dev.keliver.treehouse/FrameFoldContent|null[0]
+    enum entry Shell // dev.keliver.treehouse/FrameFoldContent.Shell|null[0]
+    enum entry Whole // dev.keliver.treehouse/FrameFoldContent.Whole|null[0]
+
+    final val entries // dev.keliver.treehouse/FrameFoldContent.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.keliver.treehouse/FrameFoldContent> // dev.keliver.treehouse/FrameFoldContent.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.keliver.treehouse/FrameFoldContent // dev.keliver.treehouse/FrameFoldContent.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.keliver.treehouse/FrameFoldContent> // dev.keliver.treehouse/FrameFoldContent.values|values#static(){}[0]
+}
+
 abstract fun interface <#A: dev.keliver.treehouse/AppService> dev.keliver.treehouse/TreehouseContentSource { // dev.keliver.treehouse/TreehouseContentSource|null[0]
     abstract fun get(#A): dev.keliver.treehouse/ZiplineTreehouseUi // dev.keliver.treehouse/TreehouseContentSource.get|get(1:0){}[0]
+}
+
+abstract fun interface dev.keliver.treehouse/HiddenEntryPolicy { // dev.keliver.treehouse/HiddenEntryPolicy|null[0]
+    abstract fun isHidden(dev.keliver.treehouse/FoldNode, kotlin/Int, dev.keliver.treehouse/FoldNode, kotlin/Int): kotlin/Boolean // dev.keliver.treehouse/HiddenEntryPolicy.isHidden|isHidden(dev.keliver.treehouse.FoldNode;kotlin.Int;dev.keliver.treehouse.FoldNode;kotlin.Int){}[0]
+
+    final object Companion { // dev.keliver.treehouse/HiddenEntryPolicy.Companion|null[0]
+        final val NothingHidden // dev.keliver.treehouse/HiddenEntryPolicy.Companion.NothingHidden|{}NothingHidden[0]
+            final fun <get-NothingHidden>(): dev.keliver.treehouse/HiddenEntryPolicy // dev.keliver.treehouse/HiddenEntryPolicy.Companion.NothingHidden.<get-NothingHidden>|<get-NothingHidden>(){}[0]
+    }
+}
+
+abstract fun interface dev.keliver.treehouse/TextLineShapes { // dev.keliver.treehouse/TextLineShapes|null[0]
+    abstract fun lineLengths(dev.keliver.protocol/Id, kotlin/Int, kotlin/String): kotlin.collections/List<kotlin/Int>? // dev.keliver.treehouse/TextLineShapes.lineLengths|lineLengths(dev.keliver.protocol.Id;kotlin.Int;kotlin.String){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.treehouse/Crashed : dev.keliver.widget/Widget<#A> { // dev.keliver.treehouse/Crashed|null[0]
@@ -79,6 +107,15 @@ abstract interface dev.keliver.treehouse/Content { // dev.keliver.treehouse/Cont
     }
 }
 
+abstract interface dev.keliver.treehouse/FoldNode { // dev.keliver.treehouse/FoldNode|null[0]
+    abstract val id // dev.keliver.treehouse/FoldNode.id|{}id[0]
+        abstract fun <get-id>(): dev.keliver.protocol/Id // dev.keliver.treehouse/FoldNode.id.<get-id>|<get-id>(){}[0]
+    abstract val widgetTag // dev.keliver.treehouse/FoldNode.widgetTag|{}widgetTag[0]
+        abstract fun <get-widgetTag>(): dev.keliver.protocol/WidgetTag // dev.keliver.treehouse/FoldNode.widgetTag.<get-widgetTag>|<get-widgetTag>(){}[0]
+
+    abstract fun property(kotlin/Int): kotlinx.serialization.json/JsonElement? // dev.keliver.treehouse/FoldNode.property|property(kotlin.Int){}[0]
+}
+
 abstract interface dev.keliver.treehouse/StateStore { // dev.keliver.treehouse/StateStore|null[0]
     abstract suspend fun get(kotlin/String): dev.keliver.treehouse/StateSnapshot? // dev.keliver.treehouse/StateStore.get|get(kotlin.String){}[0]
     abstract suspend fun put(kotlin/String, dev.keliver.treehouse/StateSnapshot) // dev.keliver.treehouse/StateStore.put|put(kotlin.String;dev.keliver.treehouse.StateSnapshot){}[0]
@@ -93,6 +130,30 @@ abstract interface dev.keliver.treehouse/TreehouseDispatchers : kotlin/AutoClose
     abstract fun checkUi() // dev.keliver.treehouse/TreehouseDispatchers.checkUi|checkUi(){}[0]
     abstract fun checkZipline() // dev.keliver.treehouse/TreehouseDispatchers.checkZipline|checkZipline(){}[0]
     abstract fun close() // dev.keliver.treehouse/TreehouseDispatchers.close|close(){}[0]
+}
+
+sealed interface dev.keliver.treehouse/FoldResult { // dev.keliver.treehouse/FoldResult|null[0]
+    final class Blocked : dev.keliver.treehouse/FoldResult { // dev.keliver.treehouse/FoldResult.Blocked|null[0]
+        constructor <init>(kotlin/String) // dev.keliver.treehouse/FoldResult.Blocked.<init>|<init>(kotlin.String){}[0]
+
+        final val reason // dev.keliver.treehouse/FoldResult.Blocked.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // dev.keliver.treehouse/FoldResult.Blocked.reason.<get-reason>|<get-reason>(){}[0]
+    }
+
+    final class Folded : dev.keliver.treehouse/FoldResult { // dev.keliver.treehouse/FoldResult.Folded|null[0]
+        constructor <init>(dev.keliver.protocol/SnapshotChangeList, dev.keliver.treehouse/FrameFoldContent, kotlin/Long, kotlin/Boolean, kotlin/String) // dev.keliver.treehouse/FoldResult.Folded.<init>|<init>(dev.keliver.protocol.SnapshotChangeList;dev.keliver.treehouse.FrameFoldContent;kotlin.Long;kotlin.Boolean;kotlin.String){}[0]
+
+        final val content // dev.keliver.treehouse/FoldResult.Folded.content|{}content[0]
+            final fun <get-content>(): dev.keliver.treehouse/FrameFoldContent // dev.keliver.treehouse/FoldResult.Folded.content.<get-content>|<get-content>(){}[0]
+        final val maxAgeMillis // dev.keliver.treehouse/FoldResult.Folded.maxAgeMillis|{}maxAgeMillis[0]
+            final fun <get-maxAgeMillis>(): kotlin/Long // dev.keliver.treehouse/FoldResult.Folded.maxAgeMillis.<get-maxAgeMillis>|<get-maxAgeMillis>(){}[0]
+        final val paneTitle // dev.keliver.treehouse/FoldResult.Folded.paneTitle|{}paneTitle[0]
+            final fun <get-paneTitle>(): kotlin/String // dev.keliver.treehouse/FoldResult.Folded.paneTitle.<get-paneTitle>|<get-paneTitle>(){}[0]
+        final val ready // dev.keliver.treehouse/FoldResult.Folded.ready|{}ready[0]
+            final fun <get-ready>(): kotlin/Boolean // dev.keliver.treehouse/FoldResult.Folded.ready.<get-ready>|<get-ready>(){}[0]
+        final val snapshot // dev.keliver.treehouse/FoldResult.Folded.snapshot|{}snapshot[0]
+            final fun <get-snapshot>(): dev.keliver.protocol/SnapshotChangeList // dev.keliver.treehouse/FoldResult.Folded.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
+    }
 }
 
 abstract class <#A: dev.keliver.treehouse/AppService> dev.keliver.treehouse/TreehouseApp : kotlin/AutoCloseable { // dev.keliver.treehouse/TreehouseApp|null[0]
@@ -148,6 +209,38 @@ final class <#A: kotlin/Any> dev.keliver.treehouse/ChangeListRenderer { // dev.k
     constructor <init>(dev.keliver.protocol.host/HostProtocol) // dev.keliver.treehouse/ChangeListRenderer.<init>|<init>(dev.keliver.protocol.host.HostProtocol){}[0]
 
     final fun render(dev.keliver.treehouse/TreehouseView<#A>, dev.keliver.protocol/SnapshotChangeList) // dev.keliver.treehouse/ChangeListRenderer.render|render(dev.keliver.treehouse.TreehouseView<1:0>;dev.keliver.protocol.SnapshotChangeList){}[0]
+}
+
+final class dev.keliver.treehouse/ChangeFolder { // dev.keliver.treehouse/ChangeFolder|null[0]
+    constructor <init>(dev.keliver.treehouse/FrameFoldRules, dev.keliver.treehouse/HiddenEntryPolicy = ..., dev.keliver.treehouse/TextLineShapes? = ...) // dev.keliver.treehouse/ChangeFolder.<init>|<init>(dev.keliver.treehouse.FrameFoldRules;dev.keliver.treehouse.HiddenEntryPolicy;dev.keliver.treehouse.TextLineShapes?){}[0]
+
+    final fun apply(kotlin.collections/List<dev.keliver.protocol/Change>) // dev.keliver.treehouse/ChangeFolder.apply|apply(kotlin.collections.List<dev.keliver.protocol.Change>){}[0]
+    final fun fold(): dev.keliver.treehouse/FoldResult // dev.keliver.treehouse/ChangeFolder.fold|fold(){}[0]
+}
+
+final class dev.keliver.treehouse/FrameFoldRules { // dev.keliver.treehouse/FrameFoldRules|null[0]
+    constructor <init>(kotlin.collections/Set<kotlin/Int> = ..., kotlin.collections/Set<kotlin/Int> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> = ..., kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> = ...) // dev.keliver.treehouse/FrameFoldRules.<init>|<init>(kotlin.collections.Set<kotlin.Int>;kotlin.collections.Set<kotlin.Int>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.String>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.String>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.String>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.Int>>;kotlin.collections.Map<kotlin.Int,kotlin.collections.Set<kotlin.String>>){}[0]
+
+    final val neverCachedModifierProperties // dev.keliver.treehouse/FrameFoldRules.neverCachedModifierProperties|{}neverCachedModifierProperties[0]
+        final fun <get-neverCachedModifierProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> // dev.keliver.treehouse/FrameFoldRules.neverCachedModifierProperties.<get-neverCachedModifierProperties>|<get-neverCachedModifierProperties>(){}[0]
+    final val neverCachedWidgetProperties // dev.keliver.treehouse/FrameFoldRules.neverCachedWidgetProperties|{}neverCachedWidgetProperties[0]
+        final fun <get-neverCachedWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/FrameFoldRules.neverCachedWidgetProperties.<get-neverCachedWidgetProperties>|<get-neverCachedWidgetProperties>(){}[0]
+    final val positionKeyModifierProperties // dev.keliver.treehouse/FrameFoldRules.positionKeyModifierProperties|{}positionKeyModifierProperties[0]
+        final fun <get-positionKeyModifierProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> // dev.keliver.treehouse/FrameFoldRules.positionKeyModifierProperties.<get-positionKeyModifierProperties>|<get-positionKeyModifierProperties>(){}[0]
+    final val positionKeyWidgetProperties // dev.keliver.treehouse/FrameFoldRules.positionKeyWidgetProperties|{}positionKeyWidgetProperties[0]
+        final fun <get-positionKeyWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/FrameFoldRules.positionKeyWidgetProperties.<get-positionKeyWidgetProperties>|<get-positionKeyWidgetProperties>(){}[0]
+    final val replayableModifiers // dev.keliver.treehouse/FrameFoldRules.replayableModifiers|{}replayableModifiers[0]
+        final fun <get-replayableModifiers>(): kotlin.collections/Set<kotlin/Int> // dev.keliver.treehouse/FrameFoldRules.replayableModifiers.<get-replayableModifiers>|<get-replayableModifiers>(){}[0]
+    final val replayableWidgets // dev.keliver.treehouse/FrameFoldRules.replayableWidgets|{}replayableWidgets[0]
+        final fun <get-replayableWidgets>(): kotlin.collections/Set<kotlin/Int> // dev.keliver.treehouse/FrameFoldRules.replayableWidgets.<get-replayableWidgets>|<get-replayableWidgets>(){}[0]
+    final val textModifierProperties // dev.keliver.treehouse/FrameFoldRules.textModifierProperties|{}textModifierProperties[0]
+        final fun <get-textModifierProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> // dev.keliver.treehouse/FrameFoldRules.textModifierProperties.<get-textModifierProperties>|<get-textModifierProperties>(){}[0]
+    final val textWidgetProperties // dev.keliver.treehouse/FrameFoldRules.textWidgetProperties|{}textWidgetProperties[0]
+        final fun <get-textWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/FrameFoldRules.textWidgetProperties.<get-textWidgetProperties>|<get-textWidgetProperties>(){}[0]
+    final val urlModifierProperties // dev.keliver.treehouse/FrameFoldRules.urlModifierProperties|{}urlModifierProperties[0]
+        final fun <get-urlModifierProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/String>> // dev.keliver.treehouse/FrameFoldRules.urlModifierProperties.<get-urlModifierProperties>|<get-urlModifierProperties>(){}[0]
+    final val urlWidgetProperties // dev.keliver.treehouse/FrameFoldRules.urlWidgetProperties|{}urlWidgetProperties[0]
+        final fun <get-urlWidgetProperties>(): kotlin.collections/Map<kotlin/Int, kotlin.collections/Set<kotlin/Int>> // dev.keliver.treehouse/FrameFoldRules.urlWidgetProperties.<get-urlWidgetProperties>|<get-urlWidgetProperties>(){}[0]
 }
 
 final class dev.keliver.treehouse/MemoryStateStore : dev.keliver.treehouse/StateStore { // dev.keliver.treehouse/MemoryStateStore|null[0]
