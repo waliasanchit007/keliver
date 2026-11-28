@@ -1,0 +1,11 @@
+{
+  "guestRoot": "dev.keliver.calls",
+  "hostPackage": "dev.keliver.calls.composeui",
+  "packages": [
+    "androidx.compose.foundation.shape"
+  ],
+  "excludeTypes": [
+    "androidx.compose.ui.Modifier"
+  ],
+  "excludeKeys": {}
+}

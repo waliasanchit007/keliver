@@ -65,6 +65,10 @@ include ':keliver-compose'
 // Gate A prototype (docs/COMPOSE_GENERATOR_DESIGN.md): new, isolated modules.
 include ':keliver-compose-generator'
 include ':keliver-compose-values'
+// G1, call records (MS4-42): the shared values' guest mirrors and the host's replay, generated from
+// values.json and the shared values lock.
+include ':keliver-compose-calls'
+include ':keliver-compose-calls-composeui'
 include ':keliver-compose-gatea-schema'
 include ':keliver-compose-gatea-widget'
 include ':keliver-compose-gatea-modifiers'

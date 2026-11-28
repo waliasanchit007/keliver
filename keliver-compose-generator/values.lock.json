@@ -1,0 +1,366 @@
+{
+  "level": 1,
+  "nextTag": 44,
+  "producers": {
+    "androidx.compose.foundation.shape.AbsoluteCutCornerShape#<init>(topLeft:CornerSize,topRight:CornerSize,bottomRight:CornerSize,bottomLeft:CornerSize)": {
+      "tag": 1,
+      "since": 1,
+      "wire": {
+        "topLeft": 1,
+        "topRight": 1,
+        "bottomRight": 1,
+        "bottomLeft": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteCutCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)": {
+      "tag": 2,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteCutCornerShape(corner:CornerSize)": {
+      "tag": 3,
+      "since": 1,
+      "wire": {
+        "corner": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteCutCornerShape(percent:Int)": {
+      "tag": 4,
+      "since": 1,
+      "wire": {
+        "percent": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteCutCornerShape(size:Dp)": {
+      "tag": 5,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteCutCornerShape(size:Float)": {
+      "tag": 6,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteCutCornerShape(topLeft:Dp,topRight:Dp,bottomRight:Dp,bottomLeft:Dp)": {
+      "tag": 7,
+      "since": 1,
+      "wire": {
+        "topLeft": 1,
+        "topRight": 1,
+        "bottomRight": 1,
+        "bottomLeft": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteCutCornerShape(topLeft:Float,topRight:Float,bottomRight:Float,bottomLeft:Float)": {
+      "tag": 8,
+      "since": 1,
+      "wire": {
+        "topLeft": 1,
+        "topRight": 1,
+        "bottomRight": 1,
+        "bottomLeft": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteCutCornerShape(topLeftPercent:Int,topRightPercent:Int,bottomRightPercent:Int,bottomLeftPercent:Int)": {
+      "tag": 9,
+      "since": 1,
+      "wire": {
+        "topLeftPercent": 1,
+        "topRightPercent": 1,
+        "bottomRightPercent": 1,
+        "bottomLeftPercent": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteRoundedCornerShape#<init>(topLeft:CornerSize,topRight:CornerSize,bottomRight:CornerSize,bottomLeft:CornerSize)": {
+      "tag": 10,
+      "since": 1,
+      "wire": {
+        "topLeft": 1,
+        "topRight": 1,
+        "bottomRight": 1,
+        "bottomLeft": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteRoundedCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)": {
+      "tag": 11,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(corner:CornerSize)": {
+      "tag": 12,
+      "since": 1,
+      "wire": {
+        "corner": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(percent:Int)": {
+      "tag": 13,
+      "since": 1,
+      "wire": {
+        "percent": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(size:Dp)": {
+      "tag": 14,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(size:Float)": {
+      "tag": 15,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(topLeft:Dp,topRight:Dp,bottomRight:Dp,bottomLeft:Dp)": {
+      "tag": 16,
+      "since": 1,
+      "wire": {
+        "topLeft": 1,
+        "topRight": 1,
+        "bottomRight": 1,
+        "bottomLeft": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(topLeft:Float,topRight:Float,bottomRight:Float,bottomLeft:Float)": {
+      "tag": 17,
+      "since": 1,
+      "wire": {
+        "topLeft": 1,
+        "topRight": 1,
+        "bottomRight": 1,
+        "bottomLeft": 1
+      }
+    },
+    "androidx.compose.foundation.shape.AbsoluteRoundedCornerShape(topLeftPercent:Int,topRightPercent:Int,bottomRightPercent:Int,bottomLeftPercent:Int)": {
+      "tag": 18,
+      "since": 1,
+      "wire": {
+        "topLeftPercent": 1,
+        "topRightPercent": 1,
+        "bottomRightPercent": 1,
+        "bottomLeftPercent": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CircleShape": {
+      "tag": 19,
+      "since": 1,
+      "wire": {}
+    },
+    "androidx.compose.foundation.shape.CornerBasedShape#copy(all:CornerSize)": {
+      "tag": 20,
+      "since": 1,
+      "wire": {
+        "all": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CornerBasedShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)": {
+      "tag": 21,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CornerSize(percent:Int)": {
+      "tag": 22,
+      "since": 1,
+      "wire": {
+        "percent": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CornerSize(size:Dp)": {
+      "tag": 23,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CornerSize(size:Float)": {
+      "tag": 24,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CutCornerShape#<init>(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)": {
+      "tag": 25,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CutCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)": {
+      "tag": 26,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CutCornerShape(corner:CornerSize)": {
+      "tag": 27,
+      "since": 1,
+      "wire": {
+        "corner": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CutCornerShape(percent:Int)": {
+      "tag": 28,
+      "since": 1,
+      "wire": {
+        "percent": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CutCornerShape(size:Dp)": {
+      "tag": 29,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CutCornerShape(size:Float)": {
+      "tag": 30,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CutCornerShape(topStart:Dp,topEnd:Dp,bottomEnd:Dp,bottomStart:Dp)": {
+      "tag": 31,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CutCornerShape(topStart:Float,topEnd:Float,bottomEnd:Float,bottomStart:Float)": {
+      "tag": 32,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.CutCornerShape(topStartPercent:Int,topEndPercent:Int,bottomEndPercent:Int,bottomStartPercent:Int)": {
+      "tag": 33,
+      "since": 1,
+      "wire": {
+        "topStartPercent": 1,
+        "topEndPercent": 1,
+        "bottomEndPercent": 1,
+        "bottomStartPercent": 1
+      }
+    },
+    "androidx.compose.foundation.shape.RoundedCornerShape#<init>(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)": {
+      "tag": 34,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.RoundedCornerShape#copy(topStart:CornerSize,topEnd:CornerSize,bottomEnd:CornerSize,bottomStart:CornerSize)": {
+      "tag": 35,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.RoundedCornerShape(corner:CornerSize)": {
+      "tag": 36,
+      "since": 1,
+      "wire": {
+        "corner": 1
+      }
+    },
+    "androidx.compose.foundation.shape.RoundedCornerShape(percent:Int)": {
+      "tag": 37,
+      "since": 1,
+      "wire": {
+        "percent": 1
+      }
+    },
+    "androidx.compose.foundation.shape.RoundedCornerShape(size:Dp)": {
+      "tag": 38,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.RoundedCornerShape(size:Float)": {
+      "tag": 39,
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
+    },
+    "androidx.compose.foundation.shape.RoundedCornerShape(topStart:Dp,topEnd:Dp,bottomEnd:Dp,bottomStart:Dp)": {
+      "tag": 40,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.RoundedCornerShape(topStart:Float,topEnd:Float,bottomEnd:Float,bottomStart:Float)": {
+      "tag": 41,
+      "since": 1,
+      "wire": {
+        "topStart": 1,
+        "topEnd": 1,
+        "bottomEnd": 1,
+        "bottomStart": 1
+      }
+    },
+    "androidx.compose.foundation.shape.RoundedCornerShape(topStartPercent:Int,topEndPercent:Int,bottomEndPercent:Int,bottomStartPercent:Int)": {
+      "tag": 42,
+      "since": 1,
+      "wire": {
+        "topStartPercent": 1,
+        "topEndPercent": 1,
+        "bottomEndPercent": 1,
+        "bottomStartPercent": 1
+      }
+    },
+    "androidx.compose.foundation.shape.ZeroCornerSize": {
+      "tag": 43,
+      "since": 1,
+      "wire": {}
+    }
+  }
+}

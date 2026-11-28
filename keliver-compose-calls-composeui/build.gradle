@@ -1,0 +1,52 @@
+// G1, call records (docs/MS4_PLAN.md, MS4-42): the host's half. GeneratedReplay (written by
+// :keliver-compose-generator:generateComposeApiValues from the same values.json and shared values
+// lock as the guest's mirrors in keliver-compose-calls) makes the call a guest recorded, on Compose
+// itself; the hand-written decoders are the arithmetic value classes that stay (Dp, Color, TextUnit,
+// Offset, Size). CallRecordsTest runs a guest recording through JSON text into this replay and
+// compares the result with the value Compose builds from the same source text, on every target.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common + WasmJs.Browser)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeCalls
+        api libs.jetbrains.compose.foundation
+        api libs.jetbrains.compose.ui
+        api libs.jetbrains.compose.animation
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+    // The generated replay calls Compose's experimental APIs, as the widget renderers do.
+    configureEach {
+      languageSettings.optIn('kotlin.RequiresOptIn')
+      languageSettings.optIn('androidx.compose.ui.ExperimentalComposeUiApi')
+      languageSettings.optIn('androidx.compose.foundation.ExperimentalFoundationApi')
+      languageSettings.optIn('androidx.compose.animation.ExperimentalAnimationApi')
+      languageSettings.optIn('androidx.compose.ui.text.ExperimentalTextApi')
+      languageSettings.optIn('androidx.compose.ui.graphics.ExperimentalGraphicsApi')
+    }
+  }
+}
+
+// GeneratedReplay.kt is compared byte for byte by checkComposeApiValues: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/GeneratedReplay.kt")
+    }
+  }
+}
