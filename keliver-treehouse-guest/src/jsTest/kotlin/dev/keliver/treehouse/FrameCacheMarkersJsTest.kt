@@ -103,7 +103,7 @@ class FrameCacheMarkersJsTest {
 
   /** The `elements` of each modifier change [FastGuestProtocolAdapter] sends, as JSON, and the decoded changes. */
   private fun send(modifiers: List<Modifier>): Pair<List<String>, List<Change>> {
-    val json = Json.Default
+    val json = Json { useArrayPolymorphism = true }
     val guest = FastGuestProtocolAdapter(
       hostVersion = RedwoodVersion("0.5.0"),
       widgetSystemFactory = factory,

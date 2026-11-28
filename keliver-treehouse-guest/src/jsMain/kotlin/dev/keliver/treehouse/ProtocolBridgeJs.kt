@@ -70,7 +70,7 @@ internal fun frameCacheMarkerElement(marker: FrameCacheMarker): dynamic {
   return js("""[tag,value]""")
 }
 
-@OptIn(ExperimentalSerializationApi::class, RedwoodCodegenApi::class)
+@OptIn(ExperimentalSerializationApi::class, RedwoodCodegenApi::class, ExperimentalKeliverHostFeaturesApi::class)
 internal class FastGuestProtocolAdapter(
   override val json: Json = Json.Default,
   hostVersion: RedwoodVersion,
